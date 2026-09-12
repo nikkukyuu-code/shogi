@@ -1175,6 +1175,36 @@ label.setting {
   white-space: nowrap;
 }
 
+.start-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 4, 2, 0.42);
+  backdrop-filter: blur(2px);
+}
+.start-card {
+  width: min(360px, 92vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 20px 18px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(61, 36, 18, 0.94) 0%, rgba(18, 10, 6, 0.96) 100%);
+  border: 2px solid var(--gold);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+}
+.start-card h2 {
+  margin: 0;
+  color: var(--gold);
+  letter-spacing: 0.22em;
+  font-size: 1.25rem;
+}
+
 </style>
 </head>
 <body>
@@ -2627,6 +2657,7 @@ label.setting {
       selSide.value = String(settings.humanSide);
       selSide.addEventListener("change", () => {
         settings.humanSide = Number(selSide.value);
+        if (!inMatch) render();
       });
     }
     const chk = root.querySelector("#chk-sound");
@@ -2648,23 +2679,37 @@ label.setting {
     stopEngine();
     searchId++;
     thinking = false;
+    engineInfo = null;
     endState = null;
+    selected = null;
+    selectedDrop = null;
+    legalTargets = [];
+    lastMove = null;
+    kifu = [];
+    pos = initialPosition();
+    history = [clonePosition(pos)];
+    flipped = settings.humanSide === GOTE;
     seriousStartedAt = null;
     lastRecordedMs = null;
     lastRank = null;
     lastRecordAt = null;
     document.querySelector(".end-overlay")?.remove();
+    document.querySelector(".start-overlay")?.remove();
     document.querySelector(".rank-overlay")?.remove();
     document.querySelector(".start-cinematic")?.remove();
     document.querySelector(".congrats-cinematic")?.remove();
     document.querySelector(".riichi-banner")?.remove();
     document.querySelector(".cinematic")?.remove();
-    renderStartScreen();
+    render();
+    mountStartOverlay();
   }
-  function renderStartScreen() {
-    app.innerHTML = `
-    <div class="start-screen">
-      <h1>\u5C06\u68CB</h1>
+  function mountStartOverlay() {
+    document.querySelector(".start-overlay")?.remove();
+    const el = document.createElement("div");
+    el.className = "start-overlay";
+    el.innerHTML = `
+    <div class="start-card">
+      <h2>\u5BFE\u5C40\u8A2D\u5B9A</h2>
       <p class="start-tag">\u6B69\u4EE5\u59167\u679A or \u7389\u53D6\u308A</p>
       <label class="start-field">
         <span>\u96E3\u6613\u5EA6</span>
@@ -2686,8 +2731,9 @@ label.setting {
       <button type="button" id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0</button>
       <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
     </div>`;
-    bindMenuControls(app);
-    app.querySelector("#btn-start").addEventListener("click", () => {
+    document.body.appendChild(el);
+    bindMenuControls(el);
+    el.querySelector("#btn-start").addEventListener("click", () => {
       unlock();
       savePrefs();
       void startMatch();
@@ -2696,6 +2742,7 @@ label.setting {
   async function startMatch() {
     if (starting || inMatch) return;
     starting = true;
+    document.querySelector(".start-overlay")?.remove();
     try {
       await playStartIntro();
       inMatch = true;
@@ -2996,6 +3043,9 @@ label.setting {
     if (statsEl) statsEl.textContent = statsText();
   }
   function statusHtml() {
+    if (!inMatch && !starting) {
+      return "\u96E3\u6613\u5EA6\u3092\u9078\u3093\u3067\u30B9\u30BF\u30FC\u30C8";
+    }
     if (endState) {
       return `<strong>${endState.title}</strong> \u2014 ${endState.subtitle}`;
     }
