@@ -3069,6 +3069,7 @@ label.setting {
           }
           pe.draggable = !isCoarsePointer() && isHumanTurn() && p.side === pos.sideToMove;
           if (pe.draggable) {
+            pe.style.pointerEvents = "auto";
             pe.addEventListener("dragstart", (e) => {
               dragFrom = sq3;
               pe.classList.add("dragging");
