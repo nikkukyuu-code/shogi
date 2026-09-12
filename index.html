@@ -923,7 +923,13 @@ label.setting {
 .side-panel, .layout, .board-area, .files-ranks, .variant-tag { display: none !important; }
 .your-turn-status { font-size: 0.95rem; }
 
-.serious-clock {
+.clock-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-width: 0;
+}
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
   font-size: 0.78rem;
@@ -1291,14 +1297,15 @@ label.setting {
 }
 .think-banner.on {
   height: auto;
-  margin: 0 0 4px;
-  padding: 2px 10px 4px;
-  font-size: clamp(1.7rem, 8vw, 2.8rem);
+  margin: 0;
+  padding: 0;
+  font-size: clamp(1.05rem, 3.6vw, 1.45rem);
   font-weight: 800;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.12em;
   color: #ffe066;
-  text-shadow: 0 0 18px #ffd24a, 0 0 6px #c9a227;
+  text-shadow: 0 0 12px #ffd24a, 0 0 4px #c9a227;
   animation: thinkGlow 1.05s ease-in-out infinite;
+  white-space: nowrap;
 }
 .think-banner .dots {
   display: inline-flex;
@@ -3255,9 +3262,7 @@ label.setting {
     const wrap = document.querySelector(".board-wrap");
     const board = document.querySelector("#board");
     if (!wrap || !board) return;
-    const banner = wrap.querySelector(".think-banner");
-    const extra = banner && banner.classList.contains("on") ? banner.offsetHeight + 6 : 0;
-    const s = Math.max(140, Math.floor(Math.min(wrap.clientWidth, wrap.clientHeight - extra)));
+    const s = Math.max(140, Math.floor(Math.min(wrap.clientWidth, wrap.clientHeight)));
     board.style.width = `${s}px`;
     board.style.height = `${s}px`;
   }
@@ -3269,17 +3274,17 @@ label.setting {
     <header class="top">
       <h1>\u5C06\u68CB</h1>
       <div class="status" id="status"></div>
-      <div class="serious-clock" id="serious-clock"${isSerious() ? "" : " hidden"}></div>
+      <div class="clock-row">
+        <div id="think-banner" class="think-banner${thinking ? " on" : ""}">${thinking ? '\u8003\u3048\u4E2D<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>' : ""}</div>
+        <div class="serious-clock" id="serious-clock"${isSerious() ? "" : " hidden"}></div>
+      </div>
       <div class="engine-stats" id="stats" hidden></div>
     </header>
     <div class="stage">
       <div id="trophy-top" class="trophy-bar"></div>
       <div class="hand" id="hand-top"></div>
       <div class="board-wrap">
-        <div class="board-stack">
-          <div id="think-banner" class="think-banner${thinking ? " on" : ""}">${thinking ? '\u8003\u3048\u4E2D<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>' : ""}</div>
-          <div class="board" id="board"></div>
-        </div>
+        <div class="board" id="board"></div>
       </div>
       <div class="hand" id="hand-bottom"></div>
       <div id="trophy-bot" class="trophy-bar you"></div>
