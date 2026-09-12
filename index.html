@@ -2349,56 +2349,15 @@ label.setting {
   function savedNickname() {
     return normalizeNick(localStorage.getItem(MY_NAME_KEY) || "");
   }
-  function nickKey(name) {
-    return name.normalize("NFKC").toLowerCase();
-  }
   function rememberMine(name) {
     localStorage.setItem(MY_NAME_KEY, name);
   }
-  async function remoteTaken() {
-    try {
-      const res = await fetch(new URL("names.json", location.href).href, { cache: "no-store" });
-      if (!res.ok) return [];
-      const data = await res.json();
-      return Array.isArray(data) ? data.filter((n) => typeof n === "string") : [];
-    } catch {
-      return [];
-    }
-  }
-  async function takenByOthers() {
-    const me = playerId();
-    const taken = /* @__PURE__ */ new Set();
-    for (const n of await remoteTaken()) taken.add(nickKey(n));
-    for (const e of await loadRanks()) {
-      if (e.name && e.playerId && e.playerId !== me) taken.add(nickKey(e.name));
-    }
-    return taken;
-  }
-  async function uniquify(base) {
-    const taken = await takenByOthers();
-    if (!taken.has(nickKey(base))) return base;
-    for (let i = 2; i < 1e3; i++) {
-      const n = `${base.slice(0, 10)}${i}`;
-      if (!taken.has(nickKey(n))) return n;
-    }
-    return `${base.slice(0, 8)}${Math.floor(10 + Math.random() * 89)}`;
-  }
-  async function claimNickname(raw, mode = "keep") {
-    const official = savedNickname();
-    const typed = normalizeNick(raw);
-    if (mode === "keep" && official) {
-      return { name: official, changed: false };
-    }
-    const base = typed || official || "\u540D\u7121\u3057";
-    if (official && nickKey(base) === nickKey(official)) {
-      return { name: official, changed: false };
-    }
-    const name = await uniquify(base);
+  function setPlayerName(raw) {
+    const name = normalizeNick(raw) || "\u540D\u7121\u3057";
+    const prev = savedNickname();
     rememberMine(name);
-    if (official && nickKey(name) !== nickKey(official)) {
-      await rewriteMyRankNames(name);
-    }
-    return { name, changed: nickKey(name) !== nickKey(base) };
+    if (prev !== name) void rewriteMyRankNames(name);
+    return name;
   }
   async function rewriteMyRankNames(name) {
     const sealed = await readSealedList() ?? await migrateLegacy();
@@ -2409,7 +2368,7 @@ label.setting {
     for (const item of sealed) {
       const row = await decryptResignTime(item);
       if (!row) continue;
-      if (row.playerId === me && row.name !== name) {
+      if ((!row.playerId || row.playerId === me) && row.name !== name) {
         const s = await encryptResignTime(row.ms, name);
         s.at = row.at;
         next.push(s);
@@ -2421,13 +2380,14 @@ label.setting {
     if (changed) await writeSealedList(next);
   }
   async function hydrateNickname(pref) {
-    const me = playerId();
-    let name = savedNickname() || normalizeNick(pref);
+    let name = savedNickname();
+    if (!name) name = normalizeNick(pref);
     if (!name) {
-      const mine = (await loadRanks()).filter((e) => e.playerId === me && e.name);
-      if (mine.length) name = mine[mine.length - 1].name;
+      const me = playerId();
+      const mine = (await loadRanks()).filter((e) => e.name && (!e.playerId || e.playerId === me));
+      if (mine.length) name = mine[0].name;
     }
-    if (!name) return "";
+    if (!name) name = "\u540D\u7121\u3057";
     rememberMine(name);
     await rewriteMyRankNames(name);
     return name;
@@ -3053,21 +3013,17 @@ label.setting {
   function displayNick() {
     return settings.nickname || "\u540D\u7121\u3057";
   }
-  async function applyNickname(raw, hintEl, rename = false) {
+  function applyNickname(raw, rename = false) {
     const typed = normalizeNick(raw);
     const official = savedNickname() || settings.nickname;
-    const mode = rename || typed && official && typed !== official || !official ? "rename" : "keep";
-    const claimed = await claimNickname(typed, mode);
-    settings.nickname = claimed.name;
+    const next = rename ? typed || "\u540D\u7121\u3057" : typed || official || "\u540D\u7121\u3057";
+    settings.nickname = official && !rename && !typed ? official : setPlayerName(next);
     savePrefs();
-    if (hintEl && claimed.changed) {
-      hintEl.textContent = `\u300C${typed || "\u540D\u7121\u3057"}\u300D\u306F\u4F7F\u308F\u308C\u3066\u3044\u305F\u306E\u3067\u300C${claimed.name}\u300D\u306B\u3057\u307E\u3057\u305F`;
-    }
     const btn = document.querySelector("#btn-nick");
     if (btn) btn.textContent = settings.nickname;
     const inp = document.querySelector("#inp-nick");
     if (inp) inp.value = settings.nickname;
-    return claimed;
+    return settings.nickname;
   }
   function openNickEditor() {
     document.querySelector(".nick-overlay")?.remove();
@@ -3078,7 +3034,7 @@ label.setting {
       <h2>\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0</h2>
       <label class="nick-field">
         <input id="inp-nick-edit" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${settings.nickname.replace(/"/g, "&quot;")}" />
-        <small id="nick-edit-hint">\u4E00\u4EBA\u4E00\u3064\u306E\u540D\u524D\u3002\u7A7A\u306A\u3089\u540D\u7121\u3057</small>
+        <small id="nick-edit-hint">\u3053\u306E\u7AEF\u672B\u3067\u4E00\u4EBA\u4E00\u3064\u3002\u7A7A\u306A\u3089\u540D\u7121\u3057</small>
       </label>
       <button type="button" class="start-btn" id="btn-nick-save">\u5909\u66F4</button>
     </div>`;
@@ -3088,7 +3044,7 @@ label.setting {
     el.querySelector("#btn-nick-save").addEventListener("click", () => {
       void (async () => {
         const inp = el.querySelector("#inp-nick-edit");
-        await applyNickname(inp?.value ?? "", el.querySelector("#nick-edit-hint"), true);
+        applyNickname(inp?.value ?? "", true);
         el.remove();
       })();
     });
@@ -3186,7 +3142,7 @@ label.setting {
       <label class="nick-field" id="nick-field">
         <span>\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0</span>
         <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${settings.nickname.replace(/"/g, "&quot;")}" />
-        <small id="nick-hint">\u4E00\u4EBA\u4E00\u3064\u306E\u540D\u524D\u3002\u3044\u3064\u3067\u3082\u5909\u66F4\u53EF\u3002\u7A7A\u306A\u3089\u540D\u7121\u3057</small>
+        <small id="nick-hint">\u3053\u306E\u7AEF\u672B\u3067\u56FA\u5B9A\u3002\u5BFE\u5C40\u3067\u306F\u5909\u308F\u308A\u307E\u305B\u3093</small>
       </label>
       <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
       <div class="side-picks" role="group" aria-label="\u624B\u756A">
@@ -3205,7 +3161,7 @@ label.setting {
     el.querySelector("#btn-start").addEventListener("click", () => {
       void (async () => {
         unlock();
-        await applyNickname(nickInp?.value ?? "", el.querySelector("#nick-hint"));
+        applyNickname(nickInp?.value ?? "", false);
         if (nickInp) nickInp.value = settings.nickname;
         void startMatch();
       })();
