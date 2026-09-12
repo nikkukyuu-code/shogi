@@ -2544,19 +2544,31 @@ label.setting {
       return [];
     }
   }
-  async function sendSealedRank(sealed) {
-    const current = await readSealedList() ?? await migrateLegacy();
-    const next = [...current, sealed];
-    await writeSealedList(next);
-    return next;
-  }
   async function submitResignTime(ms, name) {
-    const sealed = await encryptResignTime(ms, name);
-    const stored = await sendSealedRank(sealed);
-    const list = await openEntries(stored);
-    const entry = await decryptResignTime(sealed) ?? { ms: Math.max(0, Math.round(ms)), at: sealed.at, name };
-    const rank = list.findIndex((e) => e.ms === entry.ms && e.at === entry.at) + 1;
-    return { entry, rank: rank > 0 ? rank : list.length, list };
+    const nextMs = Math.max(0, Math.round(ms));
+    const me = playerId();
+    const current = await readSealedList() ?? await migrateLegacy();
+    const list = await openEntries(current);
+    const mine = (e) => !e.playerId || e.playerId === me;
+    const best = list.filter(mine).reduce((a, e) => a == null || e.ms < a.ms ? e : a, null);
+    if (best && nextMs >= best.ms) {
+      const rank2 = list.findIndex((e) => e.ms === best.ms && e.at === best.at) + 1;
+      return { entry: best, rank: rank2 > 0 ? rank2 : 1, list, updated: false };
+    }
+    const kept = [];
+    for (const item of current) {
+      const row = await decryptResignTime(item);
+      if (!row) continue;
+      if (mine(row)) continue;
+      kept.push(item);
+    }
+    const sealed = await encryptResignTime(nextMs, name);
+    const stored = [...kept, sealed];
+    await writeSealedList(stored);
+    const nextList = await openEntries(stored);
+    const entry = await decryptResignTime(sealed) ?? { ms: nextMs, at: sealed.at, name, playerId: me };
+    const rank = nextList.findIndex((e) => e.ms === entry.ms && e.at === entry.at) + 1;
+    return { entry, rank: rank > 0 ? rank : nextList.length, list: nextList, updated: true };
   }
   async function loadRanks() {
     const sealed = await readSealedList() ?? await migrateLegacy();
@@ -2651,6 +2663,7 @@ label.setting {
   var seriousStartedAt = null;
   var lastRecordedMs = null;
   var lastRank = null;
+  var lastRankUpdated = false;
   var lastRecordAt = null;
   var clockRaf = 0;
   var starting = false;
@@ -3114,6 +3127,7 @@ label.setting {
     seriousStartedAt = null;
     lastRecordedMs = null;
     lastRank = null;
+    lastRankUpdated = false;
     lastRecordAt = null;
     document.querySelector(".end-overlay")?.remove();
     document.querySelector(".start-overlay")?.remove();
@@ -3204,6 +3218,7 @@ label.setting {
     flipped = settings.humanSide === GOTE;
     lastRecordedMs = null;
     lastRank = null;
+    lastRankUpdated = false;
     lastRecordAt = null;
     seriousStartedAt = isSerious() ? performance.now() : null;
     worker.postMessage({ type: "clear" });
@@ -3245,10 +3260,12 @@ label.setting {
       const rec = await submitResignTime(elapsedSeriousMs(), savedNickname() || settings.nickname || "\u540D\u7121\u3057");
       lastRecordedMs = rec.entry.ms;
       lastRank = rec.rank;
-      lastRecordAt = rec.entry.at;
+      lastRankUpdated = rec.updated;
+      lastRecordAt = rec.updated ? rec.entry.at : lastRecordAt;
     } else {
       lastRecordedMs = isSerious() ? elapsedSeriousMs() : null;
       lastRank = null;
+      lastRankUpdated = false;
       lastRecordAt = null;
     }
     endState = {
@@ -3256,11 +3273,11 @@ label.setting {
       reason: "resign",
       winner: opposite(settings.humanSide),
       title: "\u8CA0\u3051",
-      subtitle: lastRecordedMs != null ? `\u6295\u4E86\u3000${formatMs(lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}` : "\u6295\u4E86"
+      subtitle: lastRecordedMs != null ? `\u6295\u4E86\u3000${formatMs(lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}${isSerious() && !lastRankUpdated && lastRank ? "\u3000\u81EA\u5DF1\u30D9\u30B9\u30C8\u66F4\u65B0\u306A\u3057" : ""}` : "\u6295\u4E86"
     };
     playLose();
     render();
-    if (lastRank != null && lastRank >= 1 && lastRank <= 100) {
+    if (lastRankUpdated && lastRank != null && lastRank >= 1 && lastRank <= 100) {
       window.setTimeout(() => playCongrats2(lastRank), 380);
     }
   }
@@ -3573,7 +3590,7 @@ label.setting {
       <h2 class="big">${endState.title}</h2>
       <div class="sub">${endState.subtitle}</div>
       ${lastRecordedMs != null ? `<div class="rank-record">${formatMs(lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}</div>` : ""}
-      ${lastRank != null && lastRank <= 100 ? '<div class="rank-record">\u304A\u3081\u3067\u3068\u3046</div>' : ""}
+      ${lastRankUpdated && lastRank != null && lastRank <= 100 ? '<div class="rank-record">\u304A\u3081\u3067\u3068\u3046</div>' : ""}
       <div class="end-trophies">${slots}</div>
       <div class="btns" style="justify-content:center">
         <button class="primary" id="btn-again">${btnLabel}</button>
