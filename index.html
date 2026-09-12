@@ -2241,11 +2241,27 @@ label.setting {
   }
 
   // src/.standalone-main.ts
+  var PREF_KEY = "shogi-pref-v1";
   var settings = {
     difficulty: "advanced",
     humanSide: SENTE,
     sound: true
   };
+  function loadPrefs() {
+    try {
+      const raw = localStorage.getItem(PREF_KEY);
+      if (!raw) return;
+      const p = JSON.parse(raw);
+      if (p.difficulty === "beginner" || p.difficulty === "intermediate" || p.difficulty === "advanced" || p.difficulty === "serious") {
+        settings.difficulty = p.difficulty;
+      }
+    } catch {
+    }
+  }
+  function savePrefs() {
+    localStorage.setItem(PREF_KEY, JSON.stringify({ difficulty: settings.difficulty }));
+  }
+  loadPrefs();
   var pos = initialPosition();
   var history = [clonePosition(pos)];
   var kifu = [];
@@ -2601,6 +2617,7 @@ label.setting {
       selDiff.value = settings.difficulty;
       selDiff.addEventListener("change", () => {
         settings.difficulty = selDiff.value;
+        savePrefs();
         const rankBtn = root.querySelector("#btn-rank");
         if (rankBtn) rankBtn.hidden = !isSerious();
       });
@@ -2649,7 +2666,6 @@ label.setting {
     <div class="start-screen">
       <h1>\u5C06\u68CB</h1>
       <p class="start-tag">\u6B69\u4EE5\u59167\u679A or \u7389\u53D6\u308A</p>
-      <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
       <label class="start-field">
         <span>\u96E3\u6613\u5EA6</span>
         <select id="sel-diff" aria-label="\u96E3\u6613\u5EA6">
@@ -2659,6 +2675,7 @@ label.setting {
           <option value="serious">\u771F\u5263</option>
         </select>
       </label>
+      <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
       <label class="start-field">
         <span>\u624B\u756A</span>
         <select id="sel-side" aria-label="\u624B\u756A">
@@ -2672,6 +2689,7 @@ label.setting {
     bindMenuControls(app);
     app.querySelector("#btn-start").addEventListener("click", () => {
       unlock();
+      savePrefs();
       void startMatch();
     });
   }
