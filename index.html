@@ -375,9 +375,12 @@ header.top .status {
 }
 
 .status {
-  font-size: 0.95rem;
-  line-height: 1.5;
-  min-height: 3em;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  min-height: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status .thinking {
@@ -1241,6 +1244,32 @@ label.setting {
 .start-overlay #btn-rank {
   width: 100%;
   min-height: 44px;
+}
+
+
+.think-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: #ffe8b0;
+  background: rgba(42, 28, 16, 0.75);
+  border: 1px solid rgba(201, 162, 39, 0.4);
+}
+.think-chip i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffd27a;
+  box-shadow: 0 0 8px #ffd27a;
+  animation: thinkPulse 0.9s ease-in-out infinite;
+}
+@keyframes thinkPulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
 }
 
 </style>
@@ -3091,10 +3120,9 @@ label.setting {
       return `<strong>${endState.title}</strong> \u2014 ${endState.subtitle}`;
     }
     if (thinking) {
-      const d = engineInfo?.depth ?? "\u2026";
-      const n = engineInfo?.nodes ?? 0;
-      const pv = engineInfo?.pv?.[0] ? moveToJa(engineInfo.pv[0], pos.sideToMove) : "\u2014";
-      return `<span class="thinking">\u8003\u3048\u4E2D\u2026</span>\uFF08\u6DF1\u3055 ${d}\uFF0F\u30CE\u30FC\u30C9 ${n.toLocaleString()}\uFF0F\u5019\u88DC ${pv}\uFF09`;
+      const d = engineInfo?.depth;
+      const depth = d ? ` \u6DF1\u3055${d}` : "";
+      return `<span class="think-chip"><i></i>\u76F8\u624B\u304C\u601D\u8003\u4E2D${depth}</span>`;
     }
     const check = inCheck(pos, pos.sideToMove) ? '\u3000<span style="color:#ff8080">\u738B\u624B\uFF01</span>' : "";
     if (pos.sideToMove === settings.humanSide) {
