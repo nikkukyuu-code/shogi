@@ -874,6 +874,49 @@ label.setting {
   inset: 0;
   background: radial-gradient(circle at center, rgba(20,8,4,0.15) 0%, rgba(0,0,0,0.72) 70%);
 }
+.cinematic-lines {
+  position: absolute;
+  left: 50%;
+  top: 10%;
+  transform: translate(-50%, 8px);
+  width: min(520px, 92vw);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.5s ease, transform 0.6s ease;
+  pointer-events: none;
+}
+.cinematic-lines.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.cinematic-lines p {
+  margin: 0 0 8px;
+  font-weight: 800;
+  color: #ffe066;
+  text-shadow: 0 0 16px #ffaa00, 0 3px 0 #5a1800;
+}
+.cinematic-lines p:first-child {
+  font-size: clamp(2rem, 8vw, 3.2rem);
+  letter-spacing: 0.28em;
+}
+.cinematic-lines p:last-child {
+  font-size: clamp(1rem, 4.2vw, 1.45rem);
+  letter-spacing: 0.06em;
+  color: #fff4d0;
+}
+.cinematic.await-tap .cinematic-piece {
+  pointer-events: auto;
+  cursor: pointer;
+  animation: seventhPulse 1s ease-in-out infinite;
+}
+@keyframes seventhPulse {
+  0%, 100% { transform: scale(1.45) rotate(-8deg); }
+  50% { transform: scale(1.65) rotate(-6deg); }
+}
+.sq.seventh-pick {
+  box-shadow: inset 0 0 0 3px #ffe066, 0 0 16px rgba(255, 210, 80, 0.55);
+  z-index: 4;
+}
 .cinematic-word {
   position: absolute;
   left: 50%;
@@ -2186,6 +2229,14 @@ label.setting {
     }
     speakJa("\u30EA\u30FC\u30C1");
   }
+  function playResignLines() {
+    const c = ac();
+    if (c) {
+      osc(c, "triangle", 330, 0.22, 0.05);
+      osc(c, "sine", 196, 0.35, 0.04, 0.1);
+    }
+    speakJa("\u6295\u4E86\u3067\u3059\u3002\u6700\u5F8C\u306E\u30B3\u30DE\u3092\u9078\u3093\u3067\u52D5\u304B\u3057\u3066\u304F\u3060\u3055\u3044");
+  }
   function playSeventhImpact() {
     const c = ac();
     if (!c) return;
@@ -3270,14 +3321,17 @@ label.setting {
     const barSel = info.side === settings.humanSide ? "#trophy-bot" : "#trophy-top";
     const slot = document.querySelector(`${barSel} .trophy-slot[data-i="6"]`);
     const layer = document.createElement("div");
-    layer.className = "cinematic";
+    layer.className = "cinematic await-tap";
     layer.innerHTML = `
     <div class="cinematic-vignette"></div>
-    <div class="cinematic-word">\u53D6\u5F97</div>
+    <div class="cinematic-lines">
+      <p>\u6295\u4E86\u3067\u3059</p>
+      <p>\u6700\u5F8C\u306E\u30B3\u30DE\u3092\u9078\u3093\u3067\u52D5\u304B\u3057\u3066\u304F\u3060\u3055\u3044</p>
+    </div>
     <div class="cinematic-piece">${info.glyph}</div>`;
     document.body.appendChild(layer);
     const piece = layer.querySelector(".cinematic-piece");
-    const word = layer.querySelector(".cinematic-word");
+    const lines = layer.querySelector(".cinematic-lines");
     const fromRect = cell?.getBoundingClientRect();
     const toRect = slot?.getBoundingClientRect();
     const sx = fromRect ? fromRect.left + fromRect.width / 2 : window.innerWidth / 2;
@@ -3286,39 +3340,51 @@ label.setting {
     const ey = toRect ? toRect.top + toRect.height / 2 : sy;
     piece.style.left = `${sx}px`;
     piece.style.top = `${sy}px`;
+    piece.style.pointerEvents = "auto";
+    cell?.classList.add("seventh-pick");
     requestAnimationFrame(() => layer.classList.add("show"));
     window.setTimeout(() => {
-      word.classList.add("show");
+      lines.classList.add("show");
       piece.classList.add("hold");
     }, 80);
-    window.setTimeout(() => {
+    playResignLines();
+    let started = false;
+    const fly = () => {
+      if (started) return;
+      started = true;
+      layer.classList.remove("await-tap");
+      cell?.classList.remove("seventh-pick");
       piece.classList.add("fly");
       piece.style.left = `${ex}px`;
       piece.style.top = `${ey}px`;
-    }, 900);
-    window.setTimeout(() => {
-      playSeventhImpact();
-      holdLastTrophy = false;
-      animTrophy = { side: info.side, index: 6 };
-      const top = document.querySelector("#trophy-top");
-      const bot = document.querySelector("#trophy-bot");
-      const topSide = opposite(settings.humanSide);
-      if (top) renderTrophyBar(topSide, top, false);
-      if (bot) renderTrophyBar(settings.humanSide, bot, true);
-      piece.classList.add("land");
-    }, 2600);
-    window.setTimeout(() => {
-      layer.classList.remove("show");
       window.setTimeout(() => {
-        layer.remove();
-        cinematic = false;
-        if (endState) {
-          if (endState.humanWon) playWin();
-          else if (endState.humanWon === false) playLose();
-          showEndOverlay();
-        }
-      }, 350);
-    }, 3200);
+        playSeventhImpact();
+        holdLastTrophy = false;
+        animTrophy = { side: info.side, index: 6 };
+        const top = document.querySelector("#trophy-top");
+        const bot = document.querySelector("#trophy-bot");
+        const topSide = opposite(settings.humanSide);
+        if (top) renderTrophyBar(topSide, top, false);
+        if (bot) renderTrophyBar(settings.humanSide, bot, true);
+        piece.classList.add("land");
+      }, 1650);
+      window.setTimeout(() => {
+        layer.classList.remove("show");
+        window.setTimeout(() => {
+          layer.remove();
+          cinematic = false;
+          if (endState) {
+            if (endState.humanWon) playWin();
+            else if (endState.humanWon === false) playLose();
+            showEndOverlay();
+          }
+        }, 350);
+      }, 2300);
+    };
+    piece.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      fly();
+    });
   }
   function announceYourTurn() {
     document.querySelector(".your-turn")?.remove();
