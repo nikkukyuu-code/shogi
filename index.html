@@ -2698,7 +2698,10 @@ label.setting {
       root.querySelectorAll("[data-side]").forEach((btn) => {
         btn.classList.toggle("on", Number(btn.dataset.side) === side);
       });
-      if (!inMatch) render();
+      if (!inMatch) {
+        flipped = settings.humanSide === GOTE;
+        render();
+      }
     };
     root.querySelectorAll("[data-side]").forEach((btn) => {
       btn.classList.toggle("on", Number(btn.dataset.side) === settings.humanSide);
@@ -3188,7 +3191,6 @@ label.setting {
       <button id="btn-resign">\u6295\u4E86</button>
       <button id="btn-new">\u65B0\u898F</button>
       <button class="stop" id="btn-stop" ${thinking ? "" : "disabled"}>\u4ECA\u3059\u3050\u6307\u3059</button>
-      <span class="diff-lock">${DIFF_LABEL[settings.difficulty]}</span>
       <button id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0</button>
       <span class="diff-lock">${settings.humanSide === 0 ? "\u5148\u624B" : "\u5F8C\u624B"}</span>
       <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
@@ -3236,6 +3238,7 @@ label.setting {
       boardResize = new ResizeObserver(() => fitBoard());
       boardResize.observe(wrap);
     }
+    if (!inMatch && !starting) mountStartOverlay();
     syncSeriousClock();
     if (endState && !cinematic) showEndOverlay();
     if (pendingRiichi !== null) {
