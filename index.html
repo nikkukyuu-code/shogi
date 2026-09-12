@@ -1023,6 +1023,10 @@ label.setting {
   font-size: 1rem;
   letter-spacing: 0.06em;
 }
+.rank-record.miss {
+  color: #ffc8a0;
+  font-size: 0.95rem;
+}
 
 .rank-overlay {
   position: fixed;
@@ -2553,7 +2557,7 @@ label.setting {
     const best = list.filter(mine).reduce((a, e) => a == null || e.ms < a.ms ? e : a, null);
     if (best && nextMs >= best.ms) {
       const rank2 = list.findIndex((e) => e.ms === best.ms && e.at === best.at) + 1;
-      return { entry: best, rank: rank2 > 0 ? rank2 : 1, list, updated: false };
+      return { entry: best, rank: rank2 > 0 ? rank2 : 1, list, updated: false, attemptMs: nextMs };
     }
     const kept = [];
     for (const item of current) {
@@ -2568,7 +2572,7 @@ label.setting {
     const nextList = await openEntries(stored);
     const entry = await decryptResignTime(sealed) ?? { ms: nextMs, at: sealed.at, name, playerId: me };
     const rank = nextList.findIndex((e) => e.ms === entry.ms && e.at === entry.at) + 1;
-    return { entry, rank: rank > 0 ? rank : nextList.length, list: nextList, updated: true };
+    return { entry, rank: rank > 0 ? rank : nextList.length, list: nextList, updated: true, attemptMs: nextMs };
   }
   async function loadRanks() {
     const sealed = await readSealedList() ?? await migrateLegacy();
@@ -2662,6 +2666,7 @@ label.setting {
   var onSeventhPick = null;
   var seriousStartedAt = null;
   var lastRecordedMs = null;
+  var lastAttemptMs = null;
   var lastRank = null;
   var lastRankUpdated = false;
   var lastRecordAt = null;
@@ -3126,6 +3131,7 @@ label.setting {
     flipped = settings.humanSide === GOTE;
     seriousStartedAt = null;
     lastRecordedMs = null;
+    lastAttemptMs = null;
     lastRank = null;
     lastRankUpdated = false;
     lastRecordAt = null;
@@ -3217,6 +3223,7 @@ label.setting {
     onSeventhPick = null;
     flipped = settings.humanSide === GOTE;
     lastRecordedMs = null;
+    lastAttemptMs = null;
     lastRank = null;
     lastRankUpdated = false;
     lastRecordAt = null;
@@ -3259,21 +3266,24 @@ label.setting {
     if (isSerious() && seriousStartedAt != null && kifu.some((k) => k.side === settings.humanSide)) {
       const rec = await submitResignTime(elapsedSeriousMs(), savedNickname() || settings.nickname || "\u540D\u7121\u3057");
       lastRecordedMs = rec.entry.ms;
+      lastAttemptMs = rec.attemptMs;
       lastRank = rec.rank;
       lastRankUpdated = rec.updated;
       lastRecordAt = rec.updated ? rec.entry.at : lastRecordAt;
     } else {
       lastRecordedMs = isSerious() ? elapsedSeriousMs() : null;
+      lastAttemptMs = lastRecordedMs;
       lastRank = null;
       lastRankUpdated = false;
       lastRecordAt = null;
     }
+    const slower = isSerious() && !lastRankUpdated && lastAttemptMs != null && lastRecordedMs != null && lastAttemptMs > lastRecordedMs;
     endState = {
       humanWon: false,
       reason: "resign",
       winner: opposite(settings.humanSide),
       title: "\u8CA0\u3051",
-      subtitle: lastRecordedMs != null ? `\u6295\u4E86\u3000${formatMs(lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}${isSerious() && !lastRankUpdated && lastRank ? "\u3000\u81EA\u5DF1\u30D9\u30B9\u30C8\u66F4\u65B0\u306A\u3057" : ""}` : "\u6295\u4E86"
+      subtitle: slower ? `\u4ECA\u56DE ${formatMs(lastAttemptMs)}\u3000\u81EA\u5DF1\u30D9\u30B9\u30C8 ${formatMs(lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}` : lastRecordedMs != null ? `\u6295\u4E86\u3000${formatMs(lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}` : "\u6295\u4E86"
     };
     playLose();
     render();
@@ -3589,8 +3599,9 @@ label.setting {
       <div class="end-particles">${particles}</div>
       <h2 class="big">${endState.title}</h2>
       <div class="sub">${endState.subtitle}</div>
-      ${lastRecordedMs != null ? `<div class="rank-record">${formatMs(lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}</div>` : ""}
+      ${lastRecordedMs != null ? `<div class="rank-record">${formatMs(lastRankUpdated ? lastRecordedMs : lastAttemptMs ?? lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}</div>` : ""}
       ${lastRankUpdated && lastRank != null && lastRank <= 100 ? '<div class="rank-record">\u304A\u3081\u3067\u3068\u3046</div>' : ""}
+      ${!lastRankUpdated && lastAttemptMs != null && lastRecordedMs != null && lastAttemptMs > lastRecordedMs ? '<div class="rank-record miss">\u524D\u56DE\u3088\u308A\u9045\u304B\u3063\u305F\u306E\u3067\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u66F4\u65B0\u3057\u307E\u305B\u3093</div>' : ""}
       <div class="end-trophies">${slots}</div>
       <div class="btns" style="justify-content:center">
         <button class="primary" id="btn-again">${btnLabel}</button>
