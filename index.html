@@ -1004,6 +1004,112 @@ label.setting {
   width: 100%;
 }
 
+.start-cinematic, .congrats-cinematic {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.start-cinematic.show, .congrats-cinematic.show { opacity: 1; }
+.start-cinematic.out, .congrats-cinematic.out { opacity: 0; }
+.start-vignette, .congrats-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(40,18,8,0.35) 0%, rgba(0,0,0,0.82) 72%);
+}
+.start-seal {
+  position: relative;
+  padding: 10px 28px;
+  border: 4px solid #c41e1e;
+  color: #c41e1e;
+  font-size: clamp(2rem, 10vw, 4.2rem);
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  background: rgba(255, 244, 220, 0.08);
+  transform: scale(1.35) rotate(-8deg);
+  opacity: 0;
+  text-shadow: 0 0 18px rgba(196,30,30,0.45);
+}
+.start-cinematic.show .start-seal {
+  animation: stampIn 0.45s cubic-bezier(0.12, 0.8, 0.2, 1) forwards;
+}
+.start-word {
+  position: relative;
+  margin-top: 18px;
+  font-size: clamp(1.6rem, 7vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  color: #ffe066;
+  text-shadow: 0 0 20px #ffaa00, 0 3px 0 #5a1800;
+  transform: translateY(16px);
+  opacity: 0;
+}
+.start-cinematic.show .start-word {
+  animation: startWord 0.55s ease 0.55s forwards;
+}
+.start-cinematic.go .start-word {
+  letter-spacing: 0.5em;
+}
+@keyframes stampIn {
+  0% { opacity: 0; transform: scale(1.8) rotate(-14deg); }
+  70% { opacity: 1; transform: scale(0.92) rotate(-6deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-8deg); }
+}
+@keyframes startWord {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.congrats-cinematic { z-index: 160; }
+.congrats-word {
+  position: relative;
+  font-size: clamp(2.2rem, 11vw, 4.6rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: #ffe066;
+  text-shadow: 0 0 24px #ffd700, 0 4px 0 #8b1e1e;
+  transform: scale(0.4);
+  opacity: 0;
+}
+.congrats-cinematic.show .congrats-word {
+  animation: congratsPop 0.7s cubic-bezier(0.16, 0.84, 0.28, 1) forwards;
+}
+.congrats-rank {
+  position: relative;
+  margin-top: 10px;
+  font-size: clamp(1.1rem, 4.5vw, 1.7rem);
+  letter-spacing: 0.2em;
+  color: #f3e6c8;
+  opacity: 0;
+}
+.congrats-cinematic.show .congrats-rank {
+  animation: startWord 0.45s ease 0.35s forwards;
+}
+.congrats-petal {
+  position: absolute;
+  width: 10px;
+  height: 14px;
+  border-radius: 10px 2px 10px 2px;
+  background: #ffd700;
+  opacity: 0;
+  animation: petalFall 1.8s ease-out forwards;
+}
+.congrats-petal.alt { background: #c41e1e; }
+@keyframes congratsPop {
+  0% { opacity: 0; transform: scale(0.4) rotate(-8deg); }
+  70% { opacity: 1; transform: scale(1.08) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes petalFall {
+  0% { opacity: 1; transform: translate(0,0) rotate(0); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(220deg); }
+}
+
 </style>
 </head>
 <body>
@@ -1842,13 +1948,36 @@ label.setting {
     } catch {
     }
   }
+  function playKickoff(label) {
+    const c = ac();
+    if (c) {
+      noiseBurst(c, 0.16, 0.2, 0, 160);
+      osc(c, "triangle", 196, 0.28, 0.07);
+      osc(c, "sine", 392, 0.22, 0.05, 0.12);
+      osc(c, "sine", 784, 0.28, 0.05, 0.28);
+      osc(c, "triangle", 1046, 0.35, 0.045, 0.46);
+    }
+    speakJa(`${label}\u3001\u5BFE\u5C40\u958B\u59CB`);
+  }
+  function playCongrats(rank) {
+    const c = ac();
+    if (c) {
+      const notes = [784, 988, 1174, 1568, 1976];
+      notes.forEach((f, i) => {
+        osc(c, "triangle", f, 0.28, 0.065, i * 0.09);
+        osc(c, "sine", f * 2, 0.18, 0.02, i * 0.09 + 0.02);
+      });
+      osc(c, "sine", 523, 0.7, 0.04, 0.5);
+    }
+    speakJa(rank === 1 ? "\u304A\u3081\u3067\u3068\u3046\u3001\u4E00\u4F4D\u3067\u3059" : `\u304A\u3081\u3067\u3068\u3046\u3001${rank}\u4F4D\u3067\u3059`);
+  }
 
   // src/ui/ranking.ts
   var PLAIN_KEY = "shogi-serious-rank-v1";
   var STORE_KEY = "shogi-serious-rank-v3";
   var LEGACY_STORE = "shogi-serious-rank-v2";
   var SALT_KEY = "shogi-serious-rank-salt";
-  var MAX = 30;
+  var MAX = 100;
   var PEPPER = "shogi-serious-rank/aes-gcm/2026-09-12/nikkukyuu";
   function formatMs(ms) {
     return `${Math.max(0, Math.round(ms)).toLocaleString("ja-JP")} \u30DF\u30EA\u79D2`;
@@ -2076,6 +2205,16 @@ label.setting {
   var lastRank = null;
   var lastRecordAt = null;
   var clockRaf = 0;
+  var starting = false;
+  var DIFF_LABEL = {
+    beginner: "\u521D\u7D1A",
+    intermediate: "\u4E2D\u7D1A",
+    advanced: "\u4E0A\u7D1A",
+    serious: "\u771F\u5263"
+  };
+  function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
   function isSerious() {
     return settings.difficulty === "serious";
   }
@@ -2140,10 +2279,10 @@ label.setting {
     return [];
   }
   function isHumanTurn() {
-    return !endState && !cinematic && pos.sideToMove === settings.humanSide && !thinking;
+    return !endState && !cinematic && !starting && pos.sideToMove === settings.humanSide && !thinking;
   }
   function startEngineIfNeeded() {
-    if (endState || thinking) return;
+    if (endState || thinking || starting) return;
     if (pos.sideToMove === settings.humanSide) return;
     runEngine();
   }
@@ -2351,6 +2490,62 @@ label.setting {
     });
     document.body.appendChild(overlay);
   }
+  async function playStartIntro() {
+    document.querySelector(".start-cinematic")?.remove();
+    document.querySelector(".end-overlay")?.remove();
+    const el = document.createElement("div");
+    el.className = "start-cinematic";
+    el.innerHTML = `
+    <div class="start-vignette"></div>
+    <div class="start-seal">${DIFF_LABEL[settings.difficulty]}</div>
+    <div class="start-word">\u5BFE\u5C40\u958B\u59CB</div>`;
+    document.body.appendChild(el);
+    playKickoff(DIFF_LABEL[settings.difficulty]);
+    requestAnimationFrame(() => el.classList.add("show"));
+    await wait(1500);
+    el.classList.add("go");
+    await wait(700);
+    el.classList.add("out");
+    await wait(320);
+    el.remove();
+  }
+  function playCongrats2(rank) {
+    document.querySelector(".congrats-cinematic")?.remove();
+    const petals = Array.from({ length: 36 }, (_, i) => {
+      const dx = (Math.random() - 0.5) * 520;
+      const dy = 80 + Math.random() * 420;
+      const left = 8 + Math.random() * 84;
+      const top = 8 + Math.random() * 36;
+      const delay = Math.random() * 0.45;
+      const alt = i % 3 === 0 ? " alt" : "";
+      return `<span class="congrats-petal${alt}" style="left:${left}%;top:${top}%;--dx:${dx}px;--dy:${dy}px;animation-delay:${delay}s"></span>`;
+    }).join("");
+    const el = document.createElement("div");
+    el.className = "congrats-cinematic";
+    el.innerHTML = `
+    <div class="congrats-vignette"></div>
+    ${petals}
+    <div class="congrats-word">\u304A\u3081\u3067\u3068\u3046</div>
+    <div class="congrats-rank">${rank}\u4F4D\u5165\u8CDE</div>`;
+    document.body.appendChild(el);
+    playCongrats(rank);
+    requestAnimationFrame(() => el.classList.add("show"));
+    window.setTimeout(() => {
+      el.classList.add("out");
+      window.setTimeout(() => el.remove(), 420);
+    }, 2600);
+  }
+  async function startMatch() {
+    if (starting) return;
+    starting = true;
+    try {
+      await playStartIntro();
+      newGame();
+    } finally {
+      starting = false;
+      startEngineIfNeeded();
+    }
+  }
   function newGame() {
     stopEngine();
     searchId++;
@@ -2427,6 +2622,9 @@ label.setting {
     };
     playLose();
     render();
+    if (lastRank != null && lastRank >= 1 && lastRank <= 100) {
+      window.setTimeout(() => playCongrats2(lastRank), 380);
+    }
   }
   function toggleSeriousUi() {
     const rankBtn = app.querySelector("#btn-rank");
@@ -2705,6 +2903,7 @@ label.setting {
       <h2 class="big">${endState.title}</h2>
       <div class="sub">${endState.subtitle}</div>
       ${lastRecordedMs != null ? `<div class="rank-record">${formatMs(lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}</div>` : ""}
+      ${lastRank != null && lastRank <= 100 ? '<div class="rank-record">\u304A\u3081\u3067\u3068\u3046</div>' : ""}
       <div class="end-trophies">${slots}</div>
       <div class="btns" style="justify-content:center">
         <button class="primary" id="btn-again">${btnLabel}</button>
@@ -2712,7 +2911,9 @@ label.setting {
       </div>
     </div>`;
     document.body.appendChild(overlay);
-    overlay.querySelector("#btn-again").addEventListener("click", () => newGame());
+    overlay.querySelector("#btn-again").addEventListener("click", () => {
+      void startMatch();
+    });
     overlay.querySelector("#btn-end-rank")?.addEventListener("click", () => {
       void showRanking(lastRecordAt ?? void 0);
     });
@@ -2784,9 +2985,7 @@ label.setting {
     selDiff.value = settings.difficulty;
     selDiff.addEventListener("change", () => {
       const next = selDiff.value;
-      const was = settings.difficulty;
       settings.difficulty = next;
-      if (next === "serious" && was !== "serious" && !endState) startSeriousClock();
       if (next !== "serious") {
         seriousStartedAt = null;
         lastRecordedMs = null;
@@ -2794,12 +2993,13 @@ label.setting {
         lastRecordAt = null;
       }
       toggleSeriousUi();
+      void startMatch();
     });
     const selSide = app.querySelector("#sel-side");
     selSide.value = String(settings.humanSide);
     selSide.addEventListener("change", () => {
       settings.humanSide = Number(selSide.value);
-      newGame();
+      void startMatch();
     });
     const chk = app.querySelector("#chk-sound");
     chk.checked = settings.sound;
@@ -2808,7 +3008,9 @@ label.setting {
       settings.sound = chk.checked;
       setSoundEnabled(settings.sound);
     });
-    app.querySelector("#btn-new").addEventListener("click", () => newGame());
+    app.querySelector("#btn-new").addEventListener("click", () => {
+      void startMatch();
+    });
     app.querySelector("#btn-undo").addEventListener("click", () => undo());
     app.querySelector("#btn-resign").addEventListener("click", () => {
       void resign();
@@ -2857,7 +3059,7 @@ label.setting {
       }, 700);
     }
   }
-  newGame();
+  void startMatch();
 })();
 
 </script>
