@@ -1845,7 +1845,8 @@ label.setting {
 
   // src/ui/ranking.ts
   var PLAIN_KEY = "shogi-serious-rank-v1";
-  var STORE_KEY = "shogi-serious-rank-v2";
+  var STORE_KEY = "shogi-serious-rank-v3";
+  var LEGACY_STORE = "shogi-serious-rank-v2";
   var SALT_KEY = "shogi-serious-rank-salt";
   var MAX = 30;
   var PEPPER = "shogi-serious-rank/aes-gcm/2026-09-12/nikkukyuu";
@@ -1870,83 +1871,152 @@ label.setting {
     localStorage.setItem(SALT_KEY, toB64(salt));
     return salt;
   }
-  function aadBytes() {
-    return new TextEncoder().encode(`shogi-serious-rank|${location.origin}`);
+  function aadFor(kind) {
+    return new TextEncoder().encode(`shogi-serious-${kind}|${location.origin}`);
   }
   async function rankKey() {
+    if (!crypto?.subtle) throw new Error("crypto unavailable");
     const salt = deviceSalt();
-    const material = new Uint8Array(await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(`${PEPPER}|${location.origin}|${toB64(salt)}`)
-    ));
+    const material = new Uint8Array(
+      await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(`${PEPPER}|${location.origin}|${toB64(salt)}`)
+      )
+    );
     return crypto.subtle.importKey("raw", material, "AES-GCM", false, ["encrypt", "decrypt"]);
   }
-  function normalize(list) {
-    if (!Array.isArray(list)) return [];
-    return list.filter((x) => {
-      if (!x || typeof x !== "object") return false;
-      const e = x;
-      return typeof e.ms === "number" && Number.isFinite(e.ms) && e.ms >= 0 && typeof e.at === "number";
-    }).sort((a, b) => a.ms - b.ms || a.at - b.at).slice(0, MAX);
-  }
-  async function writeEncrypted(list) {
-    if (!crypto?.subtle) throw new Error("crypto unavailable");
+  async function encryptBytes(plain, kind) {
     const key = await rankKey();
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const pt = new TextEncoder().encode(JSON.stringify(list));
     const ct = new Uint8Array(
-      await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: aadBytes() }, key, pt)
+      await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: aadFor(kind) }, key, plain)
     );
-    localStorage.setItem(
-      STORE_KEY,
-      JSON.stringify({ v: 2, iv: toB64(iv), ct: toB64(ct) })
-    );
-    localStorage.removeItem(PLAIN_KEY);
+    return { iv: toB64(iv), ct: toB64(ct) };
   }
-  async function readEncrypted() {
+  async function decryptBytes(iv, ct, kind) {
+    const key = await rankKey();
+    return new Uint8Array(
+      await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: fromB64(iv), additionalData: aadFor(kind) },
+        key,
+        fromB64(ct)
+      )
+    );
+  }
+  async function encryptResignTime(ms) {
+    const sealedMs = Math.max(0, Math.round(ms));
+    const packed = new TextEncoder().encode(JSON.stringify({ ms: sealedMs }));
+    const { iv, ct } = await encryptBytes(packed, "time");
+    return { iv, ct, at: Date.now() };
+  }
+  async function decryptResignTime(sealed) {
+    try {
+      const pt = JSON.parse(new TextDecoder().decode(await decryptBytes(sealed.iv, sealed.ct, "time")));
+      if (typeof pt.ms !== "number" || !Number.isFinite(pt.ms) || pt.ms < 0) return null;
+      return { ms: pt.ms, at: sealed.at };
+    } catch {
+      return null;
+    }
+  }
+  function isSealed(x) {
+    if (!x || typeof x !== "object") return false;
+    const e = x;
+    return typeof e.iv === "string" && typeof e.ct === "string" && typeof e.at === "number";
+  }
+  async function writeSealedList(list) {
+    const { iv, ct } = await encryptBytes(new TextEncoder().encode(JSON.stringify(list.slice(0, MAX))), "store");
+    localStorage.setItem(STORE_KEY, JSON.stringify({ v: 3, iv, ct }));
+    localStorage.removeItem(PLAIN_KEY);
+    localStorage.removeItem(LEGACY_STORE);
+  }
+  async function readSealedList() {
     const raw = localStorage.getItem(STORE_KEY);
     if (!raw) return null;
     try {
       const packed = JSON.parse(raw);
       if (!packed.iv || !packed.ct) return [];
-      const key = await rankKey();
-      const pt = await crypto.subtle.decrypt(
-        { name: "AES-GCM", iv: fromB64(packed.iv), additionalData: aadBytes() },
-        key,
-        fromB64(packed.ct)
-      );
-      return normalize(JSON.parse(new TextDecoder().decode(pt)));
+      const parsed = JSON.parse(new TextDecoder().decode(await decryptBytes(packed.iv, packed.ct, "store")));
+      return Array.isArray(parsed) ? parsed.filter(isSealed).slice(0, MAX) : [];
     } catch {
       return [];
     }
   }
-  function readLegacyPlain() {
-    const raw = localStorage.getItem(PLAIN_KEY);
-    if (!raw) return [];
-    try {
-      return normalize(JSON.parse(raw));
-    } catch {
-      return [];
+  async function openEntries(sealed) {
+    const out = [];
+    for (const item of sealed) {
+      const row = await decryptResignTime(item);
+      if (row) out.push(row);
     }
+    return out.sort((a, b) => a.ms - b.ms || a.at - b.at).slice(0, MAX);
   }
-  async function loadRanks() {
-    const enc = await readEncrypted();
-    if (enc) return enc;
-    const legacy = readLegacyPlain();
-    if (legacy.length) {
+  async function migrateLegacy() {
+    const v2 = localStorage.getItem(LEGACY_STORE);
+    if (v2) {
       try {
-        await writeEncrypted(legacy);
+        const packed = JSON.parse(v2);
+        if (packed.iv && packed.ct) {
+          const key = await rankKey();
+          const aad = new TextEncoder().encode(`shogi-serious-rank|${location.origin}`);
+          const pt = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: fromB64(packed.iv), additionalData: aad },
+            key,
+            fromB64(packed.ct)
+          );
+          const rows = JSON.parse(new TextDecoder().decode(pt));
+          if (Array.isArray(rows)) {
+            const sealed = [];
+            for (const row of rows) {
+              if (row && typeof row === "object" && typeof row.ms === "number") {
+                const s = await encryptResignTime(row.ms);
+                s.at = typeof row.at === "number" ? row.at : s.at;
+                sealed.push(s);
+              }
+            }
+            if (sealed.length) {
+              await writeSealedList(sealed);
+              return sealed;
+            }
+          }
+        }
       } catch {
       }
     }
-    return legacy;
+    const plain = localStorage.getItem(PLAIN_KEY);
+    if (!plain) return [];
+    try {
+      const rows = JSON.parse(plain);
+      if (!Array.isArray(rows)) return [];
+      const sealed = [];
+      for (const row of rows) {
+        if (row && typeof row === "object" && typeof row.ms === "number") {
+          const s = await encryptResignTime(row.ms);
+          s.at = typeof row.at === "number" ? row.at : s.at;
+          sealed.push(s);
+        }
+      }
+      if (sealed.length) await writeSealedList(sealed);
+      return sealed;
+    } catch {
+      return [];
+    }
   }
-  async function addRank(ms) {
-    const entry = { ms: Math.max(0, Math.round(ms)), at: Date.now() };
-    const list = normalize([...await loadRanks(), entry]);
-    await writeEncrypted(list);
+  async function sendSealedRank(sealed) {
+    const current = await readSealedList() ?? await migrateLegacy();
+    const next = [...current, sealed];
+    await writeSealedList(next);
+    return next;
+  }
+  async function submitResignTime(ms) {
+    const sealed = await encryptResignTime(ms);
+    const stored = await sendSealedRank(sealed);
+    const list = await openEntries(stored);
+    const entry = await decryptResignTime(sealed) ?? { ms: Math.max(0, Math.round(ms)), at: sealed.at };
     const rank = list.findIndex((e) => e.ms === entry.ms && e.at === entry.at) + 1;
     return { entry, rank: rank > 0 ? rank : list.length, list };
+  }
+  async function loadRanks() {
+    const sealed = await readSealedList() ?? await migrateLegacy();
+    return openEntries(sealed);
   }
   async function showRanking(highlightAt) {
     document.querySelector(".rank-overlay")?.remove();
@@ -2339,7 +2409,7 @@ label.setting {
   async function resign() {
     if (endState || thinking) return;
     if (isSerious() && seriousStartedAt != null && kifu.some((k) => k.side === settings.humanSide)) {
-      const rec = await addRank(elapsedSeriousMs());
+      const rec = await submitResignTime(elapsedSeriousMs());
       lastRecordedMs = rec.entry.ms;
       lastRank = rec.rank;
       lastRecordAt = rec.entry.at;
