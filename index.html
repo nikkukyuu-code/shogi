@@ -1110,6 +1110,71 @@ label.setting {
   100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(220deg); }
 }
 
+.start-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 0;
+  padding: 12px 16px 20px;
+}
+.start-screen h1 {
+  margin: 0;
+  font-size: clamp(2rem, 9vw, 3.4rem);
+  letter-spacing: 0.28em;
+  color: var(--gold);
+}
+.start-tag {
+  margin: -6px 0 8px;
+  opacity: 0.8;
+  letter-spacing: 0.08em;
+  font-size: 0.9rem;
+}
+.start-btn {
+  min-width: min(280px, 80vw);
+  min-height: 58px;
+  font-size: 1.35rem;
+  letter-spacing: 0.28em;
+  font-weight: 700;
+  background: linear-gradient(180deg, #a03030, #701818);
+  border-color: #e0c060;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.start-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: min(280px, 80vw);
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+}
+.start-field select {
+  width: 100%;
+  min-height: 44px;
+  text-align: center;
+}
+.start-screen #btn-rank {
+  min-width: min(280px, 80vw);
+  min-height: 44px;
+}
+.diff-lock {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: #ffe8b0;
+  border: 1px solid rgba(201,162,39,0.4);
+  border-radius: 4px;
+  background: rgba(42, 28, 16, 0.65);
+  white-space: nowrap;
+}
+
 </style>
 </head>
 <body>
@@ -2206,6 +2271,7 @@ label.setting {
   var lastRecordAt = null;
   var clockRaf = 0;
   var starting = false;
+  var inMatch = false;
   var DIFF_LABEL = {
     beginner: "\u521D\u7D1A",
     intermediate: "\u4E2D\u7D1A",
@@ -2221,12 +2287,6 @@ label.setting {
   function elapsedSeriousMs() {
     if (seriousStartedAt == null) return 0;
     return Math.max(0, Math.round(performance.now() - seriousStartedAt));
-  }
-  function startSeriousClock() {
-    seriousStartedAt = performance.now();
-    lastRecordedMs = null;
-    lastRank = null;
-    lastRecordAt = null;
   }
   function paintSeriousClock() {
     const el = document.querySelector("#serious-clock");
@@ -2279,10 +2339,10 @@ label.setting {
     return [];
   }
   function isHumanTurn() {
-    return !endState && !cinematic && !starting && pos.sideToMove === settings.humanSide && !thinking;
+    return inMatch && !endState && !cinematic && !starting && pos.sideToMove === settings.humanSide && !thinking;
   }
   function startEngineIfNeeded() {
-    if (endState || thinking || starting) return;
+    if (!inMatch || endState || thinking || starting) return;
     if (pos.sideToMove === settings.humanSide) return;
     runEngine();
   }
@@ -2535,11 +2595,92 @@ label.setting {
       window.setTimeout(() => el.remove(), 420);
     }, 2600);
   }
+  function bindMenuControls(root) {
+    const selDiff = root.querySelector("#sel-diff");
+    if (selDiff) {
+      selDiff.value = settings.difficulty;
+      selDiff.addEventListener("change", () => {
+        settings.difficulty = selDiff.value;
+        const rankBtn = root.querySelector("#btn-rank");
+        if (rankBtn) rankBtn.hidden = !isSerious();
+      });
+    }
+    const selSide = root.querySelector("#sel-side");
+    if (selSide) {
+      selSide.value = String(settings.humanSide);
+      selSide.addEventListener("change", () => {
+        settings.humanSide = Number(selSide.value);
+      });
+    }
+    const chk = root.querySelector("#chk-sound");
+    if (chk) {
+      chk.checked = settings.sound;
+      setSoundEnabled(settings.sound);
+      chk.addEventListener("change", () => {
+        settings.sound = chk.checked;
+        setSoundEnabled(settings.sound);
+      });
+    }
+    root.querySelector("#btn-rank")?.addEventListener("click", () => {
+      void showRanking(lastRecordAt ?? void 0);
+    });
+  }
+  function showStartScreen() {
+    inMatch = false;
+    starting = false;
+    stopEngine();
+    searchId++;
+    thinking = false;
+    endState = null;
+    seriousStartedAt = null;
+    lastRecordedMs = null;
+    lastRank = null;
+    lastRecordAt = null;
+    document.querySelector(".end-overlay")?.remove();
+    document.querySelector(".rank-overlay")?.remove();
+    document.querySelector(".start-cinematic")?.remove();
+    document.querySelector(".congrats-cinematic")?.remove();
+    document.querySelector(".riichi-banner")?.remove();
+    document.querySelector(".cinematic")?.remove();
+    renderStartScreen();
+  }
+  function renderStartScreen() {
+    app.innerHTML = `
+    <div class="start-screen">
+      <h1>\u5C06\u68CB</h1>
+      <p class="start-tag">\u6B69\u4EE5\u59167\u679A or \u7389\u53D6\u308A</p>
+      <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
+      <label class="start-field">
+        <span>\u96E3\u6613\u5EA6</span>
+        <select id="sel-diff" aria-label="\u96E3\u6613\u5EA6">
+          <option value="beginner">\u521D\u7D1A</option>
+          <option value="intermediate">\u4E2D\u7D1A</option>
+          <option value="advanced">\u4E0A\u7D1A</option>
+          <option value="serious">\u771F\u5263</option>
+        </select>
+      </label>
+      <label class="start-field">
+        <span>\u624B\u756A</span>
+        <select id="sel-side" aria-label="\u624B\u756A">
+          <option value="0">\u5148\u624B</option>
+          <option value="1">\u5F8C\u624B</option>
+        </select>
+      </label>
+      <button type="button" id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0</button>
+      <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
+    </div>`;
+    bindMenuControls(app);
+    app.querySelector("#btn-start").addEventListener("click", () => {
+      unlock();
+      void startMatch();
+    });
+  }
   async function startMatch() {
-    if (starting) return;
+    if (starting || inMatch) return;
     starting = true;
     try {
       await playStartIntro();
+      inMatch = true;
       newGame();
     } finally {
       starting = false;
@@ -2625,15 +2766,6 @@ label.setting {
     if (lastRank != null && lastRank >= 1 && lastRank <= 100) {
       window.setTimeout(() => playCongrats2(lastRank), 380);
     }
-  }
-  function toggleSeriousUi() {
-    const rankBtn = app.querySelector("#btn-rank");
-    const clock = app.querySelector("#serious-clock");
-    if (rankBtn) rankBtn.hidden = !isSerious();
-    if (clock) clock.hidden = !isSerious();
-    if (isSerious() && seriousStartedAt == null && !endState) startSeriousClock();
-    if (!isSerious()) seriousStartedAt = null;
-    syncSeriousClock();
   }
   function renderHand(side, el) {
     const hand = pos.hands[side];
@@ -2911,9 +3043,7 @@ label.setting {
       </div>
     </div>`;
     document.body.appendChild(overlay);
-    overlay.querySelector("#btn-again").addEventListener("click", () => {
-      void startMatch();
-    });
+    overlay.querySelector("#btn-again").addEventListener("click", () => showStartScreen());
     overlay.querySelector("#btn-end-rank")?.addEventListener("click", () => {
       void showRanking(lastRecordAt ?? void 0);
     });
@@ -2952,17 +3082,9 @@ label.setting {
       <button id="btn-resign">\u6295\u4E86</button>
       <button id="btn-new">\u65B0\u898F</button>
       <button class="stop" id="btn-stop" ${thinking ? "" : "disabled"}>\u4ECA\u3059\u3050\u6307\u3059</button>
-      <select id="sel-diff" aria-label="\u601D\u8003\u30EC\u30D9\u30EB">
-        <option value="beginner">\u521D\u7D1A</option>
-        <option value="intermediate">\u4E2D\u7D1A</option>
-        <option value="advanced">\u4E0A\u7D1A</option>
-        <option value="serious">\u771F\u5263</option>
-      </select>
+      <span class="diff-lock">${DIFF_LABEL[settings.difficulty]}</span>
       <button id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0</button>
-      <select id="sel-side" aria-label="\u624B\u756A">
-        <option value="0">\u5148\u624B</option>
-        <option value="1">\u5F8C\u624B</option>
-      </select>
+      <span class="diff-lock">${settings.humanSide === 0 ? "\u5148\u624B" : "\u5F8C\u624B"}</span>
       <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       <div class="kifu" id="kifu" hidden></div>
     </div>
@@ -2981,26 +3103,6 @@ label.setting {
     renderHand(botSide, handBot);
     renderTrophyBar(topSide, app.querySelector("#trophy-top"), false);
     renderTrophyBar(botSide, app.querySelector("#trophy-bot"), true);
-    const selDiff = app.querySelector("#sel-diff");
-    selDiff.value = settings.difficulty;
-    selDiff.addEventListener("change", () => {
-      const next = selDiff.value;
-      settings.difficulty = next;
-      if (next !== "serious") {
-        seriousStartedAt = null;
-        lastRecordedMs = null;
-        lastRank = null;
-        lastRecordAt = null;
-      }
-      toggleSeriousUi();
-      void startMatch();
-    });
-    const selSide = app.querySelector("#sel-side");
-    selSide.value = String(settings.humanSide);
-    selSide.addEventListener("change", () => {
-      settings.humanSide = Number(selSide.value);
-      void startMatch();
-    });
     const chk = app.querySelector("#chk-sound");
     chk.checked = settings.sound;
     setSoundEnabled(settings.sound);
@@ -3008,9 +3110,7 @@ label.setting {
       settings.sound = chk.checked;
       setSoundEnabled(settings.sound);
     });
-    app.querySelector("#btn-new").addEventListener("click", () => {
-      void startMatch();
-    });
+    app.querySelector("#btn-new").addEventListener("click", () => showStartScreen());
     app.querySelector("#btn-undo").addEventListener("click", () => undo());
     app.querySelector("#btn-resign").addEventListener("click", () => {
       void resign();
@@ -3059,7 +3159,7 @@ label.setting {
       }, 700);
     }
   }
-  void startMatch();
+  showStartScreen();
 })();
 
 </script>
