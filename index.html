@@ -1272,6 +1272,24 @@ label.setting {
   50% { opacity: 1; transform: scale(1); }
 }
 
+
+.think-banner {
+  flex-shrink: 0;
+  height: 0;
+  overflow: hidden;
+  text-align: center;
+  line-height: 1.1;
+}
+.think-banner.on {
+  height: auto;
+  padding: 1px 0 3px;
+  font-size: clamp(1.35rem, 6vw, 2.15rem);
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  color: #ffe066;
+  text-shadow: 0 0 14px rgba(255, 210, 80, 0.55);
+}
+
 </style>
 </head>
 <body>
@@ -3107,10 +3125,17 @@ label.setting {
       window.setTimeout(() => el.remove(), 350);
     }, 2e3);
   }
+  function paintThinkBanner() {
+    const el = document.querySelector("#think-banner");
+    if (!el) return;
+    el.classList.toggle("on", thinking);
+    el.textContent = thinking ? "\u601D\u8003\u4E2D" : "";
+  }
   function renderStatusOnly() {
     if (!statusEl) return;
     statusEl.innerHTML = statusHtml();
     if (statsEl) statsEl.textContent = statsText();
+    paintThinkBanner();
   }
   function statusHtml() {
     if (!inMatch && !starting) {
@@ -3120,9 +3145,7 @@ label.setting {
       return `<strong>${endState.title}</strong> \u2014 ${endState.subtitle}`;
     }
     if (thinking) {
-      const d = engineInfo?.depth;
-      const depth = d ? ` \u6DF1\u3055${d}` : "";
-      return `<span class="think-chip"><i></i>\u76F8\u624B\u304C\u601D\u8003\u4E2D${depth}</span>`;
+      return "\u76F8\u624B\u306E\u756A\u3067\u3059";
     }
     const check = inCheck(pos, pos.sideToMove) ? '\u3000<span style="color:#ff8080">\u738B\u624B\uFF01</span>' : "";
     if (pos.sideToMove === settings.humanSide) {
@@ -3208,6 +3231,7 @@ label.setting {
     <div class="stage">
       <div id="trophy-top" class="trophy-bar"></div>
       <div class="hand" id="hand-top"></div>
+      <div id="think-banner" class="think-banner${thinking ? " on" : ""}">${thinking ? "\u601D\u8003\u4E2D" : ""}</div>
       <div class="board-wrap">
         <div class="board" id="board"></div>
       </div>
