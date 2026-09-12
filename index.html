@@ -978,6 +978,7 @@ label.setting {
   flex-shrink: 0;
   min-width: 0;
 }
+.serious-clock {
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
   font-size: 0.78rem;
@@ -1337,24 +1338,23 @@ label.setting {
 
 
 .think-banner {
+  display: none;
   flex-shrink: 0;
-  height: 0;
-  overflow: hidden;
-  text-align: center;
-  line-height: 1.05;
-  pointer-events: none;
-}
-.think-banner.on {
-  height: auto;
+  align-items: center;
   margin: 0;
   padding: 0;
+  line-height: 1.05;
+  pointer-events: none;
   font-size: clamp(1.05rem, 3.6vw, 1.45rem);
   font-weight: 800;
   letter-spacing: 0.12em;
   color: #ffe066;
   text-shadow: 0 0 12px #ffd24a, 0 0 4px #c9a227;
-  animation: thinkGlow 1.05s ease-in-out infinite;
   white-space: nowrap;
+}
+.think-banner.on {
+  display: inline-flex;
+  animation: thinkGlow 1.05s ease-in-out infinite;
 }
 .think-banner .dots {
   display: inline-flex;
@@ -2613,6 +2613,8 @@ label.setting {
   var lastMove = null;
   var endState = null;
   var thinking = false;
+  var thinkStartedAt = 0;
+  var thinkHoldTimer = 0;
   var engineInfo = null;
   var searchId = 0;
   var flipped = false;
@@ -2718,12 +2720,21 @@ label.setting {
     if (pos.sideToMove === settings.humanSide) return;
     runEngine();
   }
+  function clearThinkHold() {
+    if (thinkHoldTimer) {
+      window.clearTimeout(thinkHoldTimer);
+      thinkHoldTimer = 0;
+    }
+  }
   function runEngine() {
+    clearThinkHold();
     thinking = true;
+    thinkStartedAt = performance.now();
     engineInfo = null;
     const id = ++searchId;
     playThinking();
     render();
+    paintThinkBanner();
     worker.postMessage({
       type: "search",
       pos: clonePosition(pos),
@@ -2741,6 +2752,7 @@ label.setting {
     }
     if (msg.type === "error") {
       console.error(msg.message);
+      clearThinkHold();
       thinking = false;
       const legal = generateLegalMoves(pos);
       if (legal.length) applyHumanOrEngineMove(legal[0], false);
@@ -2750,17 +2762,24 @@ label.setting {
     }
     if (msg.type === "result") {
       if (msg.id !== searchId) return;
-      thinking = false;
       engineInfo = msg.info;
-      let move = msg.info.bestMove;
-      const legal = generateLegalMoves(pos);
-      if (!move || !legal.some((m) => movesEqual(m, move))) {
-        move = legal[0] ?? null;
-      }
-      if (move) applyHumanOrEngineMove(move, false);
-      else checkEnd();
-      render();
-      startEngineIfNeeded();
+      const applyResult = () => {
+        if (msg.id !== searchId) return;
+        thinkHoldTimer = 0;
+        thinking = false;
+        let move = msg.info.bestMove;
+        const legal = generateLegalMoves(pos);
+        if (!move || !legal.some((m) => movesEqual(m, move))) {
+          move = legal[0] ?? null;
+        }
+        if (move) applyHumanOrEngineMove(move, false);
+        else checkEnd();
+        render();
+        startEngineIfNeeded();
+      };
+      const wait2 = Math.max(0, 720 - (performance.now() - thinkStartedAt));
+      if (wait2 > 0) thinkHoldTimer = window.setTimeout(applyResult, wait2);
+      else applyResult();
     }
   };
   function stopEngine() {
@@ -3061,6 +3080,7 @@ label.setting {
     starting = false;
     stopEngine();
     searchId++;
+    clearThinkHold();
     thinking = false;
     engineInfo = null;
     endState = null;
@@ -3152,6 +3172,7 @@ label.setting {
     selected = null;
     selectedDrop = null;
     legalTargets = [];
+    clearThinkHold();
     thinking = false;
     engineInfo = null;
     animTrophy = null;
@@ -3176,6 +3197,7 @@ label.setting {
     if (thinking) {
       stopEngine();
       searchId++;
+      clearThinkHold();
       thinking = false;
     }
     if (history.length <= 1) return;
