@@ -2315,8 +2315,8 @@ label.setting {
   function formatMs(ms) {
     return `${Math.max(0, Math.round(ms)).toLocaleString("ja-JP")} \u30DF\u30EA\u79D2`;
   }
-  var NAME_KEY = "shogi-taken-names";
   var PLAYER_KEY = "shogi-player-id";
+  var MY_NAME_KEY = "shogi-player-name";
   function playerId() {
     let id = localStorage.getItem(PLAYER_KEY);
     if (!id) {
@@ -2328,18 +2328,14 @@ label.setting {
   function normalizeNick(raw) {
     return raw.replace(/\s+/g, " ").trim().slice(0, 12);
   }
+  function savedNickname() {
+    return normalizeNick(localStorage.getItem(MY_NAME_KEY) || "");
+  }
   function nickKey(name) {
     return name.normalize("NFKC").toLowerCase();
   }
-  function rememberTaken(name) {
-    const cur = /* @__PURE__ */ new Set();
-    try {
-      const raw = JSON.parse(localStorage.getItem(NAME_KEY) || "[]");
-      if (Array.isArray(raw)) raw.forEach((n) => typeof n === "string" && cur.add(n));
-    } catch {
-    }
-    cur.add(name);
-    localStorage.setItem(NAME_KEY, JSON.stringify([...cur]));
+  function rememberMine(name) {
+    localStorage.setItem(MY_NAME_KEY, name);
   }
   async function remoteTaken() {
     try {
@@ -2351,36 +2347,72 @@ label.setting {
       return [];
     }
   }
-  async function claimNickname(raw) {
-    const base = normalizeNick(raw) || "\u540D\u7121\u3057";
+  async function takenByOthers() {
     const me = playerId();
-    const ranks = await loadRanks();
     const taken = /* @__PURE__ */ new Set();
     for (const n of await remoteTaken()) taken.add(nickKey(n));
-    try {
-      const rawTaken = JSON.parse(localStorage.getItem(NAME_KEY) || "[]");
-      if (Array.isArray(rawTaken)) rawTaken.forEach((n) => typeof n === "string" && taken.add(nickKey(n)));
-    } catch {
+    for (const e of await loadRanks()) {
+      if (e.name && e.playerId && e.playerId !== me) taken.add(nickKey(e.name));
     }
-    const mine = new Set(ranks.filter((e) => e.playerId === me && e.name).map((e) => nickKey(e.name)));
-    for (const e of ranks) {
-      if (e.name && e.playerId !== me) taken.add(nickKey(e.name));
-    }
-    const free = (n) => mine.has(nickKey(n)) || !taken.has(nickKey(n));
-    if (free(base)) {
-      rememberTaken(base);
-      return { name: base, changed: false };
-    }
+    return taken;
+  }
+  async function uniquify(base) {
+    const taken = await takenByOthers();
+    if (!taken.has(nickKey(base))) return base;
     for (let i = 2; i < 1e3; i++) {
       const n = `${base.slice(0, 10)}${i}`;
-      if (free(n)) {
-        rememberTaken(n);
-        return { name: n, changed: true };
+      if (!taken.has(nickKey(n))) return n;
+    }
+    return `${base.slice(0, 8)}${Math.floor(10 + Math.random() * 89)}`;
+  }
+  async function claimNickname(raw, mode = "keep") {
+    const official = savedNickname();
+    const typed = normalizeNick(raw);
+    if (mode === "keep" && official) {
+      return { name: official, changed: false };
+    }
+    const base = typed || official || "\u540D\u7121\u3057";
+    if (official && nickKey(base) === nickKey(official)) {
+      return { name: official, changed: false };
+    }
+    const name = await uniquify(base);
+    rememberMine(name);
+    if (official && nickKey(name) !== nickKey(official)) {
+      await rewriteMyRankNames(name);
+    }
+    return { name, changed: nickKey(name) !== nickKey(base) };
+  }
+  async function rewriteMyRankNames(name) {
+    const sealed = await readSealedList() ?? await migrateLegacy();
+    if (!sealed.length) return;
+    const me = playerId();
+    const next = [];
+    let changed = false;
+    for (const item of sealed) {
+      const row = await decryptResignTime(item);
+      if (!row) continue;
+      if (row.playerId === me && row.name !== name) {
+        const s = await encryptResignTime(row.ms, name);
+        s.at = row.at;
+        next.push(s);
+        changed = true;
+      } else {
+        next.push(item);
       }
     }
-    const fallback = `${base.slice(0, 8)}${Math.floor(10 + Math.random() * 89)}`;
-    rememberTaken(fallback);
-    return { name: fallback, changed: true };
+    if (changed) await writeSealedList(next);
+  }
+  async function hydrateNickname(pref) {
+    const me = playerId();
+    let name = savedNickname() || normalizeNick(pref);
+    if (!name) {
+      const mine = (await loadRanks()).filter((e) => e.playerId === me && e.name);
+      if (mine.length) name = mine[mine.length - 1].name;
+    }
+    if (!name) return "";
+    rememberMine(name);
+    await rewriteMyRankNames(name);
+    return name;
   }
   function toB64(bytes) {
     let bin = "";
@@ -2575,7 +2607,8 @@ label.setting {
       const hi = highlightAt && e.at === highlightAt ? ' class="me"' : "";
       const d = new Date(e.at);
       const when = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-      return `<li${hi}><span class="rk">${i + 1}</span><span class="nm">${e.name || "\u540D\u7121\u3057"}</span><span class="ms">${formatMs(e.ms)}</span><span class="when">${when}</span></li>`;
+      const nm = e.playerId === playerId() ? savedNickname() || e.name || "\u540D\u7121\u3057" : e.name || "\u540D\u7121\u3057";
+      return `<li${hi}><span class="rk">${i + 1}</span><span class="nm">${nm}</span><span class="ms">${formatMs(e.ms)}</span><span class="when">${when}</span></li>`;
     }).join("") : '<li class="empty">\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093</li>';
     overlay.querySelector("ol").innerHTML = rows;
   }
@@ -2604,6 +2637,16 @@ label.setting {
     localStorage.setItem(PREF_KEY, JSON.stringify({ difficulty: settings.difficulty, nickname: settings.nickname }));
   }
   loadPrefs();
+  if (!settings.nickname) settings.nickname = savedNickname();
+  void hydrateNickname(settings.nickname).then((n) => {
+    if (!n) return;
+    settings.nickname = n;
+    savePrefs();
+    const btn = document.querySelector("#btn-nick");
+    if (btn) btn.textContent = n;
+    const inp = document.querySelector("#inp-nick");
+    if (inp) inp.value = n;
+  });
   var pos = initialPosition();
   var history = [clonePosition(pos)];
   var kifu = [];
@@ -2990,15 +3033,15 @@ label.setting {
   function displayNick() {
     return settings.nickname || "\u540D\u7121\u3057";
   }
-  async function applyNickname(raw, hintEl) {
-    const wanted = normalizeNick(raw) || "\u540D\u7121\u3057";
-    const claimed = await claimNickname(wanted);
+  async function applyNickname(raw, hintEl, rename = false) {
+    const typed = normalizeNick(raw);
+    const official = savedNickname() || settings.nickname;
+    const mode = rename || typed && official && typed !== official || !official ? "rename" : "keep";
+    const claimed = await claimNickname(typed, mode);
     settings.nickname = claimed.name;
     savePrefs();
     if (hintEl && claimed.changed) {
-      hintEl.textContent = `\u300C${wanted}\u300D\u306F\u4F7F\u308F\u308C\u3066\u3044\u305F\u306E\u3067\u300C${claimed.name}\u300D\u306B\u3057\u307E\u3057\u305F`;
-    } else if (hintEl && !normalizeNick(raw)) {
-      hintEl.textContent = settings.nickname === "\u540D\u7121\u3057" ? "\u540D\u7121\u3057\u3067\u767B\u9332\u3057\u307E\u3059" : `\u540D\u7121\u3057\u3067\u300C${settings.nickname}\u300D\u306B\u3057\u307E\u3057\u305F`;
+      hintEl.textContent = `\u300C${typed || "\u540D\u7121\u3057"}\u300D\u306F\u4F7F\u308F\u308C\u3066\u3044\u305F\u306E\u3067\u300C${claimed.name}\u300D\u306B\u3057\u307E\u3057\u305F`;
     }
     const btn = document.querySelector("#btn-nick");
     if (btn) btn.textContent = settings.nickname;
@@ -3015,7 +3058,7 @@ label.setting {
       <h2>\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0</h2>
       <label class="nick-field">
         <input id="inp-nick-edit" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${settings.nickname.replace(/"/g, "&quot;")}" />
-        <small id="nick-edit-hint">\u7A7A\u306A\u3089\u540D\u7121\u3057\u3002\u88AB\u308B\u3068\u756A\u53F7\u304C\u4ED8\u304D\u307E\u3059</small>
+        <small id="nick-edit-hint">\u4E00\u4EBA\u4E00\u3064\u306E\u540D\u524D\u3002\u7A7A\u306A\u3089\u540D\u7121\u3057</small>
       </label>
       <button type="button" class="start-btn" id="btn-nick-save">\u5909\u66F4</button>
     </div>`;
@@ -3025,7 +3068,7 @@ label.setting {
     el.querySelector("#btn-nick-save").addEventListener("click", () => {
       void (async () => {
         const inp = el.querySelector("#inp-nick-edit");
-        await applyNickname(inp?.value ?? "", el.querySelector("#nick-edit-hint"));
+        await applyNickname(inp?.value ?? "", el.querySelector("#nick-edit-hint"), true);
         el.remove();
       })();
     });
@@ -3123,7 +3166,7 @@ label.setting {
       <label class="nick-field" id="nick-field">
         <span>\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0</span>
         <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${settings.nickname.replace(/"/g, "&quot;")}" />
-        <small id="nick-hint">\u3044\u3064\u3067\u3082\u5909\u66F4\u53EF\u3002\u7A7A\u306A\u3089\u540D\u7121\u3057\u3002\u88AB\u308B\u3068\u756A\u53F7\u304C\u4ED8\u304D\u307E\u3059</small>
+        <small id="nick-hint">\u4E00\u4EBA\u4E00\u3064\u306E\u540D\u524D\u3002\u3044\u3064\u3067\u3082\u5909\u66F4\u53EF\u3002\u7A7A\u306A\u3089\u540D\u7121\u3057</small>
       </label>
       <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
       <div class="side-picks" role="group" aria-label="\u624B\u756A">
@@ -3221,7 +3264,7 @@ label.setting {
   async function resign() {
     if (endState || thinking) return;
     if (isSerious() && seriousStartedAt != null && kifu.some((k) => k.side === settings.humanSide)) {
-      const rec = await submitResignTime(elapsedSeriousMs(), settings.nickname || "\u540D\u7121\u3057");
+      const rec = await submitResignTime(elapsedSeriousMs(), savedNickname() || settings.nickname || "\u540D\u7121\u3057");
       lastRecordedMs = rec.entry.ms;
       lastRank = rec.rank;
       lastRecordAt = rec.entry.at;
