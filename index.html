@@ -1414,6 +1414,10 @@ label.setting {
   letter-spacing: 0.1em;
 }
 .nick-field[hidden] { display: none; }
+#btn-nick-save-start {
+  min-height: 40px;
+  padding: 0 16px;
+}
 .nick-field input {
   width: 100%;
   min-height: 48px;
@@ -2383,17 +2387,9 @@ label.setting {
     }
     if (changed) await writeSealedList(next);
   }
-  async function hydrateNickname(pref) {
-    let name = savedNickname();
-    if (!name) name = normalizeNick(pref);
-    if (!name) {
-      const me = playerId();
-      const mine = (await loadRanks()).filter((e) => e.name && (!e.playerId || e.playerId === me));
-      if (mine.length) name = mine[0].name;
-    }
-    if (!name) name = "\u540D\u7121\u3057";
-    rememberMine(name);
-    await rewriteMyRankNames(name);
+  function hydrateNickname(pref) {
+    const name = savedNickname() || normalizeNick(pref) || "\u540D\u7121\u3057";
+    if (!savedNickname()) rememberMine(name);
     return name;
   }
   function toB64(bytes) {
@@ -2601,7 +2597,7 @@ label.setting {
       const hi = highlightAt && e.at === highlightAt ? ' class="me"' : "";
       const d = new Date(e.at);
       const when = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-      const nm = e.playerId === playerId() ? savedNickname() || e.name || "\u540D\u7121\u3057" : e.name || "\u540D\u7121\u3057";
+      const nm = savedNickname() || e.name || "\u540D\u7121\u3057";
       return `<li${hi}><span class="rk">${i + 1}</span><span class="nm">${nm}</span><span class="ms">${formatMs(e.ms)}</span><span class="when">${when}</span></li>`;
     }).join("") : '<li class="empty">\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093</li>';
     overlay.querySelector("ol").innerHTML = rows;
@@ -2631,16 +2627,8 @@ label.setting {
     localStorage.setItem(PREF_KEY, JSON.stringify({ difficulty: settings.difficulty, nickname: settings.nickname }));
   }
   loadPrefs();
-  if (!settings.nickname) settings.nickname = savedNickname();
-  void hydrateNickname(settings.nickname).then((n) => {
-    if (!n) return;
-    settings.nickname = n;
-    savePrefs();
-    const btn = document.querySelector("#btn-nick");
-    if (btn) btn.textContent = n;
-    const inp = document.querySelector("#inp-nick");
-    if (inp) inp.value = n;
-  });
+  settings.nickname = hydrateNickname(settings.nickname);
+  savePrefs();
   var pos = initialPosition();
   var history = [clonePosition(pos)];
   var kifu = [];
@@ -3031,16 +3019,14 @@ label.setting {
   function displayNick() {
     return settings.nickname || "\u540D\u7121\u3057";
   }
-  function applyNickname(raw, rename = false) {
-    const typed = normalizeNick(raw);
-    const official = savedNickname() || settings.nickname;
-    const next = rename ? typed || "\u540D\u7121\u3057" : typed || official || "\u540D\u7121\u3057";
-    settings.nickname = official && !rename && !typed ? official : setPlayerName(next);
+  function applyNickname(raw) {
+    settings.nickname = setPlayerName(raw);
     savePrefs();
     const btn = document.querySelector("#btn-nick");
     if (btn) btn.textContent = settings.nickname;
-    const inp = document.querySelector("#inp-nick");
-    if (inp) inp.value = settings.nickname;
+    document.querySelectorAll("#inp-nick, #inp-nick-edit").forEach((inp) => {
+      inp.value = settings.nickname;
+    });
     return settings.nickname;
   }
   function openNickEditor() {
@@ -3062,7 +3048,7 @@ label.setting {
     el.querySelector("#btn-nick-save").addEventListener("click", () => {
       void (async () => {
         const inp = el.querySelector("#inp-nick-edit");
-        applyNickname(inp?.value ?? "", true);
+        applyNickname(inp?.value ?? "");
         el.remove();
       })();
     });
@@ -3161,8 +3147,9 @@ label.setting {
       </div>
       <label class="nick-field" id="nick-field">
         <span>\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0</span>
-        <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${settings.nickname.replace(/"/g, "&quot;")}" />
-        <small id="nick-hint">\u3053\u306E\u7AEF\u672B\u3067\u56FA\u5B9A\u3002\u5BFE\u5C40\u3067\u306F\u5909\u308F\u308A\u307E\u305B\u3093</small>
+        <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${(savedNickname() || settings.nickname).replace(/"/g, "&quot;")}" />
+        <button type="button" id="btn-nick-save-start">\u540D\u524D\u3092\u56FA\u5B9A</button>
+        <small id="nick-hint">\u3053\u306E\u7AEF\u672B\u3067\u4E00\u4EBA\u4E00\u3064\u3002\u30B9\u30BF\u30FC\u30C8\u3067\u306F\u5909\u308F\u308A\u307E\u305B\u3093</small>
       </label>
       <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
       <div class="side-picks" role="group" aria-label="\u624B\u756A">
@@ -3174,17 +3161,15 @@ label.setting {
     </div>`;
     document.body.appendChild(el);
     bindMenuControls(el);
-    const nickInp = el.querySelector("#inp-nick");
-    nickInp?.addEventListener("input", () => {
-      settings.nickname = nickInp.value;
+    el.querySelector("#btn-nick-save-start")?.addEventListener("click", () => {
+      const inp = el.querySelector("#inp-nick");
+      applyNickname(inp?.value ?? "");
+      const hint = el.querySelector("#nick-hint");
+      if (hint) hint.textContent = `\u300C${settings.nickname}\u300D\u3067\u56FA\u5B9A\u3057\u307E\u3057\u305F`;
     });
     el.querySelector("#btn-start").addEventListener("click", () => {
-      void (async () => {
-        unlock();
-        applyNickname(nickInp?.value ?? "", false);
-        if (nickInp) nickInp.value = settings.nickname;
-        void startMatch();
-      })();
+      unlock();
+      void startMatch();
     });
   }
   async function startMatch() {
@@ -3700,7 +3685,7 @@ label.setting {
       boardResize = new ResizeObserver(() => fitBoard());
       boardResize.observe(wrap);
     }
-    if (!inMatch && !starting) mountStartOverlay();
+    if (!inMatch && !starting && !document.querySelector(".start-overlay")) mountStartOverlay();
     syncSeriousClock();
     if (endState && !cinematic) showEndOverlay();
     if (pendingRiichi !== null) {
