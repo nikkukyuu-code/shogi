@@ -1002,7 +1002,7 @@ label.setting {
 }
 .rank-card li {
   display: grid;
-  grid-template-columns: 2.2em 1fr auto;
+  grid-template-columns: 2.2em minmax(4em, 1fr) auto auto;
   gap: 8px;
   align-items: baseline;
   padding: 7px 6px;
@@ -1020,6 +1020,7 @@ label.setting {
   padding: 18px 6px;
 }
 .rank-card .rk { color: var(--gold); font-weight: 700; }
+.rank-card .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-card .when { opacity: 0.65; font-size: 0.75rem; }
 .rank-card #btn-rank-close {
   display: block;
@@ -1335,6 +1336,35 @@ label.setting {
 @keyframes thinkDot {
   0%, 100% { opacity: 0.25; transform: translateY(0.12em); }
   50% { opacity: 1; transform: translateY(-0.12em); }
+}
+
+
+.nick-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+}
+.nick-field[hidden] { display: none; }
+.nick-field input {
+  width: 100%;
+  min-height: 48px;
+  text-align: center;
+  font-family: inherit;
+  font-size: 1.05rem;
+  color: var(--washi);
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--wood-light);
+  border-radius: 4px;
+}
+.nick-field small {
+  opacity: 0.75;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-align: center;
 }
 
 </style>
@@ -2215,6 +2245,74 @@ label.setting {
   function formatMs(ms) {
     return `${Math.max(0, Math.round(ms)).toLocaleString("ja-JP")} \u30DF\u30EA\u79D2`;
   }
+  var NAME_KEY = "shogi-taken-names";
+  var PLAYER_KEY = "shogi-player-id";
+  function playerId() {
+    let id = localStorage.getItem(PLAYER_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(PLAYER_KEY, id);
+    }
+    return id;
+  }
+  function normalizeNick(raw) {
+    return raw.replace(/\s+/g, " ").trim().slice(0, 12);
+  }
+  function nickKey(name) {
+    return name.normalize("NFKC").toLowerCase();
+  }
+  function rememberTaken(name) {
+    const cur = /* @__PURE__ */ new Set();
+    try {
+      const raw = JSON.parse(localStorage.getItem(NAME_KEY) || "[]");
+      if (Array.isArray(raw)) raw.forEach((n) => typeof n === "string" && cur.add(n));
+    } catch {
+    }
+    cur.add(name);
+    localStorage.setItem(NAME_KEY, JSON.stringify([...cur]));
+  }
+  async function remoteTaken() {
+    try {
+      const res = await fetch(new URL("names.json", location.href).href, { cache: "no-store" });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data.filter((n) => typeof n === "string") : [];
+    } catch {
+      return [];
+    }
+  }
+  async function claimNickname(raw) {
+    const base = normalizeNick(raw);
+    if (!base) return { name: "", changed: false };
+    const me = playerId();
+    const ranks = await loadRanks();
+    const taken = /* @__PURE__ */ new Set();
+    for (const n of await remoteTaken()) taken.add(nickKey(n));
+    try {
+      const rawTaken = JSON.parse(localStorage.getItem(NAME_KEY) || "[]");
+      if (Array.isArray(rawTaken)) rawTaken.forEach((n) => typeof n === "string" && taken.add(nickKey(n)));
+    } catch {
+    }
+    const mine = new Set(ranks.filter((e) => e.playerId === me && e.name).map((e) => nickKey(e.name)));
+    for (const e of ranks) {
+      if (e.name && e.playerId !== me) taken.add(nickKey(e.name));
+    }
+    const free = (n) => mine.has(nickKey(n)) || !taken.has(nickKey(n));
+    if (free(base)) {
+      rememberTaken(base);
+      return { name: base, changed: false };
+    }
+    for (let i = 2; i < 1e3; i++) {
+      const n = `${base.slice(0, 10)}${i}`;
+      if (free(n)) {
+        rememberTaken(n);
+        return { name: n, changed: true };
+      }
+    }
+    const fallback = `${base.slice(0, 8)}${Math.floor(10 + Math.random() * 89)}`;
+    rememberTaken(fallback);
+    return { name: fallback, changed: true };
+  }
   function toB64(bytes) {
     let bin = "";
     for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
@@ -2265,9 +2363,9 @@ label.setting {
       )
     );
   }
-  async function encryptResignTime(ms) {
+  async function encryptResignTime(ms, name) {
     const sealedMs = Math.max(0, Math.round(ms));
-    const packed = new TextEncoder().encode(JSON.stringify({ ms: sealedMs }));
+    const packed = new TextEncoder().encode(JSON.stringify({ ms: sealedMs, name, playerId: playerId() }));
     const { iv, ct } = await encryptBytes(packed, "time");
     return { iv, ct, at: Date.now() };
   }
@@ -2275,7 +2373,12 @@ label.setting {
     try {
       const pt = JSON.parse(new TextDecoder().decode(await decryptBytes(sealed.iv, sealed.ct, "time")));
       if (typeof pt.ms !== "number" || !Number.isFinite(pt.ms) || pt.ms < 0) return null;
-      return { ms: pt.ms, at: sealed.at };
+      return {
+        ms: pt.ms,
+        at: sealed.at,
+        name: typeof pt.name === "string" && pt.name ? pt.name : "\u540D\u7121\u3057",
+        playerId: typeof pt.playerId === "string" ? pt.playerId : void 0
+      };
     } catch {
       return null;
     }
@@ -2329,7 +2432,7 @@ label.setting {
             const sealed = [];
             for (const row of rows) {
               if (row && typeof row === "object" && typeof row.ms === "number") {
-                const s = await encryptResignTime(row.ms);
+                const s = await encryptResignTime(row.ms, row.name || "\u540D\u7121\u3057");
                 s.at = typeof row.at === "number" ? row.at : s.at;
                 sealed.push(s);
               }
@@ -2351,7 +2454,7 @@ label.setting {
       const sealed = [];
       for (const row of rows) {
         if (row && typeof row === "object" && typeof row.ms === "number") {
-          const s = await encryptResignTime(row.ms);
+          const s = await encryptResignTime(row.ms, row.name || "\u540D\u7121\u3057");
           s.at = typeof row.at === "number" ? row.at : s.at;
           sealed.push(s);
         }
@@ -2368,11 +2471,11 @@ label.setting {
     await writeSealedList(next);
     return next;
   }
-  async function submitResignTime(ms) {
-    const sealed = await encryptResignTime(ms);
+  async function submitResignTime(ms, name) {
+    const sealed = await encryptResignTime(ms, name);
     const stored = await sendSealedRank(sealed);
     const list = await openEntries(stored);
-    const entry = await decryptResignTime(sealed) ?? { ms: Math.max(0, Math.round(ms)), at: sealed.at };
+    const entry = await decryptResignTime(sealed) ?? { ms: Math.max(0, Math.round(ms)), at: sealed.at, name };
     const rank = list.findIndex((e) => e.ms === entry.ms && e.at === entry.at) + 1;
     return { entry, rank: rank > 0 ? rank : list.length, list };
   }
@@ -2403,7 +2506,7 @@ label.setting {
       const hi = highlightAt && e.at === highlightAt ? ' class="me"' : "";
       const d = new Date(e.at);
       const when = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-      return `<li${hi}><span class="rk">${i + 1}</span><span class="ms">${formatMs(e.ms)}</span><span class="when">${when}</span></li>`;
+      return `<li${hi}><span class="rk">${i + 1}</span><span class="nm">${e.name || "\u540D\u7121\u3057"}</span><span class="ms">${formatMs(e.ms)}</span><span class="when">${when}</span></li>`;
     }).join("") : '<li class="empty">\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093</li>';
     overlay.querySelector("ol").innerHTML = rows;
   }
@@ -2413,7 +2516,8 @@ label.setting {
   var settings = {
     difficulty: "advanced",
     humanSide: SENTE,
-    sound: true
+    sound: true,
+    nickname: ""
   };
   function loadPrefs() {
     try {
@@ -2423,11 +2527,12 @@ label.setting {
       if (p.difficulty === "beginner" || p.difficulty === "intermediate" || p.difficulty === "advanced" || p.difficulty === "serious") {
         settings.difficulty = p.difficulty;
       }
+      if (typeof p.nickname === "string") settings.nickname = normalizeNick(p.nickname);
     } catch {
     }
   }
   function savePrefs() {
-    localStorage.setItem(PREF_KEY, JSON.stringify({ difficulty: settings.difficulty }));
+    localStorage.setItem(PREF_KEY, JSON.stringify({ difficulty: settings.difficulty, nickname: settings.nickname }));
   }
   loadPrefs();
   var pos = initialPosition();
@@ -2803,6 +2908,8 @@ label.setting {
       });
       const rankBtn = root.querySelector("#btn-rank");
       if (rankBtn) rankBtn.hidden = !isSerious();
+      const nick = root.querySelector("#nick-field");
+      if (nick) nick.hidden = !isSerious();
     };
     root.querySelectorAll("[data-diff]").forEach((btn) => {
       btn.classList.toggle("on", btn.dataset.diff === settings.difficulty);
@@ -2879,6 +2986,11 @@ label.setting {
         <button type="button" data-diff="advanced">\u4E0A\u7D1A</button>
         <button type="button" data-diff="serious">\u771F\u5263</button>
       </div>
+      <label class="nick-field" id="nick-field"${isSerious() ? "" : " hidden"}>
+        <span>\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0</span>
+        <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u30E9\u30F3\u30AD\u30F3\u30B0\u306B\u8F09\u308B\u540D\u524D" value="${settings.nickname.replace(/"/g, "&quot;")}" />
+        <small id="nick-hint">\u4ED6\u306E\u4EBA\u3068\u88AB\u308B\u3068\u756A\u53F7\u304C\u4ED8\u304D\u307E\u3059</small>
+      </label>
       <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
       <div class="side-picks" role="group" aria-label="\u624B\u756A">
         <button type="button" data-side="0">\u5148\u624B</button>
@@ -2889,10 +3001,31 @@ label.setting {
     </div>`;
     document.body.appendChild(el);
     bindMenuControls(el);
+    const nickInp = el.querySelector("#inp-nick");
+    nickInp?.addEventListener("input", () => {
+      settings.nickname = nickInp.value;
+    });
     el.querySelector("#btn-start").addEventListener("click", () => {
-      unlock();
-      savePrefs();
-      void startMatch();
+      void (async () => {
+        unlock();
+        if (isSerious()) {
+          const hint = el.querySelector("#nick-hint");
+          const cleaned = normalizeNick(nickInp?.value ?? "");
+          if (!cleaned) {
+            if (hint) hint.textContent = "\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044";
+            nickInp?.focus();
+            return;
+          }
+          const claimed = await claimNickname(cleaned);
+          settings.nickname = claimed.name;
+          if (nickInp) nickInp.value = claimed.name;
+          if (claimed.changed && hint) {
+            hint.textContent = `\u300C${cleaned}\u300D\u306F\u4F7F\u308F\u308C\u3066\u3044\u305F\u306E\u3067\u300C${claimed.name}\u300D\u306B\u3057\u307E\u3057\u305F`;
+          }
+        }
+        savePrefs();
+        void startMatch();
+      })();
     });
   }
   async function startMatch() {
@@ -2966,7 +3099,7 @@ label.setting {
   async function resign() {
     if (endState || thinking) return;
     if (isSerious() && seriousStartedAt != null && kifu.some((k) => k.side === settings.humanSide)) {
-      const rec = await submitResignTime(elapsedSeriousMs());
+      const rec = await submitResignTime(elapsedSeriousMs(), settings.nickname || "\u540D\u7121\u3057");
       lastRecordedMs = rec.entry.ms;
       lastRank = rec.rank;
       lastRecordAt = rec.entry.at;
