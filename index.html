@@ -2855,8 +2855,14 @@ label.setting {
     selected = null;
     selectedDrop = null;
     legalTargets = [];
-    const gainedTrophy = pos.trophies[side] > beforeT[side];
-    if (gainedTrophy) {
+    const capturedKing = move.captured?.kind === "K";
+    const gainedTrophy = !capturedKing && pos.trophies[side] > beforeT[side];
+    if (capturedKing) {
+      cinematic = false;
+      holdLastTrophy = false;
+      pendingSeventh = null;
+      playMove();
+    } else if (gainedTrophy) {
       animTrophy = { side, index: pos.trophies[side] - 1 };
       const n = pos.trophies[side];
       if (n === 6) {
@@ -2906,6 +2912,11 @@ label.setting {
       title: humanWon ? "\u52DD\u3061" : "\u8CA0\u3051",
       subtitle: reasonSubtitle(r.reason, humanWon)
     };
+    if (r.reason === "king_capture") {
+      cinematic = false;
+      holdLastTrophy = false;
+      pendingSeventh = null;
+    }
     if (!cinematic) {
       if (humanWon) playWin();
       else playLose();
