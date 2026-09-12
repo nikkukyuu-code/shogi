@@ -904,18 +904,39 @@ label.setting {
   letter-spacing: 0.06em;
   color: #fff4d0;
 }
-.cinematic.await-tap .cinematic-piece {
-  pointer-events: auto;
-  cursor: pointer;
-  animation: seventhPulse 1s ease-in-out infinite;
-}
-@keyframes seventhPulse {
-  0%, 100% { transform: scale(1.45) rotate(-8deg); }
-  50% { transform: scale(1.65) rotate(-6deg); }
-}
 .sq.seventh-pick {
-  box-shadow: inset 0 0 0 3px #ffe066, 0 0 16px rgba(255, 210, 80, 0.55);
+  box-shadow: inset 0 0 0 3px #ffe066, 0 0 18px rgba(255, 210, 80, 0.7);
   z-index: 4;
+  animation: seventhGlow 1s ease-in-out infinite;
+}
+@keyframes seventhGlow {
+  0%, 100% { box-shadow: inset 0 0 0 3px #ffe066, 0 0 10px rgba(255, 210, 80, 0.4); }
+  50% { box-shadow: inset 0 0 0 3px #fff2a8, 0 0 22px rgba(255, 220, 100, 0.85); }
+}
+.seventh-prompt {
+  position: fixed;
+  left: 50%;
+  top: max(10px, env(safe-area-inset-top));
+  transform: translateX(-50%);
+  z-index: 140;
+  width: min(520px, 92vw);
+  text-align: center;
+  pointer-events: none;
+}
+.seventh-prompt p {
+  margin: 0 0 6px;
+  font-weight: 800;
+  color: #ffe066;
+  text-shadow: 0 0 12px #ffaa00, 0 2px 0 #5a1800;
+}
+.seventh-prompt p:first-child {
+  font-size: clamp(1.4rem, 5.5vw, 2.1rem);
+  letter-spacing: 0.22em;
+}
+.seventh-prompt p:last-child {
+  font-size: clamp(0.9rem, 3.4vw, 1.15rem);
+  letter-spacing: 0.04em;
+  color: #fff4d0;
 }
 .cinematic-word {
   position: absolute;
@@ -950,22 +971,19 @@ label.setting {
   font-size: 2rem;
   font-weight: 700;
   box-shadow: 0 0 24px rgba(255, 210, 80, 0.7);
-  transform: scale(0.7);
+  transform: scale(1);
   transition:
-    left 1.65s cubic-bezier(0.22, 0.12, 0.18, 1),
-    top 1.65s cubic-bezier(0.22, 0.12, 0.18, 1),
-    transform 1.65s cubic-bezier(0.22, 0.12, 0.18, 1),
-    box-shadow 0.4s ease;
-}
-.cinematic-piece.hold {
-  transform: scale(1.55) rotate(-8deg);
+    left 0.9s cubic-bezier(0.22, 0.12, 0.18, 1),
+    top 0.9s cubic-bezier(0.22, 0.12, 0.18, 1),
+    transform 0.9s cubic-bezier(0.22, 0.12, 0.18, 1),
+    box-shadow 0.3s ease;
 }
 .cinematic-piece.fly {
-  transform: scale(1.15) rotate(18deg);
+  transform: scale(1) rotate(0deg);
 }
 .cinematic-piece.land {
-  transform: scale(0.55) rotate(0deg);
-  box-shadow: 0 0 28px #ffe066;
+  transform: scale(0.55);
+  box-shadow: 0 0 16px #ffe066;
 }
 
 .side-panel, .layout, .board-area, .files-ranks, .variant-tag { display: none !important; }
@@ -2668,6 +2686,8 @@ label.setting {
   var holdLastTrophy = false;
   var pendingRiichi = null;
   var pendingSeventh = null;
+  var seventhPickSq = null;
+  var onSeventhPick = null;
   var seriousStartedAt = null;
   var lastRecordedMs = null;
   var lastRank = null;
@@ -3223,6 +3243,8 @@ label.setting {
     holdLastTrophy = false;
     pendingRiichi = null;
     pendingSeventh = null;
+    seventhPickSq = null;
+    onSeventhPick = null;
     flipped = settings.humanSide === GOTE;
     lastRecordedMs = null;
     lastRank = null;
@@ -3403,10 +3425,15 @@ label.setting {
       }
     }
     boardEl.onpointerdown = (e) => {
-      if (!isHumanTurn()) return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
       const sq3 = squareFromPoint(boardEl, e.clientX, e.clientY);
       if (sq3 == null) return;
+      if (onSeventhPick && seventhPickSq !== null && sq3 === seventhPickSq) {
+        e.preventDefault();
+        onSeventhPick();
+        return;
+      }
+      if (!isHumanTurn()) return;
       e.preventDefault();
       trySelectSquare(sq3);
     };
@@ -3430,47 +3457,50 @@ label.setting {
   }
   function playSeventhCinematic(info) {
     document.querySelector(".cinematic")?.remove();
+    document.querySelector(".seventh-prompt")?.remove();
     const to = lastMove?.to;
     const cell = to !== void 0 ? document.querySelector(`.sq[data-sq="${to}"]`) : null;
     const barSel = info.side === settings.humanSide ? "#trophy-bot" : "#trophy-top";
     const slot = document.querySelector(`${barSel} .trophy-slot[data-i="6"]`);
-    const layer = document.createElement("div");
-    layer.className = "cinematic await-tap";
-    layer.innerHTML = `
-    <div class="cinematic-vignette"></div>
-    <div class="cinematic-lines">
-      <p>\u6295\u4E86\u3067\u3059</p>
-      <p>\u6700\u5F8C\u306E\u30B3\u30DE\u3092\u9078\u3093\u3067\u52D5\u304B\u3057\u3066\u304F\u3060\u3055\u3044</p>
-    </div>
-    <div class="cinematic-piece">${info.glyph}</div>`;
-    document.body.appendChild(layer);
-    const piece = layer.querySelector(".cinematic-piece");
-    const lines = layer.querySelector(".cinematic-lines");
-    const fromRect = cell?.getBoundingClientRect();
-    const toRect = slot?.getBoundingClientRect();
-    const sx = fromRect ? fromRect.left + fromRect.width / 2 : window.innerWidth / 2;
-    const sy = fromRect ? fromRect.top + fromRect.height / 2 : window.innerHeight / 2;
-    const ex = toRect ? toRect.left + toRect.width / 2 : sx;
-    const ey = toRect ? toRect.top + toRect.height / 2 : sy;
-    piece.style.left = `${sx}px`;
-    piece.style.top = `${sy}px`;
-    piece.style.pointerEvents = "auto";
+    const prompt = document.createElement("div");
+    prompt.className = "seventh-prompt";
+    prompt.innerHTML = `<p>\u6295\u4E86\u3067\u3059</p><p>\u6700\u5F8C\u306E\u30B3\u30DE\u3092\u9078\u3093\u3067\u52D5\u304B\u3057\u3066\u304F\u3060\u3055\u3044</p>`;
+    document.body.appendChild(prompt);
     cell?.classList.add("seventh-pick");
-    requestAnimationFrame(() => layer.classList.add("show"));
-    window.setTimeout(() => {
-      lines.classList.add("show");
-      piece.classList.add("hold");
-    }, 80);
+    seventhPickSq = to ?? null;
     playResignLines();
     let started = false;
     const fly = () => {
       if (started) return;
       started = true;
-      layer.classList.remove("await-tap");
+      onSeventhPick = null;
+      seventhPickSq = null;
+      prompt.remove();
       cell?.classList.remove("seventh-pick");
-      piece.classList.add("fly");
-      piece.style.left = `${ex}px`;
-      piece.style.top = `${ey}px`;
+      const fromRect = cell?.getBoundingClientRect();
+      const toRect = slot?.getBoundingClientRect();
+      const sx = fromRect ? fromRect.left + fromRect.width / 2 : window.innerWidth / 2;
+      const sy = fromRect ? fromRect.top + fromRect.height / 2 : window.innerHeight / 2;
+      const ex = toRect ? toRect.left + toRect.width / 2 : sx;
+      const ey = toRect ? toRect.top + toRect.height / 2 : sy;
+      const cellSize = fromRect ? Math.min(fromRect.width, fromRect.height) : 40;
+      const layer = document.createElement("div");
+      layer.className = "cinematic show";
+      layer.innerHTML = `<div class="cinematic-piece">${info.glyph}</div>`;
+      document.body.appendChild(layer);
+      const piece = layer.querySelector(".cinematic-piece");
+      piece.style.width = `${cellSize}px`;
+      piece.style.height = `${cellSize * 1.12}px`;
+      piece.style.marginLeft = `${-cellSize / 2}px`;
+      piece.style.marginTop = `${-(cellSize * 1.12) / 2}px`;
+      piece.style.fontSize = `${cellSize * 0.55}px`;
+      piece.style.left = `${sx}px`;
+      piece.style.top = `${sy}px`;
+      requestAnimationFrame(() => piece.classList.add("fly"));
+      requestAnimationFrame(() => {
+        piece.style.left = `${ex}px`;
+        piece.style.top = `${ey}px`;
+      });
       window.setTimeout(() => {
         playSeventhImpact();
         holdLastTrophy = false;
@@ -3481,7 +3511,7 @@ label.setting {
         if (top) renderTrophyBar(topSide, top, false);
         if (bot) renderTrophyBar(settings.humanSide, bot, true);
         piece.classList.add("land");
-      }, 1650);
+      }, 900);
       window.setTimeout(() => {
         layer.classList.remove("show");
         window.setTimeout(() => {
@@ -3492,13 +3522,17 @@ label.setting {
             else if (endState.humanWon === false) playLose();
             showEndOverlay();
           }
-        }, 350);
-      }, 2300);
+        }, 280);
+      }, 1300);
     };
-    piece.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      fly();
-    });
+    onSeventhPick = fly;
+    if (seventhPickSq == null) {
+      prompt.style.pointerEvents = "auto";
+      prompt.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        fly();
+      });
+    }
   }
   function announceYourTurn() {
     document.querySelector(".your-turn")?.remove();
@@ -3693,6 +3727,8 @@ label.setting {
     if (pendingSeventh) {
       const seventh = pendingSeventh;
       pendingSeventh = null;
+      seventhPickSq = null;
+      onSeventhPick = null;
       requestAnimationFrame(() => playSeventhCinematic(seventh));
     }
     if (pendingYourTurn && !cinematic) {
