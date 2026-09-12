@@ -249,6 +249,11 @@ header.top .status {
   justify-content: center;
   cursor: pointer;
   user-select: none;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+}
+.sq > * {
+  pointer-events: none;
 }
 
 .sq.legal {
@@ -2508,6 +2513,20 @@ label.setting {
     }
     return (8 - col) * 9 + row;
   }
+  function squareFromPoint(boardEl, clientX, clientY) {
+    const r = boardEl.getBoundingClientRect();
+    const x = clientX - r.left - boardEl.clientLeft;
+    const y = clientY - r.top - boardEl.clientTop;
+    const w = boardEl.clientWidth;
+    const h = boardEl.clientHeight;
+    if (w <= 0 || h <= 0 || x < 0 || y < 0 || x >= w || y >= h) return null;
+    const col = Math.min(8, Math.max(0, Math.floor(x / w * 9)));
+    const row = Math.min(8, Math.max(0, Math.floor(y / h * 9)));
+    return squareAtDisplay(col, row);
+  }
+  function isCoarsePointer() {
+    return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+  }
   function allLegal() {
     return generateLegalMoves(pos);
   }
@@ -3048,9 +3067,8 @@ label.setting {
             mark.textContent = lastMove.drop ? "\u6253" : "\u76F8\u624B";
             cell.appendChild(mark);
           }
-          pe.draggable = isHumanTurn() && p.side === pos.sideToMove;
+          pe.draggable = !isCoarsePointer() && isHumanTurn() && p.side === pos.sideToMove;
           if (pe.draggable) {
-            pe.style.pointerEvents = "auto";
             pe.addEventListener("dragstart", (e) => {
               dragFrom = sq3;
               pe.classList.add("dragging");
@@ -3067,7 +3085,6 @@ label.setting {
           }
           cell.appendChild(pe);
         }
-        cell.addEventListener("click", () => trySelectSquare(sq3));
         cell.addEventListener("dragover", (e) => e.preventDefault());
         cell.addEventListener("drop", (e) => {
           e.preventDefault();
@@ -3086,6 +3103,14 @@ label.setting {
         boardEl.appendChild(cell);
       }
     }
+    boardEl.onpointerdown = (e) => {
+      if (!isHumanTurn()) return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      const sq3 = squareFromPoint(boardEl, e.clientX, e.clientY);
+      if (sq3 == null) return;
+      e.preventDefault();
+      trySelectSquare(sq3);
+    };
   }
   var statusEl;
   var statsEl;
