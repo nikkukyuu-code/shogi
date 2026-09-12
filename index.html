@@ -1178,31 +1178,69 @@ label.setting {
 .start-overlay {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  z-index: 200;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
-  background: rgba(8, 4, 2, 0.42);
-  backdrop-filter: blur(2px);
+  padding: 12px;
+  background: rgba(8, 4, 2, 0.38);
+  pointer-events: auto;
 }
 .start-card {
-  width: min(360px, 92vw);
+  width: min(520px, 94vw);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 22px 20px 18px;
-  border-radius: 14px;
-  background: linear-gradient(160deg, rgba(61, 36, 18, 0.94) 0%, rgba(18, 10, 6, 0.96) 100%);
-  border: 2px solid var(--gold);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  gap: 14px;
+  padding: 22px 18px 16px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(61, 36, 18, 0.96) 0%, rgba(18, 10, 6, 0.97) 100%);
+  border: 3px solid var(--gold);
+  box-shadow: 0 18px 56px rgba(0,0,0,0.55);
 }
 .start-card h2 {
   margin: 0;
   color: var(--gold);
-  letter-spacing: 0.22em;
-  font-size: 1.25rem;
+  letter-spacing: 0.28em;
+  font-size: clamp(1.4rem, 5vw, 2rem);
+}
+.diff-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+.diff-picks button {
+  min-height: 68px;
+  font-size: clamp(1.15rem, 4.5vw, 1.7rem);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+.diff-picks button.on,
+.side-picks button.on {
+  background: linear-gradient(180deg, #a03030, #701818);
+  border-color: #ffe066;
+  box-shadow: 0 0 16px rgba(255, 208, 80, 0.35);
+  color: #fff4c8;
+}
+.side-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+.side-picks button {
+  min-height: 46px;
+  font-size: 1rem;
+}
+.start-overlay .start-btn {
+  width: 100%;
+  min-height: 64px;
+  font-size: clamp(1.3rem, 5vw, 1.8rem);
+}
+.start-overlay #btn-rank {
+  width: 100%;
+  min-height: 44px;
 }
 
 </style>
@@ -2642,24 +2680,30 @@ label.setting {
     }, 2600);
   }
   function bindMenuControls(root) {
-    const selDiff = root.querySelector("#sel-diff");
-    if (selDiff) {
-      selDiff.value = settings.difficulty;
-      selDiff.addEventListener("change", () => {
-        settings.difficulty = selDiff.value;
-        savePrefs();
-        const rankBtn = root.querySelector("#btn-rank");
-        if (rankBtn) rankBtn.hidden = !isSerious();
+    const pickDiff = (next) => {
+      settings.difficulty = next;
+      savePrefs();
+      root.querySelectorAll("[data-diff]").forEach((btn) => {
+        btn.classList.toggle("on", btn.dataset.diff === next);
       });
-    }
-    const selSide = root.querySelector("#sel-side");
-    if (selSide) {
-      selSide.value = String(settings.humanSide);
-      selSide.addEventListener("change", () => {
-        settings.humanSide = Number(selSide.value);
-        if (!inMatch) render();
+      const rankBtn = root.querySelector("#btn-rank");
+      if (rankBtn) rankBtn.hidden = !isSerious();
+    };
+    root.querySelectorAll("[data-diff]").forEach((btn) => {
+      btn.classList.toggle("on", btn.dataset.diff === settings.difficulty);
+      btn.addEventListener("click", () => pickDiff(btn.dataset.diff));
+    });
+    const pickSide = (side) => {
+      settings.humanSide = side;
+      root.querySelectorAll("[data-side]").forEach((btn) => {
+        btn.classList.toggle("on", Number(btn.dataset.side) === side);
       });
-    }
+      if (!inMatch) render();
+    };
+    root.querySelectorAll("[data-side]").forEach((btn) => {
+      btn.classList.toggle("on", Number(btn.dataset.side) === settings.humanSide);
+      btn.addEventListener("click", () => pickSide(Number(btn.dataset.side)));
+    });
     const chk = root.querySelector("#chk-sound");
     if (chk) {
       chk.checked = settings.sound;
@@ -2709,25 +2753,19 @@ label.setting {
     el.className = "start-overlay";
     el.innerHTML = `
     <div class="start-card">
-      <h2>\u5BFE\u5C40\u8A2D\u5B9A</h2>
+      <h2>\u96E3\u6613\u5EA6</h2>
       <p class="start-tag">\u6B69\u4EE5\u59167\u679A or \u7389\u53D6\u308A</p>
-      <label class="start-field">
-        <span>\u96E3\u6613\u5EA6</span>
-        <select id="sel-diff" aria-label="\u96E3\u6613\u5EA6">
-          <option value="beginner">\u521D\u7D1A</option>
-          <option value="intermediate">\u4E2D\u7D1A</option>
-          <option value="advanced">\u4E0A\u7D1A</option>
-          <option value="serious">\u771F\u5263</option>
-        </select>
-      </label>
+      <div class="diff-picks" role="group" aria-label="\u96E3\u6613\u5EA6">
+        <button type="button" data-diff="beginner">\u521D\u7D1A</button>
+        <button type="button" data-diff="intermediate">\u4E2D\u7D1A</button>
+        <button type="button" data-diff="advanced">\u4E0A\u7D1A</button>
+        <button type="button" data-diff="serious">\u771F\u5263</button>
+      </div>
       <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
-      <label class="start-field">
-        <span>\u624B\u756A</span>
-        <select id="sel-side" aria-label="\u624B\u756A">
-          <option value="0">\u5148\u624B</option>
-          <option value="1">\u5F8C\u624B</option>
-        </select>
-      </label>
+      <div class="side-picks" role="group" aria-label="\u624B\u756A">
+        <button type="button" data-side="0">\u5148\u624B</button>
+        <button type="button" data-side="1">\u5F8C\u624B</button>
+      </div>
       <button type="button" id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0</button>
       <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
     </div>`;
