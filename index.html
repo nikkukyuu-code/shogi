@@ -1410,6 +1410,25 @@ label.setting {
   text-align: center;
 }
 
+
+.nick-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(8, 4, 2, 0.5);
+}
+.nick-card { width: min(400px, 92vw); }
+#btn-nick {
+  max-width: 7.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 </style>
 </head>
 <body>
@@ -2333,8 +2352,7 @@ label.setting {
     }
   }
   async function claimNickname(raw) {
-    const base = normalizeNick(raw);
-    if (!base) return { name: "", changed: false };
+    const base = normalizeNick(raw) || "\u540D\u7121\u3057";
     const me = playerId();
     const ranks = await loadRanks();
     const taken = /* @__PURE__ */ new Set();
@@ -2950,6 +2968,51 @@ label.setting {
       window.setTimeout(() => el.remove(), 420);
     }, 2600);
   }
+  function displayNick() {
+    return settings.nickname || "\u540D\u7121\u3057";
+  }
+  async function applyNickname(raw, hintEl) {
+    const wanted = normalizeNick(raw) || "\u540D\u7121\u3057";
+    const claimed = await claimNickname(wanted);
+    settings.nickname = claimed.name;
+    savePrefs();
+    if (hintEl && claimed.changed) {
+      hintEl.textContent = `\u300C${wanted}\u300D\u306F\u4F7F\u308F\u308C\u3066\u3044\u305F\u306E\u3067\u300C${claimed.name}\u300D\u306B\u3057\u307E\u3057\u305F`;
+    } else if (hintEl && !normalizeNick(raw)) {
+      hintEl.textContent = settings.nickname === "\u540D\u7121\u3057" ? "\u540D\u7121\u3057\u3067\u767B\u9332\u3057\u307E\u3059" : `\u540D\u7121\u3057\u3067\u300C${settings.nickname}\u300D\u306B\u3057\u307E\u3057\u305F`;
+    }
+    const btn = document.querySelector("#btn-nick");
+    if (btn) btn.textContent = settings.nickname;
+    const inp = document.querySelector("#inp-nick");
+    if (inp) inp.value = settings.nickname;
+    return claimed;
+  }
+  function openNickEditor() {
+    document.querySelector(".nick-overlay")?.remove();
+    const el = document.createElement("div");
+    el.className = "nick-overlay";
+    el.innerHTML = `
+    <div class="start-card nick-card">
+      <h2>\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0</h2>
+      <label class="nick-field">
+        <input id="inp-nick-edit" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${settings.nickname.replace(/"/g, "&quot;")}" />
+        <small id="nick-edit-hint">\u7A7A\u306A\u3089\u540D\u7121\u3057\u3002\u88AB\u308B\u3068\u756A\u53F7\u304C\u4ED8\u304D\u307E\u3059</small>
+      </label>
+      <button type="button" class="start-btn" id="btn-nick-save">\u5909\u66F4</button>
+    </div>`;
+    el.addEventListener("click", (e) => {
+      if (e.target === el) el.remove();
+    });
+    el.querySelector("#btn-nick-save").addEventListener("click", () => {
+      void (async () => {
+        const inp = el.querySelector("#inp-nick-edit");
+        await applyNickname(inp?.value ?? "", el.querySelector("#nick-edit-hint"));
+        el.remove();
+      })();
+    });
+    document.body.appendChild(el);
+    el.querySelector("#inp-nick-edit")?.focus();
+  }
   function bindMenuControls(root) {
     const pickDiff = (next) => {
       settings.difficulty = next;
@@ -2960,7 +3023,7 @@ label.setting {
       const rankBtn = root.querySelector("#btn-rank");
       if (rankBtn) rankBtn.hidden = !isSerious();
       const nick = root.querySelector("#nick-field");
-      if (nick) nick.hidden = !isSerious();
+      if (nick) nick.hidden = false;
     };
     root.querySelectorAll("[data-diff]").forEach((btn) => {
       btn.classList.toggle("on", btn.dataset.diff === settings.difficulty);
@@ -3037,10 +3100,10 @@ label.setting {
         <button type="button" data-diff="advanced">\u4E0A\u7D1A</button>
         <button type="button" data-diff="serious">\u771F\u5263</button>
       </div>
-      <label class="nick-field" id="nick-field"${isSerious() ? "" : " hidden"}>
+      <label class="nick-field" id="nick-field">
         <span>\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0</span>
-        <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u30E9\u30F3\u30AD\u30F3\u30B0\u306B\u8F09\u308B\u540D\u524D" value="${settings.nickname.replace(/"/g, "&quot;")}" />
-        <small id="nick-hint">\u4ED6\u306E\u4EBA\u3068\u88AB\u308B\u3068\u756A\u53F7\u304C\u4ED8\u304D\u307E\u3059</small>
+        <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${settings.nickname.replace(/"/g, "&quot;")}" />
+        <small id="nick-hint">\u3044\u3064\u3067\u3082\u5909\u66F4\u53EF\u3002\u7A7A\u306A\u3089\u540D\u7121\u3057\u3002\u88AB\u308B\u3068\u756A\u53F7\u304C\u4ED8\u304D\u307E\u3059</small>
       </label>
       <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
       <div class="side-picks" role="group" aria-label="\u624B\u756A">
@@ -3059,22 +3122,8 @@ label.setting {
     el.querySelector("#btn-start").addEventListener("click", () => {
       void (async () => {
         unlock();
-        if (isSerious()) {
-          const hint = el.querySelector("#nick-hint");
-          const cleaned = normalizeNick(nickInp?.value ?? "");
-          if (!cleaned) {
-            if (hint) hint.textContent = "\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044";
-            nickInp?.focus();
-            return;
-          }
-          const claimed = await claimNickname(cleaned);
-          settings.nickname = claimed.name;
-          if (nickInp) nickInp.value = claimed.name;
-          if (claimed.changed && hint) {
-            hint.textContent = `\u300C${cleaned}\u300D\u306F\u4F7F\u308F\u308C\u3066\u3044\u305F\u306E\u3067\u300C${claimed.name}\u300D\u306B\u3057\u307E\u3057\u305F`;
-          }
-        }
-        savePrefs();
+        await applyNickname(nickInp?.value ?? "", el.querySelector("#nick-hint"));
+        if (nickInp) nickInp.value = settings.nickname;
         void startMatch();
       })();
     });
@@ -3520,6 +3569,7 @@ label.setting {
       <button id="btn-new">\u65B0\u898F</button>
       <button class="stop" id="btn-stop" ${thinking ? "" : "disabled"}>\u4ECA\u3059\u3050\u6307\u3059</button>
       <button id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0</button>
+      <button type="button" id="btn-nick">${displayNick()}</button>
       <span class="diff-lock">${settings.humanSide === 0 ? "\u5148\u624B" : "\u5F8C\u624B"}</span>
       <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       <div class="kifu" id="kifu" hidden></div>
@@ -3555,6 +3605,7 @@ label.setting {
     app.querySelector("#btn-rank").addEventListener("click", () => {
       void showRanking(lastRecordAt ?? void 0);
     });
+    app.querySelector("#btn-nick").addEventListener("click", () => openNickEditor());
     if (selected !== null || selectedDrop) {
       legalTargets = movesFromSelection();
       renderBoard(boardEl);
