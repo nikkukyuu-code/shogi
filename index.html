@@ -22,6 +22,8 @@
   --legal: rgba(60, 140, 80, 0.4);
   --panel: #2a1c10;
   --panel-2: #3d2a18;
+  --app-h: 100dvh;
+  --app-top: 0px;
 }
 
 * {
@@ -30,9 +32,8 @@
 
 html, body {
   margin: 0;
-  height: 100%;
-  height: 100svh;
-  max-height: 100svh;
+  height: var(--app-h, 100dvh);
+  max-height: var(--app-h, 100dvh);
   overflow: hidden;
   background:
     radial-gradient(ellipse at top, #4a3020 0%, #1a1008 70%),
@@ -44,9 +45,10 @@ html, body {
 #app {
   max-width: none;
   margin: 0;
-  height: 100svh;
-  max-height: 100svh;
+  height: var(--app-h, 100dvh);
+  max-height: var(--app-h, 100dvh);
   padding: 4px 6px;
+  padding-top: max(4px, env(safe-area-inset-top));
   padding-left: max(6px, env(safe-area-inset-left));
   padding-right: max(6px, env(safe-area-inset-right));
   padding-bottom: max(6px, env(safe-area-inset-bottom));
@@ -1462,6 +1464,16 @@ label.setting {
   .win-show { padding: 5px 8px 6px; }
   .win-sub { margin-bottom: 0; }
 }
+@media (max-height: 640px) {
+  .start-card { padding: 8px 10px 6px; gap: 5px; }
+  .win-note { font-size: 0.78rem; padding: 2px 8px; }
+  .win-kicker, .win-sub { display: none; }
+  .win-lines li { padding: 5px 8px; }
+  .diff-picks button { min-height: 40px; font-size: 1.05rem; }
+  .start-overlay .start-btn { min-height: 46px; }
+  .side-picks button { min-height: 38px; }
+  header.top { display: none; }
+}
 .start-btn {
   min-width: min(280px, 80vw);
   min-height: 58px;
@@ -1505,9 +1517,19 @@ label.setting {
   white-space: nowrap;
 }
 
+.start-overlay,
+.rank-overlay,
+.end-overlay,
+.nick-overlay {
+  top: var(--app-top, 0px);
+  left: 0;
+  right: 0;
+  bottom: auto;
+  height: var(--app-h, 100dvh);
+  max-height: var(--app-h, 100dvh);
+}
 .start-overlay {
   position: fixed;
-  inset: 0;
   z-index: 200;
   display: flex;
   align-items: flex-start;
@@ -1515,7 +1537,7 @@ label.setting {
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: max(8px, env(safe-area-inset-top)) 8px max(16px, env(safe-area-inset-bottom));
+  padding: 8px 8px max(12px, env(safe-area-inset-bottom));
   background: rgba(8, 4, 2, 0.38);
   pointer-events: auto;
 }
@@ -4057,6 +4079,22 @@ label.setting {
     });
   }
   var boardResize = null;
+  function applyViewport() {
+    const vv = window.visualViewport;
+    const h = Math.max(320, Math.round(vv?.height ?? window.innerHeight));
+    const top = Math.max(0, Math.round(vv?.offsetTop ?? 0));
+    document.documentElement.style.setProperty("--app-h", `${h}px`);
+    document.documentElement.style.setProperty("--app-top", `${top}px`);
+    fitBoard();
+  }
+  function bindViewport() {
+    applyViewport();
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", applyViewport);
+    vv?.addEventListener("scroll", applyViewport);
+    window.addEventListener("resize", applyViewport);
+    window.addEventListener("orientationchange", applyViewport);
+  }
   function fitBoard() {
     const wrap = document.querySelector(".board-wrap");
     const board = document.querySelector("#board");
@@ -4172,6 +4210,7 @@ label.setting {
       }, 700);
     }
   }
+  bindViewport();
   showStartScreen();
 })();
 
