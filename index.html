@@ -1221,6 +1221,58 @@ label.setting {
   letter-spacing: 0.08em;
   font-size: 0.9rem;
 }
+.win-rules {
+  width: 100%;
+  padding: 10px 12px 8px;
+  border-radius: 10px;
+  background: rgba(255, 232, 160, 0.08);
+  border: 1px solid rgba(201, 162, 39, 0.45);
+  text-align: center;
+}
+.win-rules h3 {
+  margin: 0 0 2px;
+  color: var(--gold);
+  letter-spacing: 0.2em;
+  font-size: 0.95rem;
+}
+.win-rules .win-lead {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+.win-rules ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.win-rules li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(18, 10, 6, 0.45);
+}
+.win-rules li strong {
+  font-size: clamp(0.95rem, 3.6vw, 1.15rem);
+  letter-spacing: 0.06em;
+  color: #fff4d0;
+}
+.win-rules li small {
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  opacity: 0.78;
+  line-height: 1.35;
+}
+.start-card { gap: 10px; }
+@media (max-height: 720px) {
+  .start-card { padding: 14px 14px 12px; gap: 8px; }
+  .diff-picks button { min-height: 52px; }
+  .win-rules { padding: 8px 10px 6px; }
+}
 .start-btn {
   min-width: min(280px, 80vw);
   min-height: 58px;
@@ -3222,7 +3274,14 @@ label.setting {
     el.innerHTML = `
     <div class="start-card">
       <h2>\u96E3\u6613\u5EA6</h2>
-      <p class="start-tag">\u6B69\u4EE5\u59167\u679A or \u7389\u53D6\u308A</p>
+      <div class="win-rules">
+        <h3>\u52DD\u3061\u65B9</h3>
+        <p class="win-lead">\u5148\u306B\u9054\u6210\u3057\u305F\u65B9\u304C\u52DD\u3061</p>
+        <ol>
+          <li><strong>\u6B69\u4EE5\u5916\u30927\u679A\u53D6\u308B</strong><small>\u3068\u91D1\u306F\u6570\u3048\u308B\u3002\u4E0D\u6210\u306E\u6B69\u3068\u7389\u306F\u6570\u3048\u306A\u3044</small></li>
+          <li><strong>\u738B\u5C06\u3092\u53D6\u308B</strong></li>
+        </ol>
+      </div>
       <div class="diff-picks" role="group" aria-label="\u96E3\u6613\u5EA6">
         <button type="button" data-diff="beginner">\u521D\u7D1A</button>
         <button type="button" data-diff="intermediate">\u4E2D\u7D1A</button>
