@@ -2327,23 +2327,6 @@ label.setting {
     }
     speakJa("7\u3064\u76EE");
   }
-  function playResignLines() {
-    const c = ac();
-    if (c) {
-      osc(c, "triangle", 330, 0.22, 0.05);
-      osc(c, "sine", 196, 0.35, 0.04, 0.1);
-    }
-    speakJa("\u6295\u4E86\u3067\u3059");
-  }
-  function playSeventhImpact() {
-    const c = ac();
-    if (!c) return;
-    noiseBurst(c, 0.18, 0.22, 0, 200);
-    osc(c, "triangle", 196, 0.4, 0.07);
-    osc(c, "sine", 784, 0.45, 0.06, 0.05);
-    osc(c, "sine", 1174, 0.5, 0.05, 0.12);
-    osc(c, "sine", 1568, 0.6, 0.04, 0.2);
-  }
   function speakJa(text) {
     if (!enabled) return;
     try {
@@ -2702,10 +2685,7 @@ label.setting {
   var cinematic = false;
   var holdLastTrophy = false;
   var pendingRiichi = null;
-  var pendingSeventh = null;
   var preSeventhGen = 0;
-  var seventhPickSq = null;
-  var onSeventhPick = null;
   var seriousStartedAt = null;
   var lastRecordedMs = null;
   var lastAttemptMs = null;
@@ -2954,7 +2934,6 @@ label.setting {
     if (capturedKing) {
       cinematic = false;
       holdLastTrophy = false;
-      pendingSeventh = null;
       playMove();
     } else if (gainedTrophy) {
       animTrophy = { side, index: pos.trophies[side] - 1 };
@@ -2963,10 +2942,9 @@ label.setting {
         pendingRiichi = side;
         playTrophy(6);
       } else if (n === 7) {
-        cinematic = true;
-        holdLastTrophy = true;
-        const last = pos.trophyPieces[side][pos.trophyPieces[side].length - 1];
-        pendingSeventh = { side, glyph: last ? trophyGlyph(last) : "\u99D2" };
+        cinematic = false;
+        holdLastTrophy = false;
+        playTrophy(7);
       } else {
         playTrophy(n);
       }
@@ -3009,7 +2987,6 @@ label.setting {
     if (r.reason === "king_capture") {
       cinematic = false;
       holdLastTrophy = false;
-      pendingSeventh = null;
     }
     if (!cinematic) {
       if (humanWon) playWin();
@@ -3310,9 +3287,6 @@ label.setting {
     cinematic = false;
     holdLastTrophy = false;
     pendingRiichi = null;
-    pendingSeventh = null;
-    seventhPickSq = null;
-    onSeventhPick = null;
     flipped = settings.humanSide === GOTE;
     lastRecordedMs = null;
     lastAttemptMs = null;
@@ -3505,11 +3479,6 @@ label.setting {
       if (e.pointerType === "mouse" && e.button !== 0) return;
       const sq3 = squareFromPoint(boardEl, e.clientX, e.clientY);
       if (sq3 == null) return;
-      if (onSeventhPick && seventhPickSq !== null && sq3 === seventhPickSq) {
-        e.preventDefault();
-        onSeventhPick();
-        return;
-      }
       if (!isHumanTurn()) return;
       e.preventDefault();
       trySelectSquare(sq3);
@@ -3531,70 +3500,6 @@ label.setting {
       el.classList.remove("show");
       window.setTimeout(() => el.remove(), 400);
     }, 2200);
-  }
-  function playSeventhCinematic(info) {
-    document.querySelector(".cinematic")?.remove();
-    document.querySelector(".pre-seventh")?.remove();
-    document.querySelector(".seventh-prompt")?.remove();
-    preSeventhGen++;
-    const to = lastMove?.to;
-    const cell = to !== void 0 ? document.querySelector(`.sq[data-sq="${to}"]`) : null;
-    const barSel = info.side === settings.humanSide ? "#trophy-bot" : "#trophy-top";
-    const slot = document.querySelector(`${barSel} .trophy-slot[data-i="6"]`);
-    onSeventhPick = null;
-    seventhPickSq = null;
-    playResignLines();
-    const fly = () => {
-      cell?.classList.remove("seventh-pick");
-      const fromRect = cell?.getBoundingClientRect();
-      const toRect = slot?.getBoundingClientRect();
-      const sx = fromRect ? fromRect.left + fromRect.width / 2 : window.innerWidth / 2;
-      const sy = fromRect ? fromRect.top + fromRect.height / 2 : window.innerHeight / 2;
-      const ex = toRect ? toRect.left + toRect.width / 2 : sx;
-      const ey = toRect ? toRect.top + toRect.height / 2 : sy;
-      const cellSize = fromRect ? Math.min(fromRect.width, fromRect.height) : 40;
-      const layer = document.createElement("div");
-      layer.className = "cinematic show";
-      layer.innerHTML = `<div class="cinematic-piece">${info.glyph}</div>`;
-      document.body.appendChild(layer);
-      const piece = layer.querySelector(".cinematic-piece");
-      piece.style.width = `${cellSize}px`;
-      piece.style.height = `${cellSize * 1.12}px`;
-      piece.style.marginLeft = `${-cellSize / 2}px`;
-      piece.style.marginTop = `${-(cellSize * 1.12) / 2}px`;
-      piece.style.fontSize = `${cellSize * 0.55}px`;
-      piece.style.left = `${sx}px`;
-      piece.style.top = `${sy}px`;
-      requestAnimationFrame(() => piece.classList.add("fly"));
-      requestAnimationFrame(() => {
-        piece.style.left = `${ex}px`;
-        piece.style.top = `${ey}px`;
-      });
-      window.setTimeout(() => {
-        playSeventhImpact();
-        holdLastTrophy = false;
-        animTrophy = { side: info.side, index: 6 };
-        const top = document.querySelector("#trophy-top");
-        const bot = document.querySelector("#trophy-bot");
-        const topSide = opposite(settings.humanSide);
-        if (top) renderTrophyBar(topSide, top, false);
-        if (bot) renderTrophyBar(settings.humanSide, bot, true);
-        piece.classList.add("land");
-      }, 900);
-      window.setTimeout(() => {
-        layer.classList.remove("show");
-        window.setTimeout(() => {
-          layer.remove();
-          cinematic = false;
-          if (endState) {
-            if (endState.humanWon) playWin();
-            else if (endState.humanWon === false) playLose();
-            showEndOverlay();
-          }
-        }, 280);
-      }, 1300);
-    };
-    fly();
   }
   function announceYourTurn() {
     document.querySelector(".your-turn")?.remove();
@@ -3786,13 +3691,6 @@ label.setting {
       const s = pendingRiichi;
       pendingRiichi = null;
       announceRiichi(s);
-    }
-    if (pendingSeventh) {
-      const seventh = pendingSeventh;
-      pendingSeventh = null;
-      seventhPickSq = null;
-      onSeventhPick = null;
-      requestAnimationFrame(() => playSeventhCinematic(seventh));
     }
     if (pendingYourTurn && !cinematic) {
       pendingYourTurn = false;
