@@ -1260,8 +1260,10 @@ label.setting {
 }
 .win-show {
   width: 100%;
-  padding: 8px 10px 10px;
-  border-radius: 12px;
+  flex: 0 1 auto;
+  min-height: 0;
+  padding: 6px 8px;
+  border-radius: 10px;
   background: rgba(255, 232, 160, 0.08);
   border: 1px solid rgba(201, 162, 39, 0.5);
   text-align: center;
@@ -1277,20 +1279,13 @@ label.setting {
   font-weight: 800;
   letter-spacing: 0.08em;
 }
-.win-kicker {
-  margin: 6px 0 8px;
-  color: #ffe066;
-  letter-spacing: 0.12em;
-  font-size: clamp(1.05rem, 4.2vw, 1.35rem);
-  font-weight: 800;
-  text-shadow: 0 0 10px rgba(255, 200, 60, 0.45);
-}
+.win-kicker, .win-ways { display: none !important; }
 .win-lines {
-  margin: 0 0 6px;
+  margin: 4px 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 .win-lines li {
   display: flex;
@@ -1532,23 +1527,26 @@ label.setting {
   position: fixed;
   z-index: 200;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 8px 8px max(12px, env(safe-area-inset-bottom));
+  overflow: hidden;
+  padding: 6px 6px max(8px, env(safe-area-inset-bottom));
   background: rgba(8, 4, 2, 0.38);
   pointer-events: auto;
 }
 .start-card {
-  width: min(520px, 94vw);
-  margin: 0 auto;
+  width: min(520px, 96vw);
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 12px 12px 10px;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 10px;
   border-radius: 16px;
   background: linear-gradient(160deg, rgba(61, 36, 18, 0.96) 0%, rgba(18, 10, 6, 0.97) 100%);
   border: 3px solid var(--gold);
@@ -1563,14 +1561,15 @@ label.setting {
 .diff-picks {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 6px;
   width: 100%;
+  flex: 0 0 auto;
 }
 .diff-picks button {
-  min-height: 68px;
-  font-size: clamp(1.15rem, 4.5vw, 1.7rem);
+  min-height: 42px;
+  font-size: clamp(1rem, 4vw, 1.25rem);
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
 }
 .diff-picks button.on,
 .side-picks button.on {
@@ -1582,22 +1581,45 @@ label.setting {
 .side-picks {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 6px;
   width: 100%;
+  flex: 0 0 auto;
 }
 .side-picks button {
-  min-height: 46px;
-  font-size: 1rem;
+  min-height: 36px;
+  font-size: 0.95rem;
 }
 .start-overlay .start-btn {
   width: 100%;
-  min-height: 64px;
-  font-size: clamp(1.3rem, 5vw, 1.8rem);
+  min-height: 48px;
+  font-size: clamp(1.15rem, 4.5vw, 1.45rem);
+  flex: 0 0 auto;
+}
+.start-foot {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 .start-overlay #btn-rank {
-  width: 100%;
-  min-height: 44px;
+  flex: 1;
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1.15;
 }
+.start-overlay #btn-rank small {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  opacity: 0.9;
+}
+.start-overlay #btn-rank[hidden] { display: none; }
+.start-overlay .sound-toggle { margin-left: auto; }
 
 
 .think-chip {
@@ -1673,21 +1695,25 @@ label.setting {
 
 .nick-field {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 6px;
   width: 100%;
   font-size: 0.85rem;
   letter-spacing: 0.1em;
+  flex: 0 0 auto;
 }
 .nick-field[hidden] { display: none; }
 #btn-nick-save-start {
   min-height: 40px;
-  padding: 0 16px;
+  padding: 0 12px;
+  flex: 0 0 auto;
 }
 .nick-field input {
-  width: 100%;
-  min-height: 48px;
+  width: auto;
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
   text-align: center;
   font-family: inherit;
   font-size: 1.05rem;
@@ -3563,8 +3589,6 @@ label.setting {
       });
       const rankBtn = root.querySelector("#btn-rank");
       if (rankBtn) rankBtn.hidden = !isSerious();
-      const rankNote = root.querySelector("#rank-note");
-      if (rankNote) rankNote.hidden = !isSerious();
       const nick = root.querySelector("#nick-field");
       if (nick) nick.hidden = false;
     };
@@ -3643,25 +3667,13 @@ label.setting {
     el.className = "start-overlay";
     el.innerHTML = `
     <div class="start-card">
-      <h2>\u96E3\u6613\u5EA6</h2>
       <section class="win-show" aria-label="\u52DD\u3061\u65B9">
         <p class="win-note">\u3075\u3064\u3046\u306E\u5C06\u68CB\u3068\u9055\u3044\u307E\u3059</p>
-        <p class="win-kicker">\u5148\u306B\u3084\u3063\u305F\u65B9\u304C\u52DD\u3061</p>
         <ol class="win-lines">
-          <li class="a"><em>1</em><span>\u6B69\u4EE5\u5916\u3092<strong>7\u679A</strong>\u53D6\u308B</span></li>
-          <li class="b"><em>2</em><span><strong>\u738B\u5C06</strong>\u3092\u53D6\u308B</span></li>
+          <li class="a"><span>\u6B69\u4EE5\u5916\u3092<strong>7\u679A</strong>\u53D6\u308B</span></li>
+          <li class="b"><span><strong>\u738B\u5C06</strong>\u3092\u53D6\u308B</span></li>
         </ol>
-        <p class="win-sub">\u3068\u91D1\u306F\u6570\u3048\u308B\u3000\u4E0D\u6210\u306E\u6B69\u3068\u7389\u306F\u6570\u3048\u306A\u3044</p>
-        <div class="win-ways">
-          <div class="win-way">
-            <div class="win-slots" aria-hidden="true"><i>\u9999</i><i>\u6842</i><i>\u9280</i><i>\u91D1</i><i>\u89D2</i><i>\u98DB</i><i>\u3068</i></div>
-            <div class="win-chips"><b class="yes">\u9999\u6842\u9280\u91D1\u89D2\u98DB\u3068 \u25CB</b><b class="no">\u6B69 \xD7\u3000\u7389 \xD7</b></div>
-          </div>
-          <span class="win-or">\u307E\u305F\u306F</span>
-          <div class="win-way king">
-            <div class="win-king" aria-hidden="true"><span>\u738B</span></div>
-          </div>
-        </div>
+        <p class="win-sub">\u3068\u91D1\u306F\u6570\u3048\u308B\u3000\u6B69\u3068\u7389\u306F\u6570\u3048\u306A\u3044\u3000\u5148\u306B\u3084\u3063\u305F\u65B9\u304C\u52DD\u3061</p>
       </section>
       <div class="diff-picks" role="group" aria-label="\u96E3\u6613\u5EA6">
         <button type="button" data-diff="beginner">\u521D\u7D1A</button>
@@ -3670,19 +3682,18 @@ label.setting {
         <button type="button" data-diff="serious">\u771F\u5263</button>
       </div>
       <label class="nick-field" id="nick-field">
-        <span>\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0</span>
-        <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${(savedNickname() || settings.nickname).replace(/"/g, "&quot;")}" />
-        <button type="button" id="btn-nick-save-start">\u540D\u524D\u3092\u56FA\u5B9A</button>
-        <small id="nick-hint">\u3053\u306E\u7AEF\u672B\u3067\u4E00\u4EBA\u4E00\u3064\u3002\u30B9\u30BF\u30FC\u30C8\u3067\u306F\u5909\u308F\u308A\u307E\u305B\u3093</small>
+        <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0\uFF08\u7A7A\u306A\u3089\u540D\u7121\u3057\uFF09" value="${(savedNickname() || settings.nickname).replace(/"/g, "&quot;")}" />
+        <button type="button" id="btn-nick-save-start">\u56FA\u5B9A</button>
       </label>
       <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
       <div class="side-picks" role="group" aria-label="\u624B\u756A">
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="rank-note" id="rank-note"${isSerious() ? "" : " hidden"}>\u771F\u5263\u306E\u6295\u4E86\u30BF\u30A4\u30E0\u9806\u4F4D\u3002\u81EA\u5206\u306E\u624B\u756A\u3060\u3051\u3092\u6E2C\u308B\u3002\u77ED\u3044\u307B\u3069\u4E0A\uFF08100\u4F4D\u307E\u3067\uFF09</p>
-      <button type="button" id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0</button>
-      <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
+      <div class="start-foot">
+        <button type="button" id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0<small>\u6295\u4E86\u30BF\u30A4\u30E0\u3000\u81EA\u5206\u306E\u624B\u756A\u3060\u3051\u3000\u77ED\u3044\u307B\u3069\u4E0A</small></button>
+        <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
+      </div>
     </div>`;
     document.body.appendChild(el);
     requestAnimationFrame(() => el.querySelector(".win-show")?.classList.add("play"));
@@ -3690,8 +3701,8 @@ label.setting {
     el.querySelector("#btn-nick-save-start")?.addEventListener("click", () => {
       const inp = el.querySelector("#inp-nick");
       applyNickname(inp?.value ?? "");
-      const hint = el.querySelector("#nick-hint");
-      if (hint) hint.textContent = `\u300C${settings.nickname}\u300D\u3067\u56FA\u5B9A\u3057\u307E\u3057\u305F`;
+      const inp2 = el.querySelector("#inp-nick");
+      if (inp2) inp2.placeholder = `\u300C${settings.nickname}\u300D\u3067\u56FA\u5B9A`;
     });
     el.querySelector("#btn-start").addEventListener("click", () => {
       unlock();
