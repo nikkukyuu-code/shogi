@@ -2,7 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta http-equiv="Cache-Control" content="no-store" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <title>将棋 — 歩以外7枚 or 玉取り</title>
 <style>
@@ -22,7 +23,7 @@
   --legal: rgba(60, 140, 80, 0.4);
   --panel: #2a1c10;
   --panel-2: #3d2a18;
-  --app-h: 100dvh;
+  --app-h: 100svh;
   --app-top: 0px;
 }
 
@@ -32,9 +33,14 @@
 
 html, body {
   margin: 0;
-  height: var(--app-h, 100dvh);
-  max-height: var(--app-h, 100dvh);
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: var(--app-h, 100svh);
+  max-height: var(--app-h, 100svh);
   overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
   background:
     radial-gradient(ellipse at top, #4a3020 0%, #1a1008 70%),
     #1a1008;
@@ -45,8 +51,12 @@ html, body {
 #app {
   max-width: none;
   margin: 0;
-  height: var(--app-h, 100dvh);
-  max-height: var(--app-h, 100dvh);
+  position: fixed;
+  top: var(--app-top, 0px);
+  left: 0;
+  right: 0;
+  height: var(--app-h, 100svh);
+  max-height: var(--app-h, 100svh);
   padding: 4px 6px;
   padding-top: max(4px, env(safe-area-inset-top));
   padding-left: max(6px, env(safe-area-inset-left));
@@ -1520,8 +1530,8 @@ label.setting {
   left: 0;
   right: 0;
   bottom: auto;
-  height: var(--app-h, 100dvh);
-  max-height: var(--app-h, 100dvh);
+  height: var(--app-h, 100svh);
+  max-height: var(--app-h, 100svh);
 }
 .start-overlay {
   position: fixed;
@@ -1594,6 +1604,12 @@ label.setting {
   min-height: 48px;
   font-size: clamp(1.15rem, 4.5vw, 1.45rem);
   flex: 0 0 auto;
+}
+.start-ver {
+  margin: 0;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  opacity: 0.45;
 }
 .start-foot {
   width: 100%;
@@ -3690,6 +3706,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
+      <p class="start-ver">v86</p>
       <div class="start-foot">
         <button type="button" id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0<small>\u6295\u4E86\u30BF\u30A4\u30E0\u3000\u81EA\u5206\u306E\u624B\u756A\u3060\u3051\u3000\u77ED\u3044\u307B\u3069\u4E0A</small></button>
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
@@ -4094,12 +4111,20 @@ label.setting {
     });
   }
   var boardResize = null;
+  function visibleHeight() {
+    const vv = window.visualViewport;
+    const candidates = [window.innerHeight, document.documentElement.clientHeight];
+    if (vv?.height) candidates.push(vv.height);
+    return Math.max(280, Math.round(Math.min(...candidates.filter((n) => n > 0))));
+  }
   function applyViewport() {
     const vv = window.visualViewport;
-    const h = Math.max(320, Math.round(vv?.height ?? window.innerHeight));
+    const h = visibleHeight();
     const top = Math.max(0, Math.round(vv?.offsetTop ?? 0));
-    document.documentElement.style.setProperty("--app-h", `${h}px`);
-    document.documentElement.style.setProperty("--app-top", `${top}px`);
+    const root = document.documentElement;
+    root.style.setProperty("--app-h", `${h}px`);
+    root.style.setProperty("--app-top", `${top}px`);
+    document.body.style.height = `${h}px`;
     fitBoard();
     fitStartCard();
   }
