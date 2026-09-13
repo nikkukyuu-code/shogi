@@ -1536,15 +1536,15 @@ label.setting {
 }
 .start-card {
   width: min(520px, 96vw);
-  height: 100%;
-  max-height: 100%;
+  height: auto;
+  max-height: none;
   min-height: 0;
   margin: 0;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 6px;
   padding: 8px 10px;
   border-radius: 16px;
@@ -3696,7 +3696,11 @@ label.setting {
       </div>
     </div>`;
     document.body.appendChild(el);
-    requestAnimationFrame(() => el.querySelector(".win-show")?.classList.add("play"));
+    requestAnimationFrame(() => {
+      el.querySelector(".win-show")?.classList.add("play");
+      fitStartCard();
+      requestAnimationFrame(fitStartCard);
+    });
     bindMenuControls(el);
     el.querySelector("#btn-nick-save-start")?.addEventListener("click", () => {
       const inp = el.querySelector("#inp-nick");
@@ -4097,6 +4101,18 @@ label.setting {
     document.documentElement.style.setProperty("--app-h", `${h}px`);
     document.documentElement.style.setProperty("--app-top", `${top}px`);
     fitBoard();
+    fitStartCard();
+  }
+  function fitStartCard() {
+    const overlay = document.querySelector(".start-overlay");
+    const card = overlay?.querySelector(".start-card");
+    if (!overlay || !card) return;
+    card.style.transform = "none";
+    const avail = Math.max(200, overlay.clientHeight - 4);
+    const need = card.scrollHeight;
+    const scale = need > 0 ? Math.min(1, avail / need) : 1;
+    card.style.transformOrigin = "top center";
+    card.style.transform = scale < 0.995 ? `scale(${scale})` : "none";
   }
   function bindViewport() {
     applyViewport();
