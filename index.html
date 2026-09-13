@@ -2333,7 +2333,7 @@ label.setting {
       osc(c, "triangle", 330, 0.22, 0.05);
       osc(c, "sine", 196, 0.35, 0.04, 0.1);
     }
-    speakJa("\u6295\u4E86\u3067\u3059\u3002\u6700\u5F8C\u306E\u30B3\u30DE\u3092\u9078\u3093\u3067\u52D5\u304B\u3057\u3066\u304F\u3060\u3055\u3044");
+    speakJa("\u6295\u4E86\u3067\u3059");
   }
   function playSeventhImpact() {
     const c = ac();
@@ -3535,26 +3535,16 @@ label.setting {
   function playSeventhCinematic(info) {
     document.querySelector(".cinematic")?.remove();
     document.querySelector(".pre-seventh")?.remove();
-    preSeventhGen++;
     document.querySelector(".seventh-prompt")?.remove();
+    preSeventhGen++;
     const to = lastMove?.to;
     const cell = to !== void 0 ? document.querySelector(`.sq[data-sq="${to}"]`) : null;
     const barSel = info.side === settings.humanSide ? "#trophy-bot" : "#trophy-top";
     const slot = document.querySelector(`${barSel} .trophy-slot[data-i="6"]`);
-    const prompt = document.createElement("div");
-    prompt.className = "seventh-prompt";
-    prompt.innerHTML = `<p>\u6295\u4E86\u3067\u3059</p><p>\u6700\u5F8C\u306E\u30B3\u30DE\u3092\u9078\u3093\u3067\u52D5\u304B\u3057\u3066\u304F\u3060\u3055\u3044</p>`;
-    document.body.appendChild(prompt);
-    cell?.classList.add("seventh-pick");
-    seventhPickSq = to ?? null;
+    onSeventhPick = null;
+    seventhPickSq = null;
     playResignLines();
-    let started = false;
     const fly = () => {
-      if (started) return;
-      started = true;
-      onSeventhPick = null;
-      seventhPickSq = null;
-      prompt.remove();
       cell?.classList.remove("seventh-pick");
       const fromRect = cell?.getBoundingClientRect();
       const toRect = slot?.getBoundingClientRect();
@@ -3604,14 +3594,7 @@ label.setting {
         }, 280);
       }, 1300);
     };
-    onSeventhPick = fly;
-    if (seventhPickSq == null) {
-      prompt.style.pointerEvents = "auto";
-      prompt.addEventListener("pointerdown", (e) => {
-        e.preventDefault();
-        fly();
-      });
-    }
+    fly();
   }
   function announceYourTurn() {
     document.querySelector(".your-turn")?.remove();
