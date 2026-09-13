@@ -3023,7 +3023,9 @@ label.setting {
   var pendingRiichi = null;
   var pendingSeventhReveal = null;
   var preSeventhGen = 0;
-  var seriousStartedAt = null;
+  var seriousActive = false;
+  var seriousAccumMs = 0;
+  var seriousRunAt = null;
   var lastRecordedMs = null;
   var lastAttemptMs = null;
   var lastRank = null;
@@ -3044,9 +3046,18 @@ label.setting {
   function isSerious() {
     return settings.difficulty === "serious";
   }
+  function pauseSeriousClock() {
+    if (seriousRunAt == null) return;
+    seriousAccumMs += performance.now() - seriousRunAt;
+    seriousRunAt = null;
+  }
+  function playerClockShouldRun() {
+    return seriousActive && inMatch && !starting && !endState && !cinematic && !thinking && pos.sideToMove === settings.humanSide;
+  }
   function elapsedSeriousMs() {
-    if (seriousStartedAt == null) return 0;
-    return Math.max(0, Math.round(performance.now() - seriousStartedAt));
+    let ms = seriousAccumMs;
+    if (seriousRunAt != null) ms += performance.now() - seriousRunAt;
+    return Math.max(0, Math.round(ms));
   }
   function paintSeriousClock() {
     const el = document.querySelector("#serious-clock");
@@ -3059,16 +3070,26 @@ label.setting {
     el.textContent = formatMs(ms);
   }
   function tickSeriousClock() {
+    if (playerClockShouldRun()) {
+      if (seriousRunAt == null) seriousRunAt = performance.now();
+    } else {
+      pauseSeriousClock();
+    }
     paintSeriousClock();
-    if (isSerious() && endState == null && seriousStartedAt != null) {
+    if (isSerious() && endState == null && (seriousActive || inMatch)) {
       clockRaf = requestAnimationFrame(tickSeriousClock);
     }
   }
   function syncSeriousClock() {
     if (clockRaf) cancelAnimationFrame(clockRaf);
     clockRaf = 0;
+    if (playerClockShouldRun()) {
+      if (seriousRunAt == null) seriousRunAt = performance.now();
+    } else {
+      pauseSeriousClock();
+    }
     paintSeriousClock();
-    if (isSerious() && endState == null && seriousStartedAt != null) {
+    if (isSerious() && endState == null && (seriousActive || inMatch)) {
       clockRaf = requestAnimationFrame(tickSeriousClock);
     }
   }
@@ -3544,7 +3565,9 @@ label.setting {
     pos = initialPosition();
     history = [clonePosition(pos)];
     flipped = settings.humanSide === GOTE;
-    seriousStartedAt = null;
+    seriousActive = false;
+    seriousAccumMs = 0;
+    seriousRunAt = null;
     lastRecordedMs = null;
     lastAttemptMs = null;
     lastRank = null;
@@ -3660,7 +3683,9 @@ label.setting {
     lastRank = null;
     lastRankUpdated = false;
     lastRecordAt = null;
-    seriousStartedAt = isSerious() ? performance.now() : null;
+    seriousActive = isSerious();
+    seriousAccumMs = 0;
+    seriousRunAt = null;
     worker.postMessage({ type: "clear" });
     document.querySelector(".end-overlay")?.remove();
     document.querySelector(".rank-overlay")?.remove();
@@ -3699,7 +3724,7 @@ label.setting {
   }
   async function resign() {
     if (endState || thinking) return;
-    if (isSerious() && seriousStartedAt != null && kifu.some((k) => k.side === settings.humanSide)) {
+    if (isSerious() && seriousActive && kifu.some((k) => k.side === settings.humanSide)) {
       const rec = await submitResignTime(elapsedSeriousMs(), savedNickname() || settings.nickname || "\u540D\u7121\u3057");
       lastRecordedMs = rec.entry.ms;
       lastAttemptMs = rec.attemptMs;
