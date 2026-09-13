@@ -1229,12 +1229,65 @@ label.setting {
   border: 1px solid rgba(201, 162, 39, 0.5);
   text-align: center;
 }
+.win-note {
+  margin: 0 0 4px;
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #c42a1a;
+  color: #fff6d8;
+  font-size: clamp(0.85rem, 3.4vw, 1.05rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
 .win-kicker {
+  margin: 6px 0 8px;
+  color: #ffe066;
+  letter-spacing: 0.12em;
+  font-size: clamp(1.05rem, 4.2vw, 1.35rem);
+  font-weight: 800;
+  text-shadow: 0 0 10px rgba(255, 200, 60, 0.45);
+}
+.win-lines {
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.win-lines li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  text-align: left;
+}
+.win-lines li.a { background: rgba(201, 162, 39, 0.2); }
+.win-lines li.b { background: rgba(196, 42, 26, 0.22); }
+.win-lines em {
+  flex: 0 0 1.6em;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 1.15rem;
+  text-align: center;
+}
+.win-lines li.a em { color: #ffe066; }
+.win-lines li.b em { color: #ff8a6a; }
+.win-lines span {
+  font-size: clamp(1.15rem, 4.6vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff8dc;
+  line-height: 1.25;
+}
+.win-lines li.a strong { color: #ffe066; font-size: 1.15em; }
+.win-lines li.b strong { color: #ffb198; font-size: 1.15em; }
+.win-sub {
   margin: 0 0 8px;
-  color: var(--gold);
-  letter-spacing: 0.18em;
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: clamp(0.78rem, 3vw, 0.95rem);
+  letter-spacing: 0.04em;
+  color: #f0d8a8;
 }
 .win-ways {
   display: grid;
@@ -1252,11 +1305,7 @@ label.setting {
   border-radius: 10px;
   background: rgba(18, 10, 6, 0.5);
 }
-.win-way strong {
-  font-size: clamp(0.95rem, 3.4vw, 1.15rem);
-  letter-spacing: 0.08em;
-  color: #fff3c8;
-}
+.win-way strong { display: none; }
 .win-slots {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -3357,19 +3406,23 @@ label.setting {
     el.className = "start-overlay";
     el.innerHTML = `
     <div class="start-card">
-      <h2>\u52DD\u3061\u65B9\u3068\u96E3\u6613\u5EA6</h2>
+      <h2>\u96E3\u6613\u5EA6</h2>
       <section class="win-show" aria-label="\u52DD\u3061\u65B9">
+        <p class="win-note">\u3075\u3064\u3046\u306E\u5C06\u68CB\u3068\u9055\u3044\u307E\u3059</p>
         <p class="win-kicker">\u5148\u306B\u3084\u3063\u305F\u65B9\u304C\u52DD\u3061</p>
+        <ol class="win-lines">
+          <li class="a"><em>1</em><span>\u6B69\u4EE5\u5916\u3092<strong>7\u679A</strong>\u53D6\u308B</span></li>
+          <li class="b"><em>2</em><span><strong>\u738B\u5C06</strong>\u3092\u53D6\u308B</span></li>
+        </ol>
+        <p class="win-sub">\u3068\u91D1\u306F\u6570\u3048\u308B\u3000\u4E0D\u6210\u306E\u6B69\u3068\u7389\u306F\u6570\u3048\u306A\u3044</p>
         <div class="win-ways">
           <div class="win-way">
             <div class="win-slots" aria-hidden="true"><i>\u9999</i><i>\u6842</i><i>\u9280</i><i>\u91D1</i><i>\u89D2</i><i>\u98DB</i><i>\u3068</i></div>
-            <strong>7\u679A\u53D6\u308B</strong>
             <div class="win-chips"><b class="yes">\u9999\u6842\u9280\u91D1\u89D2\u98DB\u3068 \u25CB</b><b class="no">\u6B69 \xD7\u3000\u7389 \xD7</b></div>
           </div>
           <span class="win-or">\u307E\u305F\u306F</span>
           <div class="win-way king">
             <div class="win-king" aria-hidden="true"><span>\u738B</span></div>
-            <strong>\u738B\u5C06\u3092\u53D6\u308B</strong>
           </div>
         </div>
       </section>
