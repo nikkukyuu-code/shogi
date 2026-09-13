@@ -1455,6 +1455,49 @@ label.setting {
   white-space: nowrap;
 }
 
+
+.pre-seventh {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+.pre-seventh.show { opacity: 1; }
+.pre-seventh.out { opacity: 0; }
+.pre-seventh-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(40,12,4,0.25) 0%, rgba(0,0,0,0.72) 68%);
+}
+.pre-seventh-word {
+  position: relative;
+  font-size: clamp(2.4rem, 11vw, 4.2rem);
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  color: #ffe066;
+  text-shadow: 0 0 22px #ffaa00, 0 4px 0 #5a1800;
+  animation: preSeventhPulse 0.9s ease-in-out infinite;
+}
+.pre-seventh p {
+  position: relative;
+  margin: 10px 0 0;
+  font-size: clamp(1.05rem, 4vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #fff4d0;
+  text-shadow: 0 0 10px #c96a20;
+}
+@keyframes preSeventhPulse {
+  0%, 100% { transform: scale(0.98); filter: brightness(0.95); }
+  50% { transform: scale(1.04); filter: brightness(1.12); }
+}
+
 </style>
 </head>
 <body>
@@ -2274,6 +2317,16 @@ label.setting {
     }
     speakJa("\u30EA\u30FC\u30C1");
   }
+  function playPreSeventh() {
+    const c = ac();
+    if (c) {
+      osc(c, "sawtooth", 165, 0.22, 0.05);
+      osc(c, "triangle", 330, 0.28, 0.06, 0.08);
+      osc(c, "sine", 660, 0.35, 0.07, 0.18);
+      osc(c, "sine", 990, 0.42, 0.05, 0.32);
+    }
+    speakJa("7\u3064\u76EE");
+  }
   function playResignLines() {
     const c = ac();
     if (c) {
@@ -2650,6 +2703,7 @@ label.setting {
   var holdLastTrophy = false;
   var pendingRiichi = null;
   var pendingSeventh = null;
+  var preSeventhGen = 0;
   var seventhPickSq = null;
   var onSeventhPick = null;
   var seriousStartedAt = null;
@@ -2745,7 +2799,7 @@ label.setting {
     return inMatch && !endState && !cinematic && !starting && pos.sideToMove === settings.humanSide && !thinking;
   }
   function startEngineIfNeeded() {
-    if (!inMatch || endState || thinking || starting) return;
+    if (!inMatch || endState || thinking || starting || cinematic) return;
     if (pos.sideToMove === settings.humanSide) return;
     runEngine();
   }
@@ -2832,6 +2886,33 @@ label.setting {
         return "";
     }
   }
+  function isSeventhTrophyMove(move, side) {
+    if (pos.trophies[side] !== TROPHY_GOAL - 1) return false;
+    const cap = move.captured ?? (move.from != null ? pos.board[move.to] : null);
+    return !!cap && cap.kind !== "K" && countsAsTrophy(cap);
+  }
+  function playPreSeventh2(side, done) {
+    document.querySelector(".pre-seventh")?.remove();
+    const gen = ++preSeventhGen;
+    const youLose = side !== settings.humanSide;
+    const el = document.createElement("div");
+    el.className = "pre-seventh";
+    el.innerHTML = `
+    <div class="pre-seventh-vignette"></div>
+    <div class="pre-seventh-word">7\u3064\u76EE</div>
+    <p>${youLose ? "\u53D6\u3089\u308C\u307E\u3059" : "\u53D6\u308A\u307E\u3059"}</p>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("show"));
+    playPreSeventh();
+    window.setTimeout(() => {
+      if (gen !== preSeventhGen) return;
+      el.classList.add("out");
+      window.setTimeout(() => {
+        el.remove();
+        if (gen === preSeventhGen) done();
+      }, 280);
+    }, 1600);
+  }
   function applyHumanOrEngineMove(move, fromHuman) {
     if (!isLegalMove(pos, move)) {
       if (!fromHuman) {
@@ -2845,6 +2926,19 @@ label.setting {
         return;
       }
     }
+    const side = pos.sideToMove;
+    if (isSeventhTrophyMove(move, side)) {
+      cinematic = true;
+      playPreSeventh2(side, () => {
+        finishAppliedMove(move, fromHuman);
+        render();
+        startEngineIfNeeded();
+      });
+      return;
+    }
+    finishAppliedMove(move, fromHuman);
+  }
+  function finishAppliedMove(move, fromHuman) {
     const side = pos.sideToMove;
     const beforeT = [pos.trophies[0], pos.trophies[1]];
     const text = moveToJa(move, side);
@@ -3139,6 +3233,8 @@ label.setting {
     document.querySelector(".congrats-cinematic")?.remove();
     document.querySelector(".riichi-banner")?.remove();
     document.querySelector(".cinematic")?.remove();
+    document.querySelector(".pre-seventh")?.remove();
+    preSeventhGen++;
     render();
     mountStartOverlay();
   }
@@ -3229,6 +3325,8 @@ label.setting {
     document.querySelector(".rank-overlay")?.remove();
     document.querySelector(".riichi-banner")?.remove();
     document.querySelector(".cinematic")?.remove();
+    document.querySelector(".pre-seventh")?.remove();
+    preSeventhGen++;
     render();
     startEngineIfNeeded();
   }
@@ -3436,6 +3534,8 @@ label.setting {
   }
   function playSeventhCinematic(info) {
     document.querySelector(".cinematic")?.remove();
+    document.querySelector(".pre-seventh")?.remove();
+    preSeventhGen++;
     document.querySelector(".seventh-prompt")?.remove();
     const to = lastMove?.to;
     const cell = to !== void 0 ? document.querySelector(`.sq[data-sq="${to}"]`) : null;
