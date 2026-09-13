@@ -1092,7 +1092,9 @@ label.setting {
   margin: 0 0 14px;
   text-align: center;
   font-size: 0.8rem;
-  opacity: 0.85;
+  line-height: 1.45;
+  opacity: 0.9;
+  color: #ffe8b0;
 }
 .rank-card ol {
   list-style: none;
@@ -1432,10 +1434,33 @@ label.setting {
 @media (max-width: 360px) {
   .win-way strong { font-size: 0.9rem; }
 }
+.rank-note {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  font-size: clamp(0.78rem, 3.1vw, 0.92rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  color: #ffe8b0;
+}
+.rank-note[hidden] { display: none; }
+
+@media (max-height: 780px) {
+  .start-card h2 { font-size: 1.25rem; }
+  .win-kicker { margin: 4px 0 6px; font-size: 1rem; }
+  .win-lines span { font-size: 1.05rem; }
+  .win-ways { display: none; }
+  .diff-picks { gap: 8px; }
+  .diff-picks button { min-height: 48px; font-size: 1.15rem; }
+  .start-overlay .start-btn { min-height: 52px; font-size: 1.25rem; }
+  .nick-field input { min-height: 40px; }
+}
 @media (max-height: 720px) {
-  .start-card { padding: 14px 14px 12px; gap: 8px; }
-  .diff-picks button { min-height: 52px; }
-  .win-show { padding: 6px 8px 8px; }
+  .start-card { padding: 10px 12px 8px; gap: 6px; }
+  .diff-picks button { min-height: 44px; }
+  .win-show { padding: 5px 8px 6px; }
+  .win-sub { margin-bottom: 0; }
 }
 .start-btn {
   min-width: min(280px, 80vw);
@@ -1487,19 +1512,21 @@ label.setting {
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding: 8px;
+  -webkit-overflow-scrolling: touch;
+  padding: max(8px, env(safe-area-inset-top)) 8px max(16px, env(safe-area-inset-bottom));
   background: rgba(8, 4, 2, 0.38);
   pointer-events: auto;
 }
 .start-card {
   width: min(520px, 94vw);
-  margin: auto;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 14px 14px 12px;
+  gap: 8px;
+  padding: 12px 12px 10px;
   border-radius: 16px;
   background: linear-gradient(160deg, rgba(61, 36, 18, 0.96) 0%, rgba(18, 10, 6, 0.97) 100%);
   border: 3px solid var(--gold);
@@ -2953,7 +2980,7 @@ label.setting {
     overlay.innerHTML = `
     <div class="rank-card" role="dialog" aria-label="\u771F\u5263\u30E9\u30F3\u30AD\u30F3\u30B0">
       <h2>\u771F\u5263\u30E9\u30F3\u30AD\u30F3\u30B0</h2>
-      <p class="rank-lead">\u6295\u4E86\u307E\u3067\u306E\u6642\u9593\u3000\u65E9\u3044\u307B\u3069\u4E0A</p>
+      <p class="rank-lead">\u771F\u5263\u3067\u6295\u4E86\u3059\u308B\u307E\u3067\u306E\u3001\u81EA\u5206\u306E\u624B\u756A\u3060\u3051\u306E\u6642\u9593\u3067\u3059\u3002\u76F8\u624B\u306E\u601D\u8003\u306F\u5165\u308A\u307E\u305B\u3093\u3002\u77ED\u3044\u307B\u3069\u4E0A\u4F4D\uFF08100\u4F4D\u307E\u3067\uFF09</p>
       <ol><li class="empty">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</li></ol>
       <button type="button" id="btn-rank-close">\u9589\u3058\u308B</button>
     </div>`;
@@ -3514,6 +3541,8 @@ label.setting {
       });
       const rankBtn = root.querySelector("#btn-rank");
       if (rankBtn) rankBtn.hidden = !isSerious();
+      const rankNote = root.querySelector("#rank-note");
+      if (rankNote) rankNote.hidden = !isSerious();
       const nick = root.querySelector("#nick-field");
       if (nick) nick.hidden = false;
     };
@@ -3629,6 +3658,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
+      <p class="rank-note" id="rank-note"${isSerious() ? "" : " hidden"}>\u771F\u5263\u306E\u6295\u4E86\u30BF\u30A4\u30E0\u9806\u4F4D\u3002\u81EA\u5206\u306E\u624B\u756A\u3060\u3051\u3092\u6E2C\u308B\u3002\u77ED\u3044\u307B\u3069\u4E0A\uFF08100\u4F4D\u307E\u3067\uFF09</p>
       <button type="button" id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0</button>
       <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
     </div>`;
