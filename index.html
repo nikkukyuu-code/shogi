@@ -1836,6 +1836,27 @@ label.setting {
     "+L": "\u6210\u9999",
     "+P": "\u3068"
   };
+  var PIECE_NAME = {
+    K: "\u7389\u5C06",
+    R: "\u98DB\u8ECA",
+    B: "\u89D2\u884C",
+    G: "\u91D1\u5C06",
+    S: "\u9280\u5C06",
+    N: "\u6842\u99AC",
+    L: "\u9999\u8ECA",
+    P: "\u6B69\u5175",
+    "+R": "\u9F8D\u738B",
+    "+B": "\u9F8D\u99AC",
+    "+S": "\u6210\u9280",
+    "+N": "\u6210\u6842",
+    "+L": "\u6210\u9999",
+    "+P": "\u3068\u91D1"
+  };
+  function pieceCallName(kind, promoted = false, side) {
+    if (kind === "K") return side === 1 ? "\u738B\u5C06" : "\u7389\u5C06";
+    const key = promoted ? `+${kind}` : kind;
+    return PIECE_NAME[key] || PIECE_KANJI[key] || kind;
+  }
   var PIECE_KANJI_SHORT = {
     K: "\u7389",
     R: "\u98DB",
@@ -3063,9 +3084,7 @@ label.setting {
     return PIECE_KANJI_SHORT[key] || t.kind;
   }
   function trophyName(t) {
-    if (t.kind === "P" && t.promoted) return "\u3068\u91D1";
-    const key = t.promoted ? `+${t.kind}` : t.kind;
-    return PIECE_KANJI[key] || trophyGlyph(t);
+    return pieceCallName(t.kind, t.promoted);
   }
   function squareAtDisplay(col, row) {
     if (!flipped) {
