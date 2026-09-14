@@ -3713,6 +3713,7 @@ label.setting {
         <button type="button" data-diff="advanced">\u4E0A\u7D1A</button>
         <button type="button" data-diff="serious">\u771F\u5263</button>
       </div>
+      <button type="button" id="btn-rank" class="start-rank">\u30E9\u30F3\u30AD\u30F3\u30B0<small>\u6295\u4E86\u30BF\u30A4\u30E0\u3000\u81EA\u5206\u306E\u624B\u756A\u3060\u3051\u3000\u77ED\u3044\u307B\u3069\u4E0A</small></button>
       <label class="nick-field" id="nick-field">
         <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0\uFF08\u7A7A\u306A\u3089\u540D\u7121\u3057\uFF09" value="${(savedNickname() || settings.nickname).replace(/"/g, "&quot;")}" />
         <button type="button" id="btn-nick-save-start">\u56FA\u5B9A</button>
@@ -3724,7 +3725,6 @@ label.setting {
       </div>
       <p class="start-ver">v86</p>
       <div class="start-foot">
-        <button type="button" id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0<small>\u6295\u4E86\u30BF\u30A4\u30E0\u3000\u81EA\u5206\u306E\u624B\u756A\u3060\u3051\u3000\u77ED\u3044\u307B\u3069\u4E0A</small></button>
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
     </div>`;
