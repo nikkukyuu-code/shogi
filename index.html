@@ -2840,7 +2840,7 @@ label.setting {
       const row = await decryptResignTime(item);
       if (!row) continue;
       if ((!row.playerId || row.playerId === me) && row.name !== name) {
-        const s = await encryptResignTime(row.ms, name);
+        const s = await encryptResignTime(row.ms, name, row.difficulty);
         s.at = row.at;
         next.push(s);
         changed = true;
@@ -2905,9 +2905,13 @@ label.setting {
       )
     );
   }
-  async function encryptResignTime(ms, name) {
+  var RANK_DIFFS = ["beginner", "intermediate", "advanced", "serious"];
+  function normalizeDiff(d) {
+    return RANK_DIFFS.includes(d) ? d : "serious";
+  }
+  async function encryptResignTime(ms, name, difficulty) {
     const sealedMs = Math.max(0, Math.round(ms));
-    const packed = new TextEncoder().encode(JSON.stringify({ ms: sealedMs, name, playerId: playerId() }));
+    const packed = new TextEncoder().encode(JSON.stringify({ ms: sealedMs, name, playerId: playerId(), difficulty: normalizeDiff(difficulty) }));
     const { iv, ct } = await encryptBytes(packed, "time");
     return { iv, ct, at: Date.now() };
   }
@@ -3007,11 +3011,13 @@ label.setting {
       return [];
     }
   }
-  async function submitResignTime(ms, name) {
+  async function submitResignTime(ms, name, difficulty) {
+    const diff = normalizeDiff(difficulty);
     const nextMs = Math.max(0, Math.round(ms));
     const me = playerId();
     const current = await readSealedList() ?? await migrateLegacy();
-    const list = await openEntries(current);
+    const all = await openEntries(current);
+    const list = all.filter((e) => normalizeDiff(e.difficulty) === diff);
     const mine = (e) => !e.playerId || e.playerId === me;
     const best = list.filter(mine).reduce((a, e) => a == null || e.ms < a.ms ? e : a, null);
     if (best && nextMs >= best.ms) {
@@ -3022,29 +3028,36 @@ label.setting {
     for (const item of current) {
       const row = await decryptResignTime(item);
       if (!row) continue;
-      if (mine(row)) continue;
+      if (mine(row) && normalizeDiff(row.difficulty) === diff) continue;
       kept.push(item);
     }
-    const sealed = await encryptResignTime(nextMs, name);
+    const sealed = await encryptResignTime(nextMs, name, diff);
     const stored = [...kept, sealed];
     await writeSealedList(stored);
-    const nextList = await openEntries(stored);
-    const entry = await decryptResignTime(sealed) ?? { ms: nextMs, at: sealed.at, name, playerId: me };
+    const nextList = (await openEntries(stored)).filter((e) => normalizeDiff(e.difficulty) === diff);
+    const entry = await decryptResignTime(sealed) ?? { ms: nextMs, at: sealed.at, name, playerId: me, difficulty: diff };
     const rank = nextList.findIndex((e) => e.ms === entry.ms && e.at === entry.at) + 1;
     return { entry, rank: rank > 0 ? rank : nextList.length, list: nextList, updated: true, attemptMs: nextMs };
   }
-  async function loadRanks() {
+  async function loadRanks(difficulty) {
     const sealed = await readSealedList() ?? await migrateLegacy();
-    return openEntries(sealed);
+    const all = await openEntries(sealed);
+    const diff = normalizeDiff(difficulty);
+    return all.filter((e) => normalizeDiff(e.difficulty) === diff);
   }
-  async function showRanking(highlightAt) {
+  async function showRanking(highlightAt, difficulty) {
+    const viewDiff = normalizeDiff(difficulty ?? (typeof settings !== "undefined" ? settings.difficulty : "serious"));
+    const labels = { beginner: "\u521D\u7D1A", intermediate: "\u4E2D\u7D1A", advanced: "\u4E0A\u7D1A", serious: "\u771F\u5263" };
     document.querySelector(".rank-overlay")?.remove();
     const overlay = document.createElement("div");
     overlay.className = "rank-overlay";
     overlay.innerHTML = `
-    <div class="rank-card" role="dialog" aria-label="\u771F\u5263\u30E9\u30F3\u30AD\u30F3\u30B0">
-      <h2>\u771F\u5263\u30E9\u30F3\u30AD\u30F3\u30B0</h2>
-      <p class="rank-lead">\u771F\u5263\u3067\u6295\u4E86\u3059\u308B\u307E\u3067\u306E\u3001\u81EA\u5206\u306E\u624B\u756A\u3060\u3051\u306E\u6642\u9593\u3067\u3059\u3002\u76F8\u624B\u306E\u601D\u8003\u306F\u5165\u308A\u307E\u305B\u3093\u3002\u77ED\u3044\u307B\u3069\u4E0A\u4F4D\uFF08100\u4F4D\u307E\u3067\uFF09</p>
+    <div class="rank-card" role="dialog" aria-label="\u30E9\u30F3\u30AD\u30F3\u30B0">
+      <h2>\u30E9\u30F3\u30AD\u30F3\u30B0</h2>
+      <p class="rank-lead">\u6295\u4E86\u3059\u308B\u307E\u3067\u306E\u3001\u81EA\u5206\u306E\u624B\u756A\u3060\u3051\u306E\u6642\u9593\u3067\u3059\u3002\u76F8\u624B\u306E\u601D\u8003\u306F\u5165\u308A\u307E\u305B\u3093\u3002\u77ED\u3044\u307B\u3069\u4E0A\u4F4D\uFF08\u96E3\u6613\u5EA6\u5225\u30FB100\u4F4D\u307E\u3067\uFF09</p>
+      <div class="rank-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px;">
+        ${RANK_DIFFS.map((d) => `<button type="button" class="rank-tab" data-diff="${d}"${d === viewDiff ? " style=\"font-weight:700;\"" : ""}>${labels[d]}</button>`).join("")}
+      </div>
       <ol><li class="empty">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</li></ol>
       <button type="button" id="btn-rank-close">\u9589\u3058\u308B</button>
     </div>`;
@@ -3053,8 +3066,11 @@ label.setting {
       if (e.target === overlay) close();
     });
     overlay.querySelector("#btn-rank-close").addEventListener("click", close);
+    overlay.querySelectorAll(".rank-tab").forEach((btn) => {
+      btn.addEventListener("click", () => void showRanking(highlightAt, btn.getAttribute("data-diff")));
+    });
     document.body.appendChild(overlay);
-    const list = await loadRanks();
+    const list = await loadRanks(viewDiff);
     if (!overlay.isConnected) return;
     const rows = list.length ? list.map((e, i) => {
       const hi = highlightAt && e.at === highlightAt ? ' class="me"' : "";
@@ -3135,7 +3151,7 @@ label.setting {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
   function isSerious() {
-    return settings.difficulty === "serious";
+    return true;
   }
   function pauseSeriousClock() {
     if (seriousRunAt == null) return;
@@ -3809,7 +3825,7 @@ label.setting {
   async function resign() {
     if (endState || thinking) return;
     if (isSerious() && seriousActive && kifu.some((k) => k.side === settings.humanSide)) {
-      const rec = await submitResignTime(elapsedSeriousMs(), savedNickname() || settings.nickname || "\u540D\u7121\u3057");
+      const rec = await submitResignTime(elapsedSeriousMs(), savedNickname() || settings.nickname || "\u540D\u7121\u3057", settings.difficulty);
       lastRecordedMs = rec.entry.ms;
       lastAttemptMs = rec.attemptMs;
       lastRank = rec.rank;
