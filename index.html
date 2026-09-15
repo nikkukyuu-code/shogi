@@ -1824,6 +1824,37 @@ label.setting {
   box-shadow: 0 0 22px #ffe066, 0 0 40px rgba(255, 180, 40, 0.7);
   animation: seventhGlow 0.75s ease-in-out infinite;
 }
+.mate-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 146;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(8, 4, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.mate-reveal.show { opacity: 1; }
+.mate-reveal.out { opacity: 0; }
+.mate-reveal .mr-kicker {
+  margin: 0;
+  color: #ffe066;
+  letter-spacing: 0.32em;
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
+  font-weight: 800;
+  text-shadow: 0 0 12px #c96a20, 0 2px 0 #3a1800;
+}
+.mate-reveal .mr-title {
+  margin: 10px 0 0;
+  font-size: clamp(2.4rem, 10vw, 4.2rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #fff4d4;
+  text-shadow: 0 0 24px #ffb020, 0 3px 0 #3a1800;
+}
 .seventh-reveal {
   position: fixed;
   left: 0;
@@ -3129,6 +3160,7 @@ label.setting {
   var holdLastTrophy = false;
   var pendingRiichi = null;
   var pendingSeventhReveal = null;
+  var pendingMateReveal = null;
   var preSeventhGen = 0;
   var seriousActive = false;
   var seriousAccumMs = 0;
@@ -3459,7 +3491,11 @@ label.setting {
       title: humanWon ? "\u52DD\u3061" : "\u8CA0\u3051",
       subtitle: reasonSubtitle(r.reason, humanWon)
     };
-    if (r.reason === "king_capture") {
+    if (r.reason === "mate" || r.reason === "king_capture") {
+      cinematic = true;
+      holdLastTrophy = false;
+      pendingMateReveal = { humanWon, reason: r.reason };
+    } else if (r.reason === "king_capture") {
       cinematic = false;
       holdLastTrophy = false;
     }
@@ -3995,6 +4031,29 @@ label.setting {
       window.setTimeout(() => el.remove(), 450);
     }, 3800);
   }
+    function playMateReveal(info) {
+    document.querySelector(".mate-reveal")?.remove();
+    const el = document.createElement("div");
+    el.className = "mate-reveal";
+    const tsumi = info.reason === "mate";
+    const kicker = tsumi ? "詰み" : "玉将";
+    const title = tsumi ? (info.humanWon ? "詰み" : "詰まされた") : (info.humanWon ? "討ち取った" : "討たれた");
+    el.innerHTML = `<p class="mr-kicker">${kicker}</p><p class="mr-title">${title}</p>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("show"));
+    window.setTimeout(() => {
+      el.classList.add("out");
+      window.setTimeout(() => {
+        el.remove();
+        cinematic = false;
+        if (endState) {
+          if (endState.humanWon) playWin();
+          else if (endState.humanWon === false) playLose();
+          showEndOverlay();
+        }
+      }, 450);
+    }, 2200);
+  }
   function playSeventhReveal(info) {
     document.querySelector(".seventh-reveal")?.remove();
     const to = lastMove?.to;
@@ -4260,6 +4319,11 @@ label.setting {
       const info = pendingSeventhReveal;
       pendingSeventhReveal = null;
       requestAnimationFrame(() => playSeventhReveal(info));
+    }
+    if (pendingMateReveal) {
+      const info = pendingMateReveal;
+      pendingMateReveal = null;
+      requestAnimationFrame(() => playMateReveal(info));
     }
     if (pendingYourTurn && !cinematic) {
       pendingYourTurn = false;
