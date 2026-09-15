@@ -6,7 +6,6 @@
 <meta http-equiv="Cache-Control" content="no-store" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <title>将棋 — 歩以外7枚 or 玉取り</title>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 :root {
   --wood-dark: #5c3a1e;
@@ -1917,60 +1916,6 @@ label.setting {
   50% { filter: brightness(1.18) drop-shadow(0 0 22px #ffcc44); transform: scale(1.08); }
 }
 
-
-.start-btn.net {
-  margin-top: 8px;
-  background: linear-gradient(#3a5a3a, #2a3f2a);
-  border-color: #8ecf8e;
-}
-.net-overlay {
-  position: fixed; inset: 0; z-index: 160;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(10,6,0,.62);
-}
-.net-card {
-  width: min(420px, 92vw);
-  background: linear-gradient(#3a2412, #24150b);
-  border: 2px solid #e0c070;
-  border-radius: 14px;
-  padding: 18px 16px 14px;
-  color: #f4e6c4;
-  text-align: center;
-}
-.net-card h2 { margin: 0 0 8px; font-size: 1.25rem; }
-.net-card p { margin: 6px 0; font-size: .92rem; }
-.net-card .room-code {
-  font-size: clamp(1.8rem, 8vw, 2.6rem);
-  letter-spacing: .28em;
-  font-weight: 900;
-  color: #ffe08a;
-  margin: 10px 0 12px;
-}
-.net-card input[type=text] {
-  width: 70%;
-  font-size: 1.2rem;
-  letter-spacing: .2em;
-  text-align: center;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #c4a574;
-  background: #1a1008;
-  color: #fff4d4;
-}
-.net-card .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
-.net-card button {
-  min-height: 42px; padding: 0 14px;
-  border-radius: 8px; border: 1px solid #c4a574;
-  background: #5c3a1e; color: #fff4d4; font-weight: 700;
-}
-.net-card button.primary { background: linear-gradient(#8b2a2a, #5c1818); }
-.net-note { opacity: .85; font-size: .8rem !important; }
-#net-room-chip {
-  margin-left: 8px;
-  font-size: .8rem;
-  color: #ffe08a;
-}
-
 </style>
 </head>
 <body>
@@ -3228,12 +3173,6 @@ label.setting {
   var clockRaf = 0;
   var starting = false;
   var inMatch = false;
-  var netMode = false;
-  var netRole = null;
-  var netRoom = "";
-  var netPeer = null;
-  var netConn = null;
-  var netStatus = "";
   var DIFF_LABEL = {
     beginner: "\u521D\u7D1A",
     intermediate: "\u4E2D\u7D1A",
@@ -3340,7 +3279,6 @@ label.setting {
     return inMatch && !endState && !cinematic && !starting && pos.sideToMove === settings.humanSide && !thinking;
   }
   function startEngineIfNeeded() {
-    if (netMode) return;
     if (!inMatch || endState || thinking || starting || cinematic) return;
     if (pos.sideToMove === settings.humanSide) return;
     runEngine();
@@ -3602,7 +3540,6 @@ label.setting {
   }
   function commitMove(move) {
     applyHumanOrEngineMove(move, true);
-    if (netMode) netSend({ type: "move", move });
     render();
     startEngineIfNeeded();
   }
@@ -3755,7 +3692,6 @@ label.setting {
     });
   }
   function showStartScreen() {
-    closeNet();
     inMatch = false;
     starting = false;
     stopEngine();
@@ -3793,223 +3729,6 @@ label.setting {
     render();
     mountStartOverlay();
   }
-
-  function netPeerId(code) {
-    return "nk7shogi" + String(code || "").toUpperCase();
-  }
-  function makeRoomCode() {
-    const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-    let c = "";
-    for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
-    return c;
-  }
-  function loadPeerLib() {
-    return new Promise((resolve, reject) => {
-      if (window.Peer) return resolve(window.Peer);
-      const t = window.setTimeout(() => reject(new Error("PeerJS timeout")), 8000);
-      const tick = () => {
-        if (window.Peer) {
-          window.clearTimeout(t);
-          resolve(window.Peer);
-        } else {
-          window.setTimeout(tick, 50);
-        }
-      };
-      tick();
-    });
-  }
-  function netSend(msg) {
-    try {
-      if (netConn && netConn.open) netConn.send(msg);
-    } catch (e) {}
-  }
-  function closeNet() {
-    try { netConn?.close(); } catch (e) {}
-    try { netPeer?.destroy(); } catch (e) {}
-    netMode = false;
-    netRole = null;
-    netRoom = "";
-    netPeer = null;
-    netConn = null;
-    netStatus = "";
-    document.querySelector(".net-overlay")?.remove();
-  }
-  function wireNetConn(conn) {
-    netConn = conn;
-    conn.on("data", (raw) => {
-      const msg = raw && typeof raw === "object" ? raw : null;
-      if (!msg || !msg.type) return;
-      if (msg.type === "hello") {
-        if (netRole === "guest") {
-          settings.humanSide = typeof msg.youAre === "number" ? msg.youAre : 1;
-          beginNetMatch();
-        }
-      } else if (msg.type === "move") {
-        if (endState || !msg.move) return;
-        if (pos.sideToMove === settings.humanSide) return;
-        applyHumanOrEngineMove(msg.move, false);
-        render();
-      } else if (msg.type === "resign") {
-        if (endState) return;
-        endState = {
-          humanWon: true,
-          reason: "resign",
-          winner: settings.humanSide,
-          title: "勝ち",
-          subtitle: "相手が投了"
-        };
-        playWin();
-        render();
-      }
-    });
-    conn.on("close", () => {
-      if (!inMatch || endState) return;
-      netStatus = "切断";
-      endState = {
-        humanWon: null,
-        reason: "disconnect",
-        winner: null,
-        title: "切断",
-        subtitle: "相手との接続が切れました"
-      };
-      render();
-    });
-    conn.on("error", () => {});
-  }
-  function beginNetMatch() {
-    document.querySelector(".net-overlay")?.remove();
-    document.querySelector(".start-overlay")?.remove();
-    netMode = true;
-    starting = false;
-    inMatch = true;
-    newGame();
-  }
-  function setNetCard(html) {
-    let el = document.querySelector(".net-overlay");
-    if (!el) {
-      el = document.createElement("div");
-      el.className = "net-overlay";
-      document.body.appendChild(el);
-    }
-    el.innerHTML = `<div class="net-card">${html}</div>`;
-    return el;
-  }
-  function openNetMenu() {
-    const el = setNetCard(`
-      <h2>ネット対戦</h2>
-      <p>同じページを開いた相手と、部屋番号で対戦します。</p>
-      <div class="row">
-        <button type="button" class="primary" id="net-host">部屋を作る</button>
-        <button type="button" id="net-join">部屋に入る</button>
-      </div>
-      <div class="row"><button type="button" id="net-back">戻る</button></div>
-    `);
-    el.querySelector("#net-host").onclick = () => void hostNetRoom();
-    el.querySelector("#net-join").onclick = () => showJoinNet();
-    el.querySelector("#net-back").onclick = () => el.remove();
-  }
-  function showJoinNet() {
-    const el = setNetCard(`
-      <h2>部屋に入る</h2>
-      <p>相手の部屋番号を入力</p>
-      <p><input id="net-code" type="text" maxlength="6" autocomplete="off" /></p>
-      <div class="row">
-        <button type="button" class="primary" id="net-go">入室</button>
-        <button type="button" id="net-back">戻る</button>
-      </div>
-      <p class="net-note" id="net-msg"></p>
-    `);
-    el.querySelector("#net-back").onclick = () => openNetMenu();
-    el.querySelector("#net-go").onclick = () => void joinNetRoom(el.querySelector("#net-code").value);
-  }
-  async function hostNetRoom() {
-    closeNet();
-    netRole = "host";
-    netRoom = makeRoomCode();
-    settings.humanSide = 0;
-    setNetCard(`
-      <h2>部屋を作成中…</h2>
-      <p class="room-code">${netRoom}</p>
-      <p class="net-note">接続サーバーに繋いでいます</p>
-    `);
-    try {
-      const Peer = await loadPeerLib();
-      netPeer = new Peer(netPeerId(netRoom), { debug: 0 });
-      netPeer.on("error", (err) => {
-        setNetCard(`<h2>部屋を作れませんでした</h2><p>${String(err?.type || err || "")}</p><div class="row"><button id="net-back">戻る</button></div>`);
-        document.querySelector("#net-back")?.addEventListener("click", () => openNetMenu());
-      });
-      await new Promise((resolve, reject) => {
-        netPeer.on("open", resolve);
-        window.setTimeout(() => reject(new Error("timeout")), 10000);
-      });
-      setNetCard(`
-        <h2>部屋番号</h2>
-        <p class="room-code">${netRoom}</p>
-        <p>相手にこの番号を伝えてください。</p>
-        <p class="net-note">入室待ち…　あなたは先手です</p>
-        <div class="row"><button type="button" id="net-cancel">やめる</button></div>
-      `);
-      document.querySelector("#net-cancel")?.addEventListener("click", () => {
-        closeNet();
-      });
-      netPeer.on("connection", (conn) => {
-        if (netConn && netConn.open) {
-          try { conn.close(); } catch (e) {}
-          return;
-        }
-        wireNetConn(conn);
-        conn.on("open", () => {
-          netSend({ type: "hello", youAre: 1, nick: savedNickname() || settings.nickname || "名無し" });
-          beginNetMatch();
-        });
-      });
-    } catch (e) {
-      setNetCard(`<h2>接続できませんでした</h2><p class="net-note">通信ライブラリか回線を確認してください</p><div class="row"><button id="net-back">戻る</button></div>`);
-      document.querySelector("#net-back")?.addEventListener("click", () => openNetMenu());
-    }
-  }
-  async function joinNetRoom(raw) {
-    const code = String(raw || "").toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, 6);
-    const msg = document.querySelector("#net-msg");
-    if (code.length !== 6) {
-      if (msg) msg.textContent = "6桁で入力してください";
-      return;
-    }
-    closeNet();
-    netRole = "guest";
-    netRoom = code;
-    settings.humanSide = 1;
-    setNetCard(`
-      <h2>入室中…</h2>
-      <p class="room-code">${netRoom}</p>
-      <p class="net-note">相手の部屋を探しています</p>
-    `);
-    try {
-      const Peer = await loadPeerLib();
-      netPeer = new Peer({ debug: 0 });
-      netPeer.on("error", (err) => {
-        setNetCard(`<h2>入れませんでした</h2><p>${String(err?.type || err || "部屋が見つかりません")}</p><div class="row"><button id="net-back">戻る</button></div>`);
-        document.querySelector("#net-back")?.addEventListener("click", () => openNetMenu());
-      });
-      await new Promise((resolve, reject) => {
-        netPeer.on("open", resolve);
-        window.setTimeout(() => reject(new Error("timeout")), 10000);
-      });
-      const conn = netPeer.connect(netPeerId(code), { reliable: true });
-      wireNetConn(conn);
-      await new Promise((resolve, reject) => {
-        conn.on("open", resolve);
-        window.setTimeout(() => reject(new Error("部屋が見つかりません")), 10000);
-      });
-      netSend({ type: "join", nick: savedNickname() || settings.nickname || "名無し" });
-      setNetCard(`<h2>接続しました</h2><p class="room-code">${netRoom}</p><p class="net-note">対局開始を待っています</p>`);
-    } catch (e) {
-      setNetCard(`<h2>入れませんでした</h2><p class="net-note">番号が違うか、相手が部屋を開いていません</p><div class="row"><button id="net-back">戻る</button></div>`);
-      document.querySelector("#net-back")?.addEventListener("click", () => openNetMenu());
-    }
-  }
-
   function mountStartOverlay() {
     document.querySelector(".start-overlay")?.remove();
     const el = document.createElement("div");
@@ -4036,12 +3755,11 @@ label.setting {
         <button type="button" id="btn-nick-save-start">\u56FA\u5B9A</button>
       </label>
       <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
-      <button type="button" class="start-btn net" id="btn-net">\u30CD\u30C3\u30C8\u5BFE\u6226</button>
       <div class="side-picks" role="group" aria-label="\u624B\u756A">
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver">v87</p>
+      <p class="start-ver">v86</p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
@@ -4062,10 +3780,6 @@ label.setting {
     el.querySelector("#btn-start").addEventListener("click", () => {
       unlock();
       void startMatch();
-    });
-    el.querySelector("#btn-net")?.addEventListener("click", () => {
-      unlock();
-      openNetMenu();
     });
   }
   async function startMatch() {
@@ -4120,7 +3834,6 @@ label.setting {
     startEngineIfNeeded();
   }
   function undo() {
-    if (netMode) return;
     if (thinking) {
       stopEngine();
       searchId++;
@@ -4147,8 +3860,7 @@ label.setting {
   }
   async function resign() {
     if (endState || thinking) return;
-    if (netMode) netSend({ type: "resign" });
-    if (!netMode && isSerious() && seriousActive && kifu.some((k) => k.side === settings.humanSide)) {
+    if (isSerious() && seriousActive && kifu.some((k) => k.side === settings.humanSide)) {
       const rec = await submitResignTime(elapsedSeriousMs(), savedNickname() || settings.nickname || "\u540D\u7121\u3057", settings.difficulty);
       lastRecordedMs = rec.entry.ms;
       lastAttemptMs = rec.attemptMs;
@@ -4524,7 +4236,7 @@ label.setting {
     const botSide = settings.humanSide;
     app.innerHTML = `
     <header class="top">
-      <h1>\u5C06\u68CB${netMode && netRoom ? `<span id="net-room-chip">部屋 ${netRoom}</span>` : ""}</h1>
+      <h1>\u5C06\u68CB</h1>
       <div class="status" id="status"></div>
       <div class="clock-row">
         <div id="think-banner" class="think-banner${thinking ? " on" : ""}">${thinking ? '\u8003\u3048\u4E2D<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>' : ""}</div>
@@ -4542,7 +4254,7 @@ label.setting {
       <div id="trophy-bot" class="trophy-bar you"></div>
     </div>
     <div class="dock">
-      <button id="btn-undo"${netMode ? " disabled" : ""}>\u5F85\u3063\u305F</button>
+      <button id="btn-undo">\u5F85\u3063\u305F</button>
       <button id="btn-resign">\u6295\u4E86</button>
       <button id="btn-new">\u65B0\u898F</button>
       <button class="stop" id="btn-stop" ${thinking ? "" : "disabled"}>\u4ECA\u3059\u3050\u6307\u3059</button>
