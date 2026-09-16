@@ -1971,6 +1971,19 @@ label.setting {
   color: #ffe08a;
 }
 
+
+#visit-count {
+  position: fixed;
+  left: 6px;
+  bottom: 4px;
+  z-index: 40;
+  pointer-events: none;
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: rgba(244, 230, 196, 0.55);
+  text-shadow: 0 1px 2px #000;
+}
 </style>
 </head>
 <body>
@@ -4064,7 +4077,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver">v88</p>
+      <p class="start-ver">v89</p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
@@ -4653,8 +4666,45 @@ label.setting {
       }, 700);
     }
   }
+
+  function formatVisits(n) {
+    return Number(n).toLocaleString("ja-JP");
+  }
+  function paintVisits(n) {
+    let el = document.getElementById("visit-count");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "visit-count";
+      document.body.appendChild(el);
+    }
+    el.textContent = "訪問 " + formatVisits(n);
+  }
+  async function bumpVisits() {
+    const localKey = "shogi-visit-local";
+    let local = parseInt(localStorage.getItem(localKey) || "0", 10) || 0;
+    local += 1;
+    localStorage.setItem(localKey, String(local));
+    paintVisits(local);
+    const urls = [
+      "https://api.counterapi.dev/v1/nikkukyuu-shogi/visits/up",
+      "https://api.countapi.xyz/hit/nikkukyuu-code.github.io/shogi"
+    ];
+    for (const url of urls) {
+      try {
+        const r = await fetch(url, { cache: "no-store" });
+        if (!r.ok) continue;
+        const d = await r.json();
+        const n = d.count ?? d.value ?? d.value_count;
+        if (typeof n === "number" && n > 0) {
+          paintVisits(n);
+          return;
+        }
+      } catch (e) {}
+    }
+  }
   bindViewport();
   showStartScreen();
+  void bumpVisits();
 })();
 
 </script>
