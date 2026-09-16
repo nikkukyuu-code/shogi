@@ -3249,6 +3249,8 @@ label.setting {
   var netConn = null;
   var netStatus = "";
   var netLobby = false;
+  var netRematchMine = false;
+  var netRematchTheirs = false;
   var DIFF_LABEL = {
     beginner: "\u521D\u7D1A",
     intermediate: "\u4E2D\u7D1A",
@@ -3843,6 +3845,8 @@ label.setting {
     try { netPeer?.destroy(); } catch (e) {}
     netMode = false;
     netLobby = false;
+    netRematchMine = false;
+    netRematchTheirs = false;
     netRole = null;
     netRoom = "";
     netPeer = null;
@@ -3876,6 +3880,15 @@ label.setting {
         };
         playWin();
         render();
+      } else if (msg.type === "rematch") {
+        netRematchTheirs = true;
+        if (netRematchMine) startNetRematch();
+        else {
+          const b = document.querySelector("#btn-again");
+          if (b) b.textContent = "相手が再戦希望　再戦する";
+          const sub = document.querySelector(".end-overlay .sub");
+          if (sub) sub.textContent = (sub.textContent || "") + "　相手が再戦を希望";
+        }
       }
     });
     conn.on("close", () => {
@@ -3891,6 +3904,39 @@ label.setting {
       render();
     });
     conn.on("error", () => {});
+  }
+  function startNetRematch() {
+    if (!netMode || !netConn || !netConn.open) {
+      showStartScreen();
+      return;
+    }
+    netRematchMine = false;
+    netRematchTheirs = false;
+    endState = null;
+    cinematic = false;
+    document.querySelector(".end-overlay")?.remove();
+    document.querySelector(".mate-reveal")?.remove();
+    document.querySelector(".seventh-reveal")?.remove();
+    inMatch = true;
+    starting = false;
+    newGame();
+  }
+  function requestNetRematch() {
+    if (!netMode || !netConn || !netConn.open) {
+      showStartScreen();
+      return;
+    }
+    netRematchMine = true;
+    netSend({ type: "rematch" });
+    if (netRematchTheirs) {
+      startNetRematch();
+      return;
+    }
+    const b = document.querySelector("#btn-again");
+    if (b) {
+      b.textContent = "相手の応答待ち";
+      b.disabled = true;
+    }
   }
   function beginNetMatch() {
     document.querySelector(".net-overlay")?.remove();
@@ -4078,7 +4124,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver"><span id="visit-count"></span><span>v90</span></p>
+      <p class="start-ver"><span id="visit-count"></span><span>v91</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
@@ -4506,7 +4552,10 @@ label.setting {
       </div>
     </div>`;
     document.body.appendChild(overlay);
-    overlay.querySelector("#btn-again").addEventListener("click", () => showStartScreen());
+    overlay.querySelector("#btn-again").addEventListener("click", () => {
+      if (netMode && netConn && netConn.open) requestNetRematch();
+      else showStartScreen();
+    });
     overlay.querySelector("#btn-end-rank")?.addEventListener("click", () => {
       void showRanking(lastRecordAt ?? void 0);
     });
