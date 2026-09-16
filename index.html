@@ -1611,6 +1611,17 @@ label.setting {
   font-size: 0.65rem;
   letter-spacing: 0.12em;
   opacity: 0.45;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.8em;
+}
+#visit-count {
+  font-size: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  opacity: 1;
+  position: static;
 }
 .start-foot {
   width: 100%;
@@ -1972,18 +1983,6 @@ label.setting {
 }
 
 
-#visit-count {
-  position: fixed;
-  left: 6px;
-  bottom: 4px;
-  z-index: 40;
-  pointer-events: none;
-  font-size: 10px;
-  line-height: 1.2;
-  letter-spacing: 0.04em;
-  color: rgba(244, 230, 196, 0.55);
-  text-shadow: 0 1px 2px #000;
-}
 </style>
 </head>
 <body>
@@ -2895,7 +2894,7 @@ label.setting {
 
   // src/ui/ranking.ts
   var PLAIN_KEY = "shogi-serious-rank-v1";
-  var STORE_KEY = "shogi-serious-rank-v3";
+  var STORE_KEY = "shogi-serious-rank-v4";
   var LEGACY_STORE = "shogi-serious-rank-v2";
   var SALT_KEY = "shogi-serious-rank-salt";
   var MAX = 100;
@@ -3035,7 +3034,7 @@ label.setting {
   }
   async function writeSealedList(list) {
     const { iv, ct } = await encryptBytes(new TextEncoder().encode(JSON.stringify(list.slice(0, MAX))), "store");
-    localStorage.setItem(STORE_KEY, JSON.stringify({ v: 3, iv, ct }));
+    localStorage.setItem(STORE_KEY, JSON.stringify({ v: 4, iv, ct }));
     localStorage.removeItem(PLAIN_KEY);
     localStorage.removeItem(LEGACY_STORE);
   }
@@ -3060,6 +3059,8 @@ label.setting {
     return out.sort((a, b) => a.ms - b.ms || a.at - b.at).slice(0, MAX);
   }
   async function migrateLegacy() {
+    return [];
+    /* ranking reset: ignore legacy stores */
     const v2 = localStorage.getItem(LEGACY_STORE);
     if (v2) {
       try {
@@ -4077,12 +4078,13 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver">v89</p>
+      <p class="start-ver"><span id="visit-count"></span><span>v90</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
     </div>`;
     document.body.appendChild(el);
+    if (lastVisitN != null) paintVisits(lastVisitN);
     requestAnimationFrame(() => {
       el.querySelector(".win-show")?.classList.add("play");
       fitStartCard();
@@ -4670,14 +4672,11 @@ label.setting {
   function formatVisits(n) {
     return Number(n).toLocaleString("ja-JP");
   }
+  var lastVisitN = null;
   function paintVisits(n) {
-    let el = document.getElementById("visit-count");
-    if (!el) {
-      el = document.createElement("div");
-      el.id = "visit-count";
-      document.body.appendChild(el);
-    }
-    el.textContent = "訪問 " + formatVisits(n);
+    lastVisitN = n;
+    const el = document.getElementById("visit-count");
+    if (el) el.textContent = "訪問 " + formatVisits(n);
   }
   async function bumpVisits() {
     const localKey = "shogi-visit-local";
