@@ -3234,6 +3234,7 @@ label.setting {
   var netPeer = null;
   var netConn = null;
   var netStatus = "";
+  var netLobby = false;
   var DIFF_LABEL = {
     beginner: "\u521D\u7D1A",
     intermediate: "\u4E2D\u7D1A",
@@ -3827,6 +3828,7 @@ label.setting {
     try { netConn?.close(); } catch (e) {}
     try { netPeer?.destroy(); } catch (e) {}
     netMode = false;
+    netLobby = false;
     netRole = null;
     netRoom = "";
     netPeer = null;
@@ -3879,6 +3881,7 @@ label.setting {
   function beginNetMatch() {
     document.querySelector(".net-overlay")?.remove();
     document.querySelector(".start-overlay")?.remove();
+    netLobby = false;
     netMode = true;
     starting = false;
     inMatch = true;
@@ -3894,7 +3897,23 @@ label.setting {
     el.innerHTML = `<div class="net-card">${html}</div>`;
     return el;
   }
+  function enterNetLobby() {
+    netLobby = true;
+    document.querySelector(".start-overlay")?.remove();
+    inMatch = false;
+    starting = false;
+    pos = initialPosition();
+    history = [clonePosition(pos)];
+    kifu = [];
+    lastMove = null;
+    endState = null;
+    selected = null;
+    selectedDrop = null;
+    legalTargets = [];
+    render();
+  }
   function openNetMenu() {
+    enterNetLobby();
     const el = setNetCard(`
       <h2>ネット対戦</h2>
       <p>同じページを開いた相手と、部屋番号で対戦します。</p>
@@ -3906,7 +3925,10 @@ label.setting {
     `);
     el.querySelector("#net-host").onclick = () => void hostNetRoom();
     el.querySelector("#net-join").onclick = () => showJoinNet();
-    el.querySelector("#net-back").onclick = () => el.remove();
+    el.querySelector("#net-back").onclick = () => {
+      closeNet();
+      showStartScreen();
+    };
   }
   function showJoinNet() {
     const el = setNetCard(`
@@ -3952,6 +3974,7 @@ label.setting {
       `);
       document.querySelector("#net-cancel")?.addEventListener("click", () => {
         closeNet();
+        showStartScreen();
       });
       netPeer.on("connection", (conn) => {
         if (netConn && netConn.open) {
@@ -4041,7 +4064,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver">v87</p>
+      <p class="start-ver">v88</p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
@@ -4185,7 +4208,7 @@ label.setting {
       const n = hand[k];
       if (n <= 0) continue;
       const btn = document.createElement("div");
-      btn.className = "hand-piece" + (side === GOTE ? " gote" : "");
+      btn.className = "hand-piece" + (side !== settings.humanSide ? " gote" : "");
       if (selectedDrop === k && pos.sideToMove === side) btn.classList.add("selected");
       btn.textContent = PIECE_KANJI_SHORT[k];
       if (n > 1) {
@@ -4248,7 +4271,7 @@ label.setting {
         if (p) {
           const pe = document.createElement("div");
           const justOpp = !!(oppLast && lastMove && lastMove.to === sq3);
-          pe.className = "piece" + (p.side === GOTE ? " gote" : "") + (justOpp ? " just-played" : "");
+          pe.className = "piece" + (p.side !== settings.humanSide ? " gote" : "") + (justOpp ? " just-played" : "");
           pe.textContent = pieceGlyph(p);
           if (justOpp) {
             const mark = document.createElement("i");
@@ -4595,7 +4618,7 @@ label.setting {
       boardResize = new ResizeObserver(() => fitBoard());
       boardResize.observe(wrap);
     }
-    if (!inMatch && !starting && !document.querySelector(".start-overlay")) mountStartOverlay();
+    if (!inMatch && !starting && !netLobby && !document.querySelector(".net-overlay") && !document.querySelector(".start-overlay")) mountStartOverlay();
     syncSeriousClock();
     if (endState && !cinematic) showEndOverlay();
     if (pendingRiichi !== null) {
