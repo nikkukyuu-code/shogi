@@ -4124,7 +4124,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver"><span id="visit-count"></span><span>v91</span></p>
+      <p class="start-ver"><span id="visit-count"></span><span>v92</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
@@ -4542,13 +4542,14 @@ label.setting {
       <div class="end-particles">${particles}</div>
       <h2 class="big">${endState.title}</h2>
       <div class="sub">${endState.subtitle}</div>
-      ${lastRecordedMs != null ? `<div class="rank-record">${formatMs(lastRankUpdated ? lastRecordedMs : lastAttemptMs ?? lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}</div>` : ""}
-      ${lastRankUpdated && lastRank != null && lastRank <= 100 ? '<div class="rank-record">\u304A\u3081\u3067\u3068\u3046</div>' : ""}
-      ${!lastRankUpdated && lastAttemptMs != null && lastRecordedMs != null && lastAttemptMs > lastRecordedMs ? '<div class="rank-record miss">\u524D\u56DE\u3088\u308A\u9045\u304B\u3063\u305F\u306E\u3067\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u66F4\u65B0\u3057\u307E\u305B\u3093</div>' : ""}
+      ${!netMode && lastRecordedMs != null ? `<div class="rank-record">${formatMs(lastRankUpdated ? lastRecordedMs : lastAttemptMs ?? lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}</div>` : ""}
+      ${!netMode && lastRankUpdated && lastRank != null && lastRank <= 100 ? '<div class="rank-record">\u304A\u3081\u3067\u3068\u3046</div>' : ""}
+      ${!netMode && !lastRankUpdated && lastAttemptMs != null && lastRecordedMs != null && lastAttemptMs > lastRecordedMs ? '<div class="rank-record miss">\u524D\u56DE\u3088\u308A\u9045\u304B\u3063\u305F\u306E\u3067\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u66F4\u65B0\u3057\u307E\u305B\u3093</div>' : ""}
       <div class="end-trophies">${slots}</div>
       <div class="btns" style="justify-content:center">
         <button class="primary" id="btn-again">${btnLabel}</button>
-        ${isSerious() ? '<button type="button" id="btn-end-rank">\u30E9\u30F3\u30AD\u30F3\u30B0</button>' : ""}
+        ${!netMode && isSerious() ? '<button type="button" id="btn-end-rank">\u30E9\u30F3\u30AD\u30F3\u30B0</button>' : ""}
+        <button type="button" id="btn-end-menu">\u96E3\u6613\u5EA6\u9078\u629E\u3078</button>
       </div>
     </div>`;
     document.body.appendChild(overlay);
@@ -4559,6 +4560,7 @@ label.setting {
     overlay.querySelector("#btn-end-rank")?.addEventListener("click", () => {
       void showRanking(lastRecordAt ?? void 0);
     });
+    overlay.querySelector("#btn-end-menu")?.addEventListener("click", () => showStartScreen());
   }
   var boardResize = null;
   function visibleHeight() {
