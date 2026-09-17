@@ -3023,7 +3023,8 @@ label.setting {
         ms: pt.ms,
         at: sealed.at,
         name: typeof pt.name === "string" && pt.name ? pt.name : "\u540D\u7121\u3057",
-        playerId: typeof pt.playerId === "string" ? pt.playerId : void 0
+        playerId: typeof pt.playerId === "string" ? pt.playerId : void 0,
+        difficulty: normalizeDiff(pt.difficulty)
       };
     } catch {
       return null;
@@ -4126,7 +4127,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver"><span id="visit-count"></span><span>v93</span></p>
+      <p class="start-ver"><span id="visit-count"></span><span>v94</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
