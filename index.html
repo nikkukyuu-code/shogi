@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <meta http-equiv="Cache-Control" content="no-store" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<title>将棋 — 歩以外7枚 or 玉取り v98</title>
+<title>将棋 — 歩以外7枚 or 玉取り v99</title>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1273660625090851"
      crossorigin="anonymous"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -2003,6 +2003,31 @@ label.setting {
   opacity: 1;
   box-shadow: 0 0 0 2px rgba(240,210,122,0.4);
 }
+
+.start-rank-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.start-rank-list {
+  margin: 0;
+  padding: 4px 8px 6px;
+  min-height: 92px;
+  list-style: none;
+  font-size: 0.78rem;
+  color: #f3e6c8;
+}
+.start-rank-list li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 2px 0;
+}
+.start-rank-list .rk { width: 1.2em; color: #f0d27a; }
+.start-rank-list .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.start-rank-list .ms { opacity: 0.9; font-variant-numeric: tabular-nums; }
+.start-rank-list .empty { justify-content: center; opacity: 0.7; }
 </style>
 </head>
 <body>
@@ -3757,6 +3782,18 @@ label.setting {
     el.querySelector("#inp-nick-edit")?.focus();
   }
   function bindMenuControls(root) {
+    const paintStartRanks = () => {
+      const ol = root.querySelector("#start-rank-list");
+      if (!ol) return;
+      void loadRanks(settings.difficulty).then((list) => {
+        if (!ol.isConnected) return;
+        const top = list.slice(0, 5);
+        ol.innerHTML = top.length ? top.map((e, i) => {
+          const nm = (e.name || "名無し").replace(/[<>&]/g, "");
+          return `<li><span class="rk">${i + 1}</span><span class="nm">${nm}</span><span class="ms">${formatMs(e.ms)}</span></li>`;
+        }).join("") : '<li class="empty">まだ記録がありません</li>';
+      });
+    };
     const pickDiff = (next) => {
       settings.difficulty = next;
       savePrefs();
@@ -3764,14 +3801,16 @@ label.setting {
         btn.classList.toggle("on", btn.dataset.diff === next);
       });
       const rankBtn = root.querySelector("#btn-rank");
-      if (rankBtn) rankBtn.hidden = !isSerious();
+      if (rankBtn) rankBtn.hidden = false;
       const nick = root.querySelector("#nick-field");
       if (nick) nick.hidden = false;
+      paintStartRanks();
     };
     root.querySelectorAll("[data-diff]").forEach((btn) => {
       btn.classList.toggle("on", btn.dataset.diff === settings.difficulty);
       btn.addEventListener("click", () => pickDiff(btn.dataset.diff));
     });
+    paintStartRanks();
     const pickSide = (side) => {
       settings.humanSide = side;
       root.querySelectorAll("[data-side]").forEach((btn) => {
@@ -4141,7 +4180,10 @@ label.setting {
         <button type="button" data-diff="advanced">\u4E0A\u7D1A</button>
         <button type="button" data-diff="serious">\u771F\u5263</button>
       </div>
-      <button type="button" id="btn-rank" class="start-rank">\u30E9\u30F3\u30AD\u30F3\u30B0<small>\u6295\u4E86\u30BF\u30A4\u30E0\u3000\u81EA\u5206\u306E\u624B\u756A\u3060\u3051\u3000\u77ED\u3044\u307B\u3069\u4E0A</small></button>
+      <div class="start-rank-box">
+        <button type="button" id="btn-rank" class="start-rank">\u30E9\u30F3\u30AD\u30F3\u30B0<small>\u9078\u3093\u3060\u96E3\u6613\u5EA6\u306E\u4E0A\u4F4D\u30FB\u8A73\u3057\u304F\u306F\u30BF\u30C3\u30D7</small></button>
+        <ol id="start-rank-list" class="start-rank-list"><li class="empty">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</li></ol>
+      </div>
       <label class="nick-field" id="nick-field">
         <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0\uFF08\u7A7A\u306A\u3089\u540D\u7121\u3057\uFF09" value="${(savedNickname() || settings.nickname).replace(/"/g, "&quot;")}" />
         <button type="button" id="btn-nick-save-start">\u56FA\u5B9A</button>
@@ -4152,7 +4194,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver"><span id="visit-count"></span><span>v98</span></p>
+      <p class="start-ver"><span id="visit-count"></span><span>v99</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
