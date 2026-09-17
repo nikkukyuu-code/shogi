@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <meta http-equiv="Cache-Control" content="no-store" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<title>将棋 — 歩以外7枚 or 玉取り</title>
+<title>将棋 — 歩以外7枚 or 玉取り v97</title>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1273660625090851"
      crossorigin="anonymous"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -2897,12 +2897,18 @@ label.setting {
   // src/ui/ranking.ts
   var PLAIN_KEY = "shogi-serious-rank-v1";
   var STORE_KEY = "shogi-serious-rank-v5";
+  var PLAIN_RANK_KEY = "shogi-rank-plain-v1";
   var LEGACY_STORE = "shogi-serious-rank-v2";
   var SALT_KEY = "shogi-serious-rank-salt";
   var MAX = 100;
   var PEPPER = "shogi-serious-rank/aes-gcm/2026-09-12/nikkukyuu";
   function formatMs(ms) {
-    return `${Math.max(0, Math.round(ms)).toLocaleString("ja-JP")} \u30DF\u30EA\u79D2`;
+    const total = Math.max(0, Math.round(ms));
+    const hours = Math.floor(total / 3600000);
+    const minutes = Math.floor((total % 3600000) / 60000);
+    const seconds = Math.floor((total % 60000) / 1000);
+    const millis = total % 1000;
+    return hours + "時間" + String(minutes).padStart(2, "0") + "分" + String(seconds).padStart(2, "0") + "秒" + String(millis).padStart(3, "0");
   }
   var PLAYER_KEY = "shogi-player-id";
   var MY_NAME_KEY = "shogi-player-name";
@@ -3118,35 +3124,35 @@ label.setting {
     const diff = normalizeDiff(difficulty);
     const nextMs = Math.max(0, Math.round(ms));
     const me = playerId();
-    const current = await readSealedList() ?? await migrateLegacy();
-    const all = await openEntries(current);
-    const list = all.filter((e) => normalizeDiff(e.difficulty) === diff);
+    const now = Date.now();
+    let all = [];
+    try { all = JSON.parse(localStorage.getItem(PLAIN_RANK_KEY) || "[]"); } catch (e) { all = []; }
+    if (!Array.isArray(all)) all = [];
+    const list = all.filter((e) => e && normalizeDiff(e.difficulty) === diff).sort((a, b) => a.ms - b.ms || a.at - b.at);
     const mine = (e) => !e.playerId || e.playerId === me;
     const best = list.filter(mine).reduce((a, e) => a == null || e.ms < a.ms ? e : a, null);
     if (best && nextMs >= best.ms) {
       const rank2 = list.findIndex((e) => e.ms === best.ms && e.at === best.at) + 1;
       return { entry: best, rank: rank2 > 0 ? rank2 : 1, list, updated: false, attemptMs: nextMs };
     }
-    const kept = [];
-    for (const item of current) {
-      const row = await decryptResignTime(item);
-      if (!row) continue;
-      if (mine(row) && normalizeDiff(row.difficulty) === diff) continue;
-      kept.push(item);
-    }
-    const sealed = await encryptResignTime(nextMs, name, diff);
-    const stored = [...kept, sealed];
-    await writeSealedList(stored);
-    const nextList = (await openEntries(stored)).filter((e) => normalizeDiff(e.difficulty) === diff);
-    const entry = await decryptResignTime(sealed) ?? { ms: nextMs, at: sealed.at, name, playerId: me, difficulty: diff };
+    const kept = all.filter((e) => e && !(mine(e) && normalizeDiff(e.difficulty) === diff));
+    const entry = { ms: nextMs, at: now, name, playerId: me, difficulty: diff };
+    const stored = [...kept, entry].slice(-400);
+    localStorage.setItem(PLAIN_RANK_KEY, JSON.stringify(stored));
+    try { await writeSealedList(stored.map((row) => ({ iv: "plain", ct: JSON.stringify(row), at: row.at }))); } catch (e) {}
+    const nextList = stored.filter((e) => normalizeDiff(e.difficulty) === diff).sort((a, b) => a.ms - b.ms || a.at - b.at).slice(0, MAX);
     const rank = nextList.findIndex((e) => e.ms === entry.ms && e.at === entry.at) + 1;
     return { entry, rank: rank > 0 ? rank : nextList.length, list: nextList, updated: true, attemptMs: nextMs };
   }
   async function loadRanks(difficulty) {
-    const sealed = await readSealedList() ?? await migrateLegacy();
-    const all = await openEntries(sealed);
     const diff = normalizeDiff(difficulty);
-    return all.filter((e) => normalizeDiff(e.difficulty) === diff);
+    let all = [];
+    try { all = JSON.parse(localStorage.getItem(PLAIN_RANK_KEY) || "[]"); } catch (e) { all = []; }
+    if (!Array.isArray(all) || !all.length) {
+      const sealed = await readSealedList();
+      if (sealed && sealed.length) all = await openEntries(sealed);
+    }
+    return all.filter((e) => e && typeof e.ms === "number" && normalizeDiff(e.difficulty) === diff).sort((a, b) => a.ms - b.ms || a.at - b.at).slice(0, MAX);
   }
   async function showRanking(highlightAt, difficulty) {
     const viewDiff = normalizeDiff(difficulty ?? (typeof settings !== "undefined" ? settings.difficulty : "serious"));
@@ -4128,7 +4134,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver"><span id="visit-count"></span><span>v96</span></p>
+      <p class="start-ver"><span id="visit-count"></span><span>v97</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
@@ -4168,6 +4174,16 @@ label.setting {
       starting = false;
       startEngineIfNeeded();
     }
+  }
+  function restartSameDifficulty() {
+    document.querySelector(".end-overlay")?.remove();
+    document.querySelector(".mate-reveal")?.remove();
+    document.querySelector(".seventh-reveal")?.remove();
+    inMatch = true;
+    starting = false;
+    endState = null;
+    cinematic = false;
+    newGame();
   }
   function newGame() {
     stopEngine();
@@ -4571,7 +4587,7 @@ label.setting {
     document.body.appendChild(overlay);
     overlay.querySelector("#btn-again").addEventListener("click", () => {
       if (netMode && netConn && netConn.open) requestNetRematch();
-      else showStartScreen();
+      else restartSameDifficulty();
     });
     overlay.querySelector("#btn-end-rank")?.addEventListener("click", () => {
       void showRanking(lastRecordAt ?? void 0);
