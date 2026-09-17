@@ -2896,7 +2896,7 @@ label.setting {
 
   // src/ui/ranking.ts
   var PLAIN_KEY = "shogi-serious-rank-v1";
-  var STORE_KEY = "shogi-serious-rank-v4";
+  var STORE_KEY = "shogi-serious-rank-v5";
   var LEGACY_STORE = "shogi-serious-rank-v2";
   var SALT_KEY = "shogi-serious-rank-salt";
   var MAX = 100;
@@ -3037,7 +3037,7 @@ label.setting {
   }
   async function writeSealedList(list) {
     const { iv, ct } = await encryptBytes(new TextEncoder().encode(JSON.stringify(list.slice(0, MAX))), "store");
-    localStorage.setItem(STORE_KEY, JSON.stringify({ v: 4, iv, ct }));
+    localStorage.setItem(STORE_KEY, JSON.stringify({ v: 5, iv, ct }));
     localStorage.removeItem(PLAIN_KEY);
     localStorage.removeItem(LEGACY_STORE);
   }
@@ -4127,7 +4127,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver"><span id="visit-count"></span><span>v94</span></p>
+      <p class="start-ver"><span id="visit-count"></span><span>v95</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
