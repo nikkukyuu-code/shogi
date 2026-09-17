@@ -3585,6 +3585,7 @@ label.setting {
       if (humanWon) playWin();
       else playLose();
     }
+    if (humanWon && !netMode) rankRecordP = recordWinRank();
   }
   function trySelectSquare(sq3) {
     unlock();
@@ -4127,7 +4128,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver"><span id="visit-count"></span><span>v95</span></p>
+      <p class="start-ver"><span id="visit-count"></span><span>v96</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
@@ -4232,23 +4233,31 @@ label.setting {
     document.querySelector(".end-overlay")?.remove();
     render();
   }
+  var rankRecordP = null;
+  async function recordWinRank() {
+    lastRecordedMs = null;
+    lastAttemptMs = null;
+    lastRank = null;
+    lastRankUpdated = false;
+    if (netMode || !endState || endState.humanWon !== true) return;
+    if (!isSerious() || !seriousActive) return;
+    if (!kifu.some((k) => k.side === settings.humanSide)) return;
+    pauseSeriousClock();
+    const rec = await submitResignTime(elapsedSeriousMs(), savedNickname() || settings.nickname || "\u540D\u7121\u3057", settings.difficulty);
+    lastRecordedMs = rec.entry.ms;
+    lastAttemptMs = rec.attemptMs;
+    lastRank = rec.rank;
+    lastRankUpdated = rec.updated;
+    lastRecordAt = rec.updated ? rec.entry.at : lastRecordAt;
+  }
   async function resign() {
     if (endState || thinking) return;
     if (netMode) netSend({ type: "resign" });
-    if (!netMode && isSerious() && seriousActive && kifu.some((k) => k.side === settings.humanSide)) {
-      const rec = await submitResignTime(elapsedSeriousMs(), savedNickname() || settings.nickname || "\u540D\u7121\u3057", settings.difficulty);
-      lastRecordedMs = rec.entry.ms;
-      lastAttemptMs = rec.attemptMs;
-      lastRank = rec.rank;
-      lastRankUpdated = rec.updated;
-      lastRecordAt = rec.updated ? rec.entry.at : lastRecordAt;
-    } else {
-      lastRecordedMs = isSerious() ? elapsedSeriousMs() : null;
-      lastAttemptMs = lastRecordedMs;
-      lastRank = null;
-      lastRankUpdated = false;
-      lastRecordAt = null;
-    }
+    lastRecordedMs = null;
+    lastAttemptMs = null;
+    lastRank = null;
+    lastRankUpdated = false;
+    lastRecordAt = null;
     const slower = isSerious() && !lastRankUpdated && lastAttemptMs != null && lastRecordedMs != null && lastAttemptMs > lastRecordedMs;
     endState = {
       humanWon: false,
@@ -4516,8 +4525,12 @@ label.setting {
 \u8AAD\u307F\u7B4B: ${pv || "\u2014"}
 \u53D6\u5F97: \u5148${pos.trophies[0]} \u5F8C${pos.trophies[1]}`;
   }
-  function showEndOverlay() {
+  async function showEndOverlay() {
     if (!endState) return;
+    if (rankRecordP) {
+      await rankRecordP;
+      rankRecordP = null;
+    }
     document.querySelector(".end-overlay")?.remove();
     const win = endState.humanWon === true;
     const lose = endState.humanWon === false;
