@@ -89,6 +89,16 @@ header.top h1 {
   font-weight: 700;
   flex-shrink: 0;
 }
+.start-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-self: flex-start;
+  margin: 0 0 8px;
+}
+.start-nav .start-home {
+  margin: 0;
+}
 header.top .home-link,
 .start-home {
   flex-shrink: 0;
@@ -4189,7 +4199,10 @@ label.setting {
     el.className = "start-overlay";
     el.innerHTML = `
     <div class="start-card">
-      <a class="home-link start-home" href="../">ルール説明へ</a>
+      <div class="start-nav">
+        <a class="home-link start-home" href="https://nikkukyuu-code.github.io/">トップページに戻る</a>
+        <a class="home-link start-home" href="../">ルール説明へ</a>
+      </div>
       <h2 class="start-title">7GET将棋</h2>
       <section class="win-show" aria-label="\u52DD\u3061\u65B9">
         <p class="win-note">\u3075\u3064\u3046\u306E\u5C06\u68CB\u3068\u9055\u3044\u307E\u3059</p>
@@ -4730,6 +4743,7 @@ label.setting {
     const botSide = settings.humanSide;
     app.innerHTML = `
     <header class="top">
+      <a class="home-link" href="https://nikkukyuu-code.github.io/" title="トップページに戻る">トップ</a>
       <a class="home-link" href="../" title="ルール説明へ">説明</a>
       <h1>7GET将棋${netMode && netRoom ? `<span id="net-room-chip">部屋 ${netRoom}</span>` : ""}</h1>
       <div class="status" id="status"></div>
