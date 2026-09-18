@@ -2,88 +2,4879 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>7GET将棋 — nikkukyuu-code</title>
-<meta name="description" content="ブラウザで遊べる将棋バリアント「7GET将棋」。相手の歩以外の駒を7枚取るか、玉を取る（詰める）か、先に達成した側の勝ちです。" />
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1273660625090851" crossorigin="anonymous"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta http-equiv="Cache-Control" content="no-store" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>7GET将棋</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
-  :root {
-    --bg: #f6f1e8;
-    --ink: #2b1c12;
-    --accent: #8b2a2a;
-    --gold: #c9a227;
+:root {
+  --wood-dark: #5c3a1e;
+  --wood-mid: #8b5a2b;
+  --wood-light: #c4a574;
+  --wood-board: #d4a574;
+  --wood-line: #3d2412;
+  --washi: #f3e6c8;
+  --accent: #8b1e1e;
+  --ink: #1a120a;
+  --gold: #c9a227;
+  --highlight: rgba(255, 220, 80, 0.45);
+  --last: rgba(255, 140, 40, 0.4);
+  --check: rgba(220, 40, 40, 0.55);
+  --legal: rgba(60, 140, 80, 0.4);
+  --panel: #2a1c10;
+  --panel-2: #3d2a18;
+  --app-h: 100svh;
+  --app-top: 0px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: var(--app-h, 100svh);
+  max-height: var(--app-h, 100svh);
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  background:
+    radial-gradient(ellipse at top, #4a3020 0%, #1a1008 70%),
+    #1a1008;
+  color: var(--washi);
+  font-family: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
+}
+
+#app {
+  max-width: none;
+  margin: 0;
+  position: fixed;
+  top: var(--app-top, 0px);
+  left: 0;
+  right: 0;
+  height: var(--app-h, 100svh);
+  max-height: var(--app-h, 100svh);
+  padding: 4px 6px;
+  padding-top: max(4px, env(safe-area-inset-top));
+  padding-left: max(6px, env(safe-area-inset-left));
+  padding-right: max(6px, env(safe-area-inset-right));
+  padding-bottom: max(6px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+header.top {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 2px;
+  border-bottom: 1px solid var(--wood-mid);
+  padding: 2px 2px 4px;
+  flex-shrink: 0;
+  min-height: 0;
+}
+
+header.top h1 {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+header.top .home-link,
+.start-home {
+  flex-shrink: 0;
+  color: var(--washi);
+  background: #3d2a18;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  line-height: 1.4;
+}
+.start-home {
+  display: inline-block;
+  margin: 0 0 8px;
+  align-self: flex-start;
+}
+.start-title {
+  margin: 0 0 10px;
+  font-size: 1.35rem;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  text-align: center;
+}
+
+header.top .status {
+  flex: 1;
+  min-height: 0;
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.stage {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.dock {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 2px 2px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dock button, .dock select {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
+.sound-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 0;
+  width: 100%;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--wood-mid);
+  border-radius: 6px;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.35);
+}
+
+.hand-label {
+  width: auto;
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  opacity: 0.7;
+  letter-spacing: 0.06em;
+  padding-right: 6px;
+  align-self: center;
+}
+
+.hand-piece {
+  position: relative;
+  width: 30px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #f5e6c8, #e8d4a8);
+  color: #1a1008;
+  border: 1px solid #8b6914;
+  border-radius: 4px 4px 8px 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 700;
+  user-select: none;
+  box-shadow: 1px 2px 3px rgba(0,0,0,0.35);
+}
+
+.hand-piece.gote {
+  transform: rotate(180deg);
+}
+
+.hand-piece.selected {
+  outline: 2px solid var(--gold);
+  box-shadow: 0 0 10px var(--gold);
+}
+
+.hand-piece .count {
+  position: absolute;
+  right: -4px;
+  top: -6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.65rem;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: none;
+}
+
+.hand-piece.gote .count {
+  transform: rotate(180deg);
+  left: -4px;
+  right: auto;
+  top: auto;
+  bottom: -6px;
+}
+
+.board-wrap {
+  position: relative;
+  padding: 2px;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(145deg, #6b4423, #4a2c14 40%, #5c3a1e);
+  border-radius: 8px;
+  box-shadow:
+    0 8px 24px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+.board-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  width: 280px;
+  height: 280px;
+  max-width: 100%;
+  max-height: 100%;
+  background: var(--wood-board);
+  background-image:
+    linear-gradient(90deg, rgba(90,50,20,0.08) 1px, transparent 1px),
+    linear-gradient(rgba(90,50,20,0.06) 1px, transparent 1px);
+  border: 2px solid var(--wood-line);
+  box-shadow: inset 0 0 40px rgba(80,40,10,0.25);
+  touch-action: none;
+}
+
+.sq {
+  position: relative;
+  border: 0.5px solid rgba(40, 20, 8, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+}
+.sq > * {
+  pointer-events: none;
+}
+
+.sq.legal {
+  background: var(--legal);
+}
+
+.sq.last, .sq.last-to {
+  background: var(--last);
+}
+.sq.last-from {
+  background: rgba(40, 80, 160, 0.28);
+}
+.sq.last-from::after {
+  content: "";
+  position: absolute;
+  inset: 18%;
+  border: 2px dashed rgba(80, 120, 200, 0.7);
+  border-radius: 4px;
+  pointer-events: none;
+}
+.sq.opp-last {
+  background: rgba(255, 70, 50, 0.38);
+  box-shadow: inset 0 0 0 3px #ff5030, 0 0 14px rgba(255, 70, 40, 0.55);
+  z-index: 2;
+}
+.just-mark {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  font-style: normal;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: #e01818;
+  color: #fff8e8;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.piece.just-played {
+  outline: 3px solid #ff3a2a;
+  box-shadow: 0 0 0 3px #ffe066, 0 0 16px rgba(255, 60, 40, 0.75);
+  animation: justPop 0.55s cubic-bezier(0.2, 1.4, 0.3, 1);
+  z-index: 2;
+}
+.piece.just-played.gote {
+  outline: 3px solid #ff3a2a;
+}
+@keyframes justPop {
+  0% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.piece.just-played.gote {
+  animation-name: justPopGote;
+}
+@keyframes justPopGote {
+  0% { transform: rotate(180deg) scale(1.35); }
+  100% { transform: rotate(180deg) scale(1); }
+}
+
+.sq.selected {
+  background: var(--highlight);
+}
+
+.sq.check {
+  background: var(--check);
+}
+
+.piece {
+  width: 88%;
+  height: 92%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(165deg, #f7ebcf 0%, #e6d3a6 55%, #dcc896 100%);
+  color: #1a1008;
+  border: 1px solid #7a5a20;
+  border-radius: 5px 5px 10px 10px;
+  font-size: clamp(0.95rem, 3.2vw, 1.45rem);
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 1px 2px 2px rgba(0,0,0,0.25);
+  pointer-events: none;
+  text-align: center;
+  padding: 0 1px;
+}
+
+.piece.gote {
+  transform: rotate(180deg);
+}
+
+.piece.dragging {
+  opacity: 0.45;
+}
+
+.star {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: var(--wood-line);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.panel {
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--wood-mid);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.panel h2 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  color: var(--gold);
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+
+.status {
+  font-size: 0.85rem;
+  line-height: 1.2;
+  min-height: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status .thinking {
+  color: #ffd27a;
+}
+
+.engine-stats {
+  font-size: 0.8rem;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+  white-space: pre-line;
+}
+
+.kifu {
+  max-height: 220px;
+  overflow: auto;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+  background: rgba(0,0,0,0.2);
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+button, select {
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 7px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--wood-light);
+  background: linear-gradient(180deg, #6b4423, #4a2c14);
+  color: var(--washi);
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.12);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: linear-gradient(180deg, #a03030, #701818);
+  border-color: #c06060;
+}
+
+button.stop {
+  background: linear-gradient(180deg, #b8860b, #8b6914);
+  border-color: var(--gold);
+  color: #1a1008;
+  font-weight: 700;
+}
+
+label.setting {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+  opacity: 0.95;
+}
+
+.promo-dialog {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.promo-dialog .box {
+  background: var(--panel-2);
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  padding: 20px 24px;
+  text-align: center;
+}
+
+.promo-dialog .box h3 {
+  margin: 0 0 12px;
+  color: var(--gold);
+}
+
+.files-ranks {
+  display: flex;
+  justify-content: space-between;
+  width: min(100%, var(--board-size, 520px));
+  padding: 0 8px;
+  font-size: 0.7rem;
+  opacity: 0.55;
+  letter-spacing: 0.05em;
+}
+
+.coords-side {
+  position: absolute;
+  right: -18px;
+  top: 14px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  font-size: 0.65rem;
+  opacity: 0.55;
+}
+
+/* ===== Trophy scoreboard ===== */
+.trophy-bar {
+  width: 100%;
+  margin: 0;
+  padding: 3px 8px 4px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #3a2514 0%, #24160c 100%);
+  border: 2px solid var(--wood-mid);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+  position: relative;
+}
+.trophy-bar.you {
+  border-color: #c9a227;
+}
+.trophy-bar.urgent {
+  box-shadow: 0 0 18px rgba(220, 40, 40, 0.55), 0 4px 16px rgba(0,0,0,0.45);
+  border-color: #e05050;
+  animation: urgentPulse 1.1s ease-in-out infinite;
+}
+@keyframes urgentPulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(220,40,40,0.4); }
+  50% { box-shadow: 0 0 28px rgba(255,80,60,0.75); }
+}
+.trophy-bar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+  gap: 8px;
+}
+.trophy-bar-head .who {
+  font-size: 0.9rem;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  font-weight: 700;
+}
+.trophy-bar-head .count {
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #f5e6c8;
+  transition: color 0.2s, transform 0.2s;
+}
+.trophy-bar-head .count.pulse {
+  color: #ffe066;
+  transform: scale(1.25);
+  text-shadow: 0 0 12px #ffd700, 0 0 24px #ffaa00;
+  animation: countFlash 0.6s ease;
+}
+@keyframes countFlash {
+  0% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+.trophy-slots {
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+}
+.trophy-slot {
+  flex: 1;
+  height: 28px;
+  max-width: 40px;
+  aspect-ratio: unset;
+  background: rgba(0,0,0,0.35);
+  border: 1.5px dashed rgba(201,162,39,0.35);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(0.85rem, 2.5vw, 1.2rem);
+  font-weight: 700;
+  color: #1a1008;
+  position: relative;
+  overflow: visible;
+}
+.trophy-slot.filled {
+  background: linear-gradient(165deg, #f7ebcf, #e6d3a6);
+  border-style: solid;
+  border-color: #c9a227;
+  box-shadow: 0 0 8px rgba(201,162,39,0.45);
+}
+.trophy-slot.pop {
+  animation: slotPop 0.55s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+@keyframes slotPop {
+  0% { transform: scale(0.2) rotate(-20deg); opacity: 0; }
+  60% { transform: scale(1.2) rotate(8deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.trophy-slot .spark {
+  position: absolute;
+  inset: -6px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 30%, #fff7 0 2px, transparent 3px),
+    radial-gradient(circle at 80% 20%, #ffd700aa 0 2px, transparent 3px),
+    radial-gradient(circle at 50% 80%, #fff8 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 60%, #ffaa00aa 0 1.5px, transparent 2.5px);
+  animation: sparkle 0.7s ease-out forwards;
+}
+@keyframes sparkle {
+  0% { opacity: 1; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+
+/* ===== End overlay ===== */
+.end-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 4, 2, 0.72);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.35s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.end-overlay.win {
+  background: radial-gradient(ellipse at center, rgba(120,40,20,0.55) 0%, rgba(8,4,2,0.85) 70%);
+}
+.end-overlay.lose {
+  background: radial-gradient(ellipse at center, rgba(20,20,40,0.5) 0%, rgba(0,0,0,0.88) 70%);
+}
+.end-card {
+  position: relative;
+  text-align: center;
+  padding: 36px 40px 28px;
+  border-radius: 16px;
+  max-width: 92vw;
+  width: 420px;
+  overflow: hidden;
+}
+.end-overlay.win .end-card {
+  background: linear-gradient(160deg, #5c1a1a 0%, #2a1008 50%, #1a0c08 100%);
+  border: 3px solid #c9a227;
+  box-shadow: 0 0 40px rgba(201,162,39,0.45), 0 20px 60px rgba(0,0,0,0.6);
+}
+.end-overlay.lose .end-card {
+  background: linear-gradient(160deg, #1a1a28 0%, #0c0c14 100%);
+  border: 3px solid #556;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+}
+.end-card .big {
+  font-size: clamp(3rem, 12vw, 5rem);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  margin: 0 0 8px;
+  line-height: 1.1;
+}
+.end-overlay.win .big {
+  color: #ffe066;
+  text-shadow: 0 0 20px #ffd700, 0 4px 0 #8b1e1e;
+}
+.end-overlay.lose .big {
+  color: #aab;
+  text-shadow: 0 2px 8px #000;
+}
+.end-card .sub {
+  font-size: 1.05rem;
+  opacity: 0.95;
+  margin-bottom: 18px;
+  letter-spacing: 0.08em;
+  color: #f3e6c8;
+}
+.end-card .end-trophies {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.end-card .end-trophies .trophy-slot {
+  width: 36px;
+  max-width: 36px;
+}
+.end-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.end-particles span {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffd700;
+  animation: particleFly 1.4s ease-out forwards;
+  opacity: 0;
+}
+.end-overlay.lose .end-particles span {
+  background: #668;
+}
+@keyframes particleFly {
+  0% { opacity: 1; transform: translate(0,0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.2); }
+}
+
+.variant-tag {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  background: rgba(201,162,39,0.2);
+  border: 1px solid rgba(201,162,39,0.5);
+  border-radius: 999px;
+  
+  color: #ffe8a0;
+}
+
+
+@media (max-width: 860px) {
+  .board-area {
+    --board-size: min(94vw, calc(100svh - 22rem), 380px);
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
-    color: var(--ink);
-    background: var(--bg);
-    line-height: 1.7;
+  .files-ranks { display: none; }
+  .side-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-height: 22svh;
+    overflow: auto;
+    flex-shrink: 0;
   }
-  header {
-    padding: 48px 20px 24px;
-    text-align: center;
-    border-bottom: 1px solid #e2d3bc;
+  .side-panel .panel {
+    flex: 1 1 140px;
+    padding: 6px 8px;
   }
-  header p.kicker {
-    margin: 0 0 8px;
-    letter-spacing: 0.28em;
-    font-size: 0.75rem;
-    color: var(--accent);
+  .side-panel .panel h2 {
+    margin-bottom: 4px;
+    font-size: 0.8rem;
   }
-  h1 { margin: 0; font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; }
-  main { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
-  .card {
-    background: #fffdf8;
-    border: 1px solid #e2d3bc;
-    border-radius: 16px;
-    padding: 24px;
-  }
-  .card h2 { margin: 0 0 8px; font-size: 1.35rem; }
-  .card p { margin: 0 0 16px; }
-  a.play {
-    display: inline-block;
-    background: var(--accent);
-    color: #fff;
-    text-decoration: none;
-    padding: 12px 22px;
-    border-radius: 999px;
-    letter-spacing: 0.08em;
-  }
-  h3 { margin: 28px 0 8px; font-size: 1.05rem; }
-  ul { padding-left: 1.2em; }
-  footer {
-    text-align: center;
-    padding: 24px 20px 40px;
-    font-size: 0.85rem;
-  }
-  footer a { color: var(--accent); }
+  .kifu { display: none; }
+  .coords-side { display: none; }
+  .status { min-height: 0; font-size: 0.8rem; }
+}
+
+@media (max-height: 780px) {
+  header.top { margin-bottom: 2px; padding-bottom: 2px; }
+  header.top h1 { font-size: 0.9rem; }
+  .variant-tag { font-size: 0.6rem; padding: 1px 6px; display: none; }
+  .hand { min-height: 22px; padding: 2px 6px; }
+  .hand-label { font-size: 0.65rem; }
+  .hand-piece { width: 26px; height: 28px; font-size: 0.8rem; }
+  .trophy-bar { padding: 2px 8px 4px; }
+  .trophy-slot { height: 22px; }
+  .files-ranks { display: none; }
+  .board-area { --board-size: min(94vw, calc(100svh - 16.5rem), 360px); }
+}
+
+.your-turn-status {
+  color: #ffe066;
+  font-size: 1.15rem;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 10px rgba(255, 208, 80, 0.45);
+}
+
+.your-turn {
+  position: fixed;
+  left: 50%;
+  top: 18%;
+  transform: translate(-50%, -12px);
+  z-index: 80;
+  padding: 14px 32px;
+  font-size: clamp(1.4rem, 5vw, 2rem);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #1a1008;
+  background: linear-gradient(180deg, #ffe08a, #d4a017);
+  border: 3px solid #fff4c0;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45), 0 0 24px rgba(255,200,60,0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.your-turn.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.trophy-bar.riichi {
+  border-color: #ffe066;
+  box-shadow: 0 0 22px rgba(255, 180, 40, 0.65), 0 0 10px rgba(255, 60, 40, 0.4);
+  animation: urgentPulse 1.1s ease-in-out infinite;
+}
+.trophy-bar.riichi.you {
+  border-color: #ffe066;
+}
+.riichi-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 0 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #c82020, #7a1010);
+  color: #fff4d0;
+  letter-spacing: 0.16em;
+}
+.riichi-row.you {
+  background: linear-gradient(180deg, #f0c040, #b07810);
+  color: #1a1008;
+}
+.riichi-row b {
+  font-size: clamp(1.15rem, 4.6vw, 1.55rem);
+  font-weight: 800;
+  letter-spacing: 0.28em;
+}
+.riichi-row span {
+  font-size: clamp(0.78rem, 3vw, 0.95rem);
+  font-weight: 700;
+}
+.riichi-inline {
+  color: #ff6a6a;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+.trophy-slot.wait {
+  border-style: solid;
+  border-color: #ffe066;
+  background: rgba(80, 20, 8, 0.55);
+  box-shadow: inset 0 0 10px rgba(255, 180, 40, 0.45), 0 0 12px rgba(255, 80, 40, 0.4);
+  animation: urgentPulse 0.85s ease-in-out infinite;
+}
+.trophy-slot.wait .wait-mark {
+  color: #ffe066;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 8px #ffaa00;
+}
+.riichi-banner {
+  position: fixed;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, calc(-50% - 12px)) scale(0.88);
+  z-index: 85;
+  min-width: min(88vw, 420px);
+  padding: 22px 36px 16px;
+  text-align: center;
+  color: #fff4d0;
+  background: linear-gradient(180deg, #9a1414, #3a0808);
+  border: 4px solid #ffe066;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 36px rgba(255,60,40,0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  letter-spacing: 0.28em;
+}
+.riichi-banner.you {
+  background: linear-gradient(180deg, #c89018, #5a3008);
+  border-color: #fff2a8;
+}
+.riichi-banner.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.riichi-banner span {
+  display: block;
+  font-size: clamp(2.6rem, 12vw, 4rem);
+  font-weight: 800;
+  text-shadow: 0 0 20px #ff4040, 0 4px 0 #4a0000;
+}
+.riichi-banner.you span {
+  text-shadow: 0 0 20px #ffe066, 0 4px 0 #5a3000;
+}
+.riichi-banner small {
+  display: block;
+  margin-top: 8px;
+  font-size: clamp(1rem, 4vw, 1.25rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  opacity: 0.95;
+}
+
+.cinematic {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.cinematic.show { opacity: 1; }
+.cinematic-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(20,8,4,0.15) 0%, rgba(0,0,0,0.72) 70%);
+}
+.cinematic-lines {
+  position: absolute;
+  left: 50%;
+  top: 10%;
+  transform: translate(-50%, 8px);
+  width: min(520px, 92vw);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.5s ease, transform 0.6s ease;
+  pointer-events: none;
+}
+.cinematic-lines.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.cinematic-lines p {
+  margin: 0 0 8px;
+  font-weight: 800;
+  color: #ffe066;
+  text-shadow: 0 0 16px #ffaa00, 0 3px 0 #5a1800;
+}
+.cinematic-lines p:first-child {
+  font-size: clamp(2rem, 8vw, 3.2rem);
+  letter-spacing: 0.28em;
+}
+.cinematic-lines p:last-child {
+  font-size: clamp(1rem, 4.2vw, 1.45rem);
+  letter-spacing: 0.06em;
+  color: #fff4d0;
+}
+.sq.seventh-pick {
+  box-shadow: inset 0 0 0 3px #ffe066, 0 0 18px rgba(255, 210, 80, 0.7);
+  z-index: 4;
+  animation: seventhGlow 1s ease-in-out infinite;
+}
+@keyframes seventhGlow {
+  0%, 100% { box-shadow: inset 0 0 0 3px #ffe066, 0 0 10px rgba(255, 210, 80, 0.4); }
+  50% { box-shadow: inset 0 0 0 3px #fff2a8, 0 0 22px rgba(255, 220, 100, 0.85); }
+}
+.seventh-prompt {
+  position: fixed;
+  left: 50%;
+  top: max(10px, env(safe-area-inset-top));
+  transform: translateX(-50%);
+  z-index: 140;
+  width: min(520px, 92vw);
+  text-align: center;
+  pointer-events: none;
+}
+.seventh-prompt p {
+  margin: 0 0 6px;
+  font-weight: 800;
+  color: #ffe066;
+  text-shadow: 0 0 12px #ffaa00, 0 2px 0 #5a1800;
+}
+.seventh-prompt p:first-child {
+  font-size: clamp(1.4rem, 5.5vw, 2.1rem);
+  letter-spacing: 0.22em;
+}
+.seventh-prompt p:last-child {
+  font-size: clamp(0.9rem, 3.4vw, 1.15rem);
+  letter-spacing: 0.04em;
+  color: #fff4d0;
+}
+.cinematic-word {
+  position: absolute;
+  left: 50%;
+  top: 12%;
+  transform: translate(-50%, 8px);
+  font-size: clamp(1.6rem, 6vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  color: #ffe066;
+  text-shadow: 0 0 18px #ffaa00, 0 3px 0 #5a1800;
+  opacity: 0;
+  transition: opacity 0.6s ease, transform 0.8s ease;
+}
+.cinematic-word.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.cinematic-piece {
+  position: fixed;
+  width: 64px;
+  height: 72px;
+  margin-left: -32px;
+  margin-top: -36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(165deg, #f7ebcf, #e6d3a6);
+  color: #1a1008;
+  border: 2px solid #c9a227;
+  border-radius: 8px 8px 14px 14px;
+  font-size: 2rem;
+  font-weight: 700;
+  box-shadow: 0 0 24px rgba(255, 210, 80, 0.7);
+  transform: scale(1);
+  transition:
+    left 0.9s cubic-bezier(0.22, 0.12, 0.18, 1),
+    top 0.9s cubic-bezier(0.22, 0.12, 0.18, 1),
+    transform 0.9s cubic-bezier(0.22, 0.12, 0.18, 1),
+    box-shadow 0.3s ease;
+}
+.cinematic-piece.fly {
+  transform: scale(1) rotate(0deg);
+}
+.cinematic-piece.land {
+  transform: scale(0.55);
+  box-shadow: 0 0 16px #ffe066;
+}
+
+.side-panel, .layout, .board-area, .files-ranks, .variant-tag { display: none !important; }
+.your-turn-status { font-size: 0.95rem; }
+
+.clock-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+.serious-clock {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  white-space: nowrap;
+  padding: 2px 6px;
+  border: 1px solid rgba(201, 162, 39, 0.45);
+  border-radius: 999px;
+  background: rgba(42, 28, 16, 0.7);
+}
+.serious-clock[hidden] { display: none; }
+
+#btn-rank {
+  background: linear-gradient(180deg, #6b2a12, #3d1608);
+  border-color: var(--gold);
+  color: #ffe8b0;
+}
+#btn-rank[hidden] { display: none; }
+
+.rank-record {
+  margin: -6px 0 14px;
+  color: #ffe066;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+}
+.rank-record.miss {
+  color: #ffc8a0;
+  font-size: 0.95rem;
+}
+
+.rank-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 4, 2, 0.78);
+  backdrop-filter: blur(4px);
+}
+.rank-card {
+  width: min(420px, 92vw);
+  max-height: 86svh;
+  overflow: auto;
+  padding: 22px 20px 18px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #3d2412 0%, #1a1008 100%);
+  border: 2px solid var(--gold);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.55);
+}
+.rank-card h2 {
+  margin: 0 0 4px;
+  text-align: center;
+  color: var(--gold);
+  letter-spacing: 0.16em;
+  font-size: 1.2rem;
+}
+.rank-lead {
+  margin: 0 0 14px;
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  opacity: 0.9;
+  color: #ffe8b0;
+}
+.rank-card ol {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+.rank-card li {
+  display: grid;
+  grid-template-columns: 2.2em minmax(4em, 1fr) auto auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 7px 6px;
+  border-bottom: 1px solid rgba(196, 165, 116, 0.2);
+  font-variant-numeric: tabular-nums;
+}
+.rank-card li.me {
+  background: rgba(201, 162, 39, 0.18);
+  border-radius: 6px;
+}
+.rank-card li.empty {
+  display: block;
+  text-align: center;
+  opacity: 0.7;
+  padding: 18px 6px;
+}
+.rank-card .rk { color: var(--gold); font-weight: 700; }
+.rank-card .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-card .when { opacity: 0.65; font-size: 0.75rem; }
+.rank-card #btn-rank-close {
+  display: block;
+  width: 100%;
+}
+
+.start-cinematic, .congrats-cinematic {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.start-cinematic.show, .congrats-cinematic.show { opacity: 1; }
+.start-cinematic.out, .congrats-cinematic.out { opacity: 0; }
+.start-vignette, .congrats-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(40,18,8,0.35) 0%, rgba(0,0,0,0.82) 72%);
+}
+.start-seal {
+  position: relative;
+  padding: 10px 28px;
+  border: 4px solid #c41e1e;
+  color: #c41e1e;
+  font-size: clamp(2rem, 10vw, 4.2rem);
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  background: rgba(255, 244, 220, 0.08);
+  transform: scale(1.35) rotate(-8deg);
+  opacity: 0;
+  text-shadow: 0 0 18px rgba(196,30,30,0.45);
+}
+.start-cinematic.show .start-seal {
+  animation: stampIn 0.45s cubic-bezier(0.12, 0.8, 0.2, 1) forwards;
+}
+.start-word {
+  position: relative;
+  margin-top: 18px;
+  font-size: clamp(1.6rem, 7vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  color: #ffe066;
+  text-shadow: 0 0 20px #ffaa00, 0 3px 0 #5a1800;
+  transform: translateY(16px);
+  opacity: 0;
+}
+.start-cinematic.show .start-word {
+  animation: startWord 0.55s ease 0.55s forwards;
+}
+.start-cinematic.go .start-word {
+  letter-spacing: 0.5em;
+}
+@keyframes stampIn {
+  0% { opacity: 0; transform: scale(1.8) rotate(-14deg); }
+  70% { opacity: 1; transform: scale(0.92) rotate(-6deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-8deg); }
+}
+@keyframes startWord {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.congrats-cinematic { z-index: 160; }
+.congrats-word {
+  position: relative;
+  font-size: clamp(2.2rem, 11vw, 4.6rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: #ffe066;
+  text-shadow: 0 0 24px #ffd700, 0 4px 0 #8b1e1e;
+  transform: scale(0.4);
+  opacity: 0;
+}
+.congrats-cinematic.show .congrats-word {
+  animation: congratsPop 0.7s cubic-bezier(0.16, 0.84, 0.28, 1) forwards;
+}
+.congrats-rank {
+  position: relative;
+  margin-top: 10px;
+  font-size: clamp(1.1rem, 4.5vw, 1.7rem);
+  letter-spacing: 0.2em;
+  color: #f3e6c8;
+  opacity: 0;
+}
+.congrats-cinematic.show .congrats-rank {
+  animation: startWord 0.45s ease 0.35s forwards;
+}
+.congrats-petal {
+  position: absolute;
+  width: 10px;
+  height: 14px;
+  border-radius: 10px 2px 10px 2px;
+  background: #ffd700;
+  opacity: 0;
+  animation: petalFall 1.8s ease-out forwards;
+}
+.congrats-petal.alt { background: #c41e1e; }
+@keyframes congratsPop {
+  0% { opacity: 0; transform: scale(0.4) rotate(-8deg); }
+  70% { opacity: 1; transform: scale(1.08) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes petalFall {
+  0% { opacity: 1; transform: translate(0,0) rotate(0); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(220deg); }
+}
+
+.start-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 0;
+  padding: 12px 16px 20px;
+}
+.start-screen h1 {
+  margin: 0;
+  font-size: clamp(2rem, 9vw, 3.4rem);
+  letter-spacing: 0.28em;
+  color: var(--gold);
+}
+.start-tag {
+  margin: -6px 0 8px;
+  opacity: 0.8;
+  letter-spacing: 0.08em;
+  font-size: 0.9rem;
+}
+.win-show {
+  width: 100%;
+  flex: 0 1 auto;
+  min-height: 0;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255, 232, 160, 0.08);
+  border: 1px solid rgba(201, 162, 39, 0.5);
+  text-align: center;
+}
+.win-note {
+  margin: 0 0 4px;
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #c42a1a;
+  color: #fff6d8;
+  font-size: clamp(0.85rem, 3.4vw, 1.05rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.win-kicker, .win-ways { display: none !important; }
+.win-lines {
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+.win-lines li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  text-align: left;
+}
+.win-lines li.a { background: rgba(201, 162, 39, 0.2); }
+.win-lines li.b { background: rgba(196, 42, 26, 0.22); }
+.win-lines em {
+  flex: 0 0 1.6em;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 1.15rem;
+  text-align: center;
+}
+.win-lines li.a em { color: #ffe066; }
+.win-lines li.b em { color: #ff8a6a; }
+.win-lines span {
+  font-size: clamp(1.15rem, 4.6vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff8dc;
+  line-height: 1.25;
+}
+.win-lines li.a strong { color: #ffe066; font-size: 1.15em; }
+.win-lines li.b strong { color: #ffb198; font-size: 1.15em; }
+.win-sub {
+  margin: 0 0 8px;
+  font-size: clamp(0.78rem, 3vw, 0.95rem);
+  letter-spacing: 0.04em;
+  color: #f0d8a8;
+}
+.win-ways {
+  display: grid;
+  grid-template-columns: 1fr auto 0.72fr;
+  gap: 8px;
+  align-items: stretch;
+}
+.win-way {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 6px 7px;
+  border-radius: 10px;
+  background: rgba(18, 10, 6, 0.5);
+}
+.win-way strong { display: none; }
+.win-slots {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  width: 100%;
+}
+.win-slots i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 3 / 4;
+  border-radius: 3px;
+  background: linear-gradient(165deg, #f7ebcf, #e6d3a6);
+  color: #1a1008;
+  font-size: clamp(0.62rem, 2.6vw, 0.78rem);
+  font-weight: 700;
+  font-style: normal;
+  box-shadow: 0 1px 0 #c9a227;
+  opacity: 0.22;
+  transform: scale(0.86);
+}
+.win-show.play .win-slots i {
+  animation: winFill 0.38s ease forwards;
+}
+.win-slots i:nth-child(1) { animation-delay: 0.05s; }
+.win-slots i:nth-child(2) { animation-delay: 0.16s; }
+.win-slots i:nth-child(3) { animation-delay: 0.27s; }
+.win-slots i:nth-child(4) { animation-delay: 0.38s; }
+.win-slots i:nth-child(5) { animation-delay: 0.49s; }
+.win-slots i:nth-child(6) { animation-delay: 0.6s; }
+.win-slots i:nth-child(7) { animation-delay: 0.72s; }
+@keyframes winFill {
+  to { opacity: 1; transform: scale(1); box-shadow: 0 0 8px rgba(255, 210, 80, 0.55); }
+}
+.win-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+.win-chips b {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+.win-chips .yes { color: #ffe8b0; background: rgba(80, 140, 60, 0.35); }
+.win-chips .no { color: #ffc0b0; background: rgba(140, 40, 30, 0.35); }
+.win-or {
+  align-self: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: #ffe066;
+  writing-mode: vertical-rl;
+}
+.win-king {
+  width: 46px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px 8px 12px 12px;
+  background: linear-gradient(165deg, #f7ebcf, #e6d3a6);
+  color: #1a1008;
+  font-size: 1.55rem;
+  font-weight: 800;
+  position: relative;
+}
+.win-show.play .win-king::after {
+  content: "";
+  position: absolute;
+  inset: 18% 8%;
+  border-top: 3px solid #c42a1a;
+  transform: rotate(-28deg);
+  box-shadow: 0 0 8px #ff6644;
+  animation: kingCut 1.6s ease-in-out infinite;
+}
+.win-show.play .win-king {
+  animation: kingPulse 1.6s ease-in-out infinite;
+}
+@keyframes kingCut {
+  0%, 35% { opacity: 0; }
+  50%, 100% { opacity: 1; }
+}
+@keyframes kingPulse {
+  0%, 35% { filter: none; }
+  50%, 100% { filter: brightness(1.1); box-shadow: 0 0 14px rgba(255, 80, 50, 0.45); }
+}
+.start-card { gap: 10px; }
+@media (max-width: 360px) {
+  .win-way strong { font-size: 0.9rem; }
+}
+.rank-note {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  font-size: clamp(0.78rem, 3.1vw, 0.92rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  color: #ffe8b0;
+}
+.rank-note[hidden] { display: none; }
+
+@media (max-height: 780px) {
+  .start-card h2 { font-size: 1.25rem; }
+  .win-kicker { margin: 4px 0 6px; font-size: 1rem; }
+  .win-lines span { font-size: 1.05rem; }
+  .win-ways { display: none; }
+  .diff-picks { gap: 8px; }
+  .diff-picks button { min-height: 48px; font-size: 1.15rem; }
+  .start-overlay .start-btn { min-height: 52px; font-size: 1.25rem; }
+  .nick-field input { min-height: 40px; }
+}
+@media (max-height: 720px) {
+  .start-card { padding: 10px 12px 8px; gap: 6px; }
+  .diff-picks button { min-height: 44px; }
+  .win-show { padding: 5px 8px 6px; }
+  .win-sub { margin-bottom: 0; }
+}
+@media (max-height: 640px) {
+  .start-card { padding: 8px 10px 6px; gap: 5px; }
+  .win-note { font-size: 0.78rem; padding: 2px 8px; }
+  .win-kicker, .win-sub { display: none; }
+  .win-lines li { padding: 5px 8px; }
+  .diff-picks button { min-height: 40px; font-size: 1.05rem; }
+  .start-overlay .start-btn { min-height: 46px; }
+  .side-picks button { min-height: 38px; }
+  header.top { display: none; }
+}
+.start-btn {
+  min-width: min(280px, 80vw);
+  min-height: 58px;
+  font-size: 1.35rem;
+  letter-spacing: 0.28em;
+  font-weight: 700;
+  background: linear-gradient(180deg, #a03030, #701818);
+  border-color: #e0c060;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.start-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: min(280px, 80vw);
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+}
+.start-field select {
+  width: 100%;
+  min-height: 44px;
+  text-align: center;
+}
+.start-screen #btn-rank {
+  min-width: min(280px, 80vw);
+  min-height: 44px;
+}
+.diff-lock {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: #ffe8b0;
+  border: 1px solid rgba(201,162,39,0.4);
+  border-radius: 4px;
+  background: rgba(42, 28, 16, 0.65);
+  white-space: nowrap;
+}
+
+.start-overlay,
+.rank-overlay,
+.end-overlay,
+.nick-overlay {
+  top: var(--app-top, 0px);
+  left: 0;
+  right: 0;
+  bottom: auto;
+  height: var(--app-h, 100svh);
+  max-height: var(--app-h, 100svh);
+}
+.start-overlay {
+  position: fixed;
+  z-index: 200;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  overflow: hidden;
+  padding: 6px 6px max(8px, env(safe-area-inset-bottom));
+  background: rgba(8, 4, 2, 0.38);
+  pointer-events: auto;
+}
+.start-card {
+  width: min(520px, 96vw);
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  margin: 0;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(61, 36, 18, 0.96) 0%, rgba(18, 10, 6, 0.97) 100%);
+  border: 3px solid var(--gold);
+  box-shadow: 0 18px 56px rgba(0,0,0,0.55);
+}
+.start-card h2 {
+  margin: 0;
+  color: var(--gold);
+  letter-spacing: 0.28em;
+  font-size: clamp(1.4rem, 5vw, 2rem);
+}
+.diff-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  width: 100%;
+  flex: 0 0 auto;
+}
+.diff-picks button {
+  min-height: 42px;
+  font-size: clamp(1rem, 4vw, 1.25rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+.diff-picks button.on,
+.side-picks button.on {
+  background: linear-gradient(180deg, #a03030, #701818);
+  border-color: #ffe066;
+  box-shadow: 0 0 16px rgba(255, 208, 80, 0.35);
+  color: #fff4c8;
+}
+.side-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  width: 100%;
+  flex: 0 0 auto;
+}
+.side-picks button {
+  min-height: 36px;
+  font-size: 0.95rem;
+}
+.start-overlay .start-btn {
+  width: 100%;
+  min-height: 48px;
+  font-size: clamp(1.15rem, 4.5vw, 1.45rem);
+  flex: 0 0 auto;
+}
+.start-ver {
+  margin: 0;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  opacity: 0.45;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.8em;
+}
+#visit-count {
+  font-size: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  opacity: 1;
+  position: static;
+}
+.start-foot {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.start-overlay #btn-rank {
+  flex: 1;
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1.15;
+}
+.start-overlay #btn-rank small {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  opacity: 0.9;
+}
+.start-overlay #btn-rank[hidden] { display: none; }
+.start-overlay .sound-toggle { margin-left: auto; }
+
+
+.think-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: #ffe8b0;
+  background: rgba(42, 28, 16, 0.75);
+  border: 1px solid rgba(201, 162, 39, 0.4);
+}
+.think-chip i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffd27a;
+  box-shadow: 0 0 8px #ffd27a;
+  animation: thinkPulse 0.9s ease-in-out infinite;
+}
+@keyframes thinkPulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+
+.think-banner {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  line-height: 1.05;
+  pointer-events: none;
+  font-size: clamp(1.05rem, 3.6vw, 1.45rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #ffe066;
+  text-shadow: 0 0 12px #ffd24a, 0 0 4px #c9a227;
+  white-space: nowrap;
+}
+.think-banner.on {
+  display: inline-flex;
+  animation: thinkGlow 1.05s ease-in-out infinite;
+}
+.think-banner .dots {
+  display: inline-flex;
+  gap: 5px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.think-banner .dots i {
+  width: 0.22em;
+  height: 0.22em;
+  border-radius: 50%;
+  background: #ffe066;
+  box-shadow: 0 0 8px #ffd24a;
+  animation: thinkDot 1.05s ease-in-out infinite;
+}
+.think-banner .dots i:nth-child(2) { animation-delay: 0.15s; }
+.think-banner .dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes thinkGlow {
+  0%, 100% { opacity: 0.72; transform: scale(0.98); filter: brightness(0.95); }
+  50% { opacity: 1; transform: scale(1.04); filter: brightness(1.15); }
+}
+@keyframes thinkDot {
+  0%, 100% { opacity: 0.25; transform: translateY(0.12em); }
+  50% { opacity: 1; transform: translateY(-0.12em); }
+}
+
+
+.nick-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  flex: 0 0 auto;
+}
+.nick-field[hidden] { display: none; }
+#btn-nick-save-start {
+  min-height: 40px;
+  padding: 0 12px;
+  flex: 0 0 auto;
+}
+.nick-field input {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  text-align: center;
+  font-family: inherit;
+  font-size: 1.05rem;
+  color: var(--washi);
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--wood-light);
+  border-radius: 4px;
+}
+.nick-field small {
+  opacity: 0.75;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+
+.nick-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(8, 4, 2, 0.5);
+}
+.nick-card { width: min(400px, 92vw); }
+#btn-nick {
+  max-width: 7.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.pre-seventh {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+.pre-seventh.show { opacity: 1; }
+.pre-seventh.out { opacity: 0; }
+.pre-seventh-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(40,12,4,0.25) 0%, rgba(0,0,0,0.72) 68%);
+}
+.pre-seventh-word {
+  position: relative;
+  font-size: clamp(2.4rem, 11vw, 4.2rem);
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  color: #ffe066;
+  text-shadow: 0 0 22px #ffaa00, 0 4px 0 #5a1800;
+  animation: preSeventhPulse 0.9s ease-in-out infinite;
+}
+.pre-seventh p {
+  position: relative;
+  margin: 10px 0 0;
+  font-size: clamp(1.05rem, 4vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #fff4d0;
+  text-shadow: 0 0 10px #c96a20;
+}
+@keyframes preSeventhPulse {
+  0%, 100% { transform: scale(0.98); filter: brightness(0.95); }
+  50% { transform: scale(1.04); filter: brightness(1.12); }
+}
+
+
+.sq.seventh-taken {
+  box-shadow: inset 0 0 0 4px #ffe066, 0 0 28px rgba(255, 210, 80, 0.95);
+  z-index: 8;
+  animation: seventhGlow 0.75s ease-in-out infinite;
+}
+.sq.seventh-taken .piece {
+  transform: scale(1.22);
+  filter: drop-shadow(0 0 10px #ffe066) drop-shadow(0 0 22px #ffaa00);
+  animation: seventhPiecePulse 0.75s ease-in-out infinite;
+}
+.trophy-slot.reveal {
+  z-index: 8;
+  transform: scale(1.28);
+  box-shadow: 0 0 22px #ffe066, 0 0 40px rgba(255, 180, 40, 0.7);
+  animation: seventhGlow 0.75s ease-in-out infinite;
+}
+.mate-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 146;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(8, 4, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.mate-reveal.show { opacity: 1; }
+.mate-reveal.out { opacity: 0; }
+.mate-reveal .mr-kicker {
+  margin: 0;
+  color: #ffe066;
+  letter-spacing: 0.32em;
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
+  font-weight: 800;
+  text-shadow: 0 0 12px #c96a20, 0 2px 0 #3a1800;
+}
+.mate-reveal .mr-title {
+  margin: 10px 0 0;
+  font-size: clamp(2.4rem, 10vw, 4.2rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #fff4d4;
+  text-shadow: 0 0 24px #ffb020, 0 3px 0 #3a1800;
+}
+.seventh-reveal {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: max(8px, env(safe-area-inset-top));
+  z-index: 145;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  pointer-events: none;
+  background: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  padding-top: 6px;
+}
+.seventh-reveal.show { opacity: 1; }
+.seventh-reveal.out { opacity: 0; }
+.sr-kicker {
+  margin: 0;
+  color: #ffe066;
+  letter-spacing: 0.28em;
+  font-size: clamp(1.1rem, 4vw, 1.4rem);
+  font-weight: 800;
+  text-shadow: 0 0 12px #c96a20, 0 2px 0 #3a1800;
+}
+.sr-label {
+  margin: 6px 0 8px;
+  font-size: clamp(1.25rem, 5vw, 1.7rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fff4d0;
+  text-shadow: 0 0 10px #000, 0 2px 0 #3a1800;
+}
+.sr-piece {
+  width: 96px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px 12px 20px 20px;
+  background: linear-gradient(165deg, #fff6d8, #e6d3a6);
+  color: #1a1008;
+  font-size: 3.2rem;
+  font-weight: 800;
+  box-shadow: 0 0 28px rgba(255, 210, 80, 0.95), 0 0 48px rgba(255, 160, 40, 0.55);
+  animation: seventhPiecePulse 0.85s ease-in-out infinite;
+}
+.sr-name {
+  margin: 10px 0 0;
+  font-size: clamp(2rem, 9vw, 2.9rem);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: #ffe066;
+  text-shadow: 0 0 18px #ffaa00, 0 3px 0 #5a1800;
+}
+@keyframes seventhPiecePulse {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 10px #ffe066); transform: scale(1); }
+  50% { filter: brightness(1.18) drop-shadow(0 0 22px #ffcc44); transform: scale(1.08); }
+}
+
+
+.start-btn.net {
+  margin-top: 8px;
+  background: linear-gradient(#3a5a3a, #2a3f2a);
+  border-color: #8ecf8e;
+}
+.net-overlay {
+  position: fixed; inset: 0; z-index: 160;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(10,6,0,.62);
+}
+.net-card {
+  width: min(420px, 92vw);
+  background: linear-gradient(#3a2412, #24150b);
+  border: 2px solid #e0c070;
+  border-radius: 14px;
+  padding: 18px 16px 14px;
+  color: #f4e6c4;
+  text-align: center;
+}
+.net-card h2 { margin: 0 0 8px; font-size: 1.25rem; }
+.net-card p { margin: 6px 0; font-size: .92rem; }
+.net-card .room-code {
+  font-size: clamp(1.8rem, 8vw, 2.6rem);
+  letter-spacing: .28em;
+  font-weight: 900;
+  color: #ffe08a;
+  margin: 10px 0 12px;
+}
+.net-card input[type=text] {
+  width: 70%;
+  font-size: 1.2rem;
+  letter-spacing: .2em;
+  text-align: center;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #c4a574;
+  background: #1a1008;
+  color: #fff4d4;
+}
+.net-card .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+.net-card button {
+  min-height: 42px; padding: 0 14px;
+  border-radius: 8px; border: 1px solid #c4a574;
+  background: #5c3a1e; color: #fff4d4; font-weight: 700;
+}
+.net-card button.primary { background: linear-gradient(#8b2a2a, #5c1818); }
+.net-note { opacity: .85; font-size: .8rem !important; }
+#net-room-chip {
+  margin-left: 8px;
+  font-size: .8rem;
+  color: #ffe08a;
+}
+
+
+
+.rank-tabs { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 12px; }
+.rank-tab {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid #c9a227;
+  background: transparent;
+  color: #e8d5a3;
+  opacity: 0.65;
+}
+.rank-tab.on {
+  background: #8b1e1e;
+  color: #fff8e4;
+  border-color: #f0d27a;
+  font-weight: 700;
+  opacity: 1;
+  box-shadow: 0 0 0 2px rgba(240,210,122,0.4);
+}
+
+.start-rank-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.start-rank-list {
+  margin: 0;
+  padding: 4px 8px 6px;
+  min-height: 92px;
+  list-style: none;
+  font-size: 0.78rem;
+  color: #f3e6c8;
+}
+.start-rank-list li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 2px 0;
+}
+.start-rank-list .rk { width: 1.2em; color: #f0d27a; }
+.start-rank-list .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.start-rank-list .ms { opacity: 0.9; font-variant-numeric: tabular-nums; }
+.start-rank-list .empty { justify-content: center; opacity: 0.7; }
 </style>
 </head>
 <body>
-  <header>
-    <p class="kicker">NIKKUKYUU-CODE</p>
-    <h1>7GET将棋</h1>
-  </header>
-  <main>
-    <article class="card">
-      <h2>7GET将棋 — 歩以外7枚 or 玉取り</h2>
-      <p>通常の将棋の動きはそのままに、勝ち方が少し違うブラウザ将棋です。相手の歩以外の駒を7枚取るか、玉を取る（詰める）か、先に達成した側の勝ちです。</p>
-      <p><a class="play" href="./shogi/">ゲームを開く</a></p>
-    </article>
-    <h3>遊び方の要点</h3>
-    <ul>
-      <li>取る対象になるのは香・桂・銀・金・角・飛と、その成駒、およびと金です。</li>
-      <li>歩と玉はトロフィーに数えません。</li>
-      <li>取った駒を打っても、トロフィーの数は減りません。</li>
-      <li>一人でAIと指すほか、部屋番号を使ったネット対戦もできます。</li>
-    </ul>
-    <h3>このサイトについて</h3>
-    <p>個人がブラウザ向けに制作したゲームを公開するためのページです。ルール説明は本ページとゲーム画面にあります。</p>
-  </main>
-  <footer>
-    <a href="./privacy.html">プライバシーポリシー</a>
-  </footer>
+<div id="app"></div>
+<script>
+"use strict";
+(() => {
+  // src/rules/types.ts
+  var SENTE = 0;
+  var GOTE = 1;
+  var TROPHY_GOAL = 7;
+  function countsAsTrophy(captured) {
+    if (captured.kind === "K") return false;
+    if (captured.kind === "P") return captured.promoted;
+    return true;
+  }
+  var EMPTY_HAND = () => ({
+    K: 0,
+    R: 0,
+    B: 0,
+    G: 0,
+    S: 0,
+    N: 0,
+    L: 0,
+    P: 0
+  });
+  var PIECE_KANJI = {
+    K: "\u7389",
+    R: "\u98DB",
+    B: "\u89D2",
+    G: "\u91D1",
+    S: "\u9280",
+    N: "\u6842",
+    L: "\u9999",
+    P: "\u6B69",
+    "+R": "\u9F8D",
+    "+B": "\u99AC",
+    "+S": "\u6210\u9280",
+    "+N": "\u6210\u6842",
+    "+L": "\u6210\u9999",
+    "+P": "\u3068"
+  };
+  var PIECE_NAME = {
+    K: "\u7389\u5C06",
+    R: "\u98DB\u8ECA",
+    B: "\u89D2\u884C",
+    G: "\u91D1\u5C06",
+    S: "\u9280\u5C06",
+    N: "\u6842\u99AC",
+    L: "\u9999\u8ECA",
+    P: "\u6B69\u5175",
+    "+R": "\u9F8D\u738B",
+    "+B": "\u9F8D\u99AC",
+    "+S": "\u6210\u9280",
+    "+N": "\u6210\u6842",
+    "+L": "\u6210\u9999",
+    "+P": "\u3068\u91D1"
+  };
+  function pieceCallName(kind, promoted = false, side) {
+    if (kind === "K") return side === 1 ? "\u738B\u5C06" : "\u7389\u5C06";
+    const key = promoted ? `+${kind}` : kind;
+    return PIECE_NAME[key] || PIECE_KANJI[key] || kind;
+  }
+  var PIECE_KANJI_SHORT = {
+    K: "\u7389",
+    R: "\u98DB",
+    B: "\u89D2",
+    G: "\u91D1",
+    S: "\u9280",
+    N: "\u6842",
+    L: "\u9999",
+    P: "\u6B69",
+    "+R": "\u9F8D",
+    "+B": "\u99AC",
+    "+S": "\u5168",
+    "+N": "\u572D",
+    "+L": "\u674F",
+    "+P": "\u3068"
+  };
+  function fileOf(sq3) {
+    return sq3 / 9 | 0;
+  }
+  function rankOf(sq3) {
+    return sq3 % 9;
+  }
+  function makeSquare(file, rank) {
+    return file * 9 + rank;
+  }
+  function opposite(side) {
+    return 1 - side;
+  }
+  function inPromotionZone(sq3, side) {
+    const r = rankOf(sq3);
+    return side === SENTE ? r >= 6 : r <= 2;
+  }
+  function canPromoteKind(kind) {
+    return kind !== "K" && kind !== "G";
+  }
+  function mustPromote(kind, to, side) {
+    const r = rankOf(to);
+    if (side === SENTE) {
+      if (kind === "P" || kind === "L") return r === 8;
+      if (kind === "N") return r >= 7;
+    } else {
+      if (kind === "P" || kind === "L") return r === 0;
+      if (kind === "N") return r <= 1;
+    }
+    return false;
+  }
+
+  // src/rules/zobrist.ts
+  var KINDS = ["K", "R", "B", "G", "S", "N", "L", "P"];
+  function mulberry32(a) {
+    return function() {
+      let t = a += 1831565813;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return (t ^ t >>> 14) >>> 0;
+    };
+  }
+  var rng = mulberry32(1515870810);
+  var pieceKeys = [];
+  for (let sq3 = 0; sq3 < 81; sq3++) {
+    pieceKeys[sq3] = [];
+    for (let k = 0; k < 8; k++) {
+      pieceKeys[sq3][k] = [[rng(), rng()], [rng(), rng()]];
+    }
+  }
+  var handKeys = [];
+  for (let s = 0; s < 2; s++) {
+    handKeys[s] = [];
+    for (let k = 0; k < 8; k++) {
+      handKeys[s][k] = [0];
+      for (let c = 1; c <= 18; c++) handKeys[s][k][c] = rng();
+    }
+  }
+  var sideKey = rng();
+  function kindIndex(kind) {
+    return KINDS.indexOf(kind);
+  }
+  function hashPiece(sq3, p) {
+    return pieceKeys[sq3][kindIndex(p.kind)][p.promoted ? 1 : 0][p.side];
+  }
+  function hashHand(side, hand) {
+    let h = 0;
+    for (const k of KINDS) {
+      const c = hand[k];
+      if (c > 0) h ^= handKeys[side][kindIndex(k)][Math.min(c, 18)];
+    }
+    return h;
+  }
+  function computeHash(pos2) {
+    let h = 0;
+    for (let sq3 = 0; sq3 < 81; sq3++) {
+      const p = pos2.board[sq3];
+      if (p) h ^= hashPiece(sq3, p);
+    }
+    h ^= hashHand(0, pos2.hands[0]);
+    h ^= hashHand(1, pos2.hands[1]);
+    if (pos2.sideToMove === 1) h ^= sideKey;
+    return h;
+  }
+
+  // src/rules/board.ts
+  function createEmptyBoard() {
+    return Array(81).fill(null);
+  }
+  function place(board, file, rank, kind, side, promoted = false) {
+    board[makeSquare(file, rank)] = { kind, promoted, side };
+  }
+  function initialPosition() {
+    const board = createEmptyBoard();
+    const senteBack = ["L", "N", "S", "G", "K", "G", "S", "N", "L"];
+    for (let f = 0; f < 9; f++) place(board, f, 0, senteBack[f], SENTE);
+    place(board, 1, 1, "B", SENTE);
+    place(board, 7, 1, "R", SENTE);
+    for (let f = 0; f < 9; f++) place(board, f, 2, "P", SENTE);
+    const goteBack = ["L", "N", "S", "G", "K", "G", "S", "N", "L"];
+    for (let f = 0; f < 9; f++) place(board, f, 8, goteBack[f], GOTE);
+    place(board, 7, 7, "B", GOTE);
+    place(board, 1, 7, "R", GOTE);
+    for (let f = 0; f < 9; f++) place(board, f, 6, "P", GOTE);
+    const pos2 = {
+      board,
+      hands: [EMPTY_HAND(), EMPTY_HAND()],
+      sideToMove: SENTE,
+      historyKeys: [],
+      ply: 0,
+      trophies: [0, 0],
+      trophyPieces: [[], []]
+    };
+    pos2.historyKeys.push(computeHash(pos2));
+    return pos2;
+  }
+  function cloneHand(h) {
+    return { K: h.K, R: h.R, B: h.B, G: h.G, S: h.S, N: h.N, L: h.L, P: h.P };
+  }
+  function clonePosition(pos2) {
+    return {
+      board: pos2.board.map((p) => p ? { ...p } : null),
+      hands: [cloneHand(pos2.hands[0]), cloneHand(pos2.hands[1])],
+      sideToMove: pos2.sideToMove,
+      historyKeys: pos2.historyKeys.slice(),
+      ply: pos2.ply,
+      trophies: [pos2.trophies[0], pos2.trophies[1]],
+      trophyPieces: [
+        pos2.trophyPieces[0].map((x) => ({ ...x })),
+        pos2.trophyPieces[1].map((x) => ({ ...x }))
+      ]
+    };
+  }
+  function findKing(pos2, side) {
+    for (let sq3 = 0; sq3 < 81; sq3++) {
+      const p = pos2.board[sq3];
+      if (p && p.kind === "K" && p.side === side) return sq3;
+    }
+    return -1;
+  }
+
+  // src/rules/attack.ts
+  function onBoard(f, r) {
+    return f >= 0 && f < 9 && r >= 0 && r < 9;
+  }
+  function sq(f, r) {
+    return f * 9 + r;
+  }
+  function fwd(side) {
+    return side === SENTE ? 1 : -1;
+  }
+  function isSquareAttacked(pos2, target, bySide) {
+    const tf = fileOf(target);
+    const tr = rankOf(target);
+    const fr = fwd(bySide);
+    {
+      const f = tf;
+      const r = tr - fr;
+      if (onBoard(f, r)) {
+        const p = pos2.board[sq(f, r)];
+        if (p && p.side === bySide && p.kind === "P" && !p.promoted) return true;
+      }
+    }
+    for (const df of [-1, 1]) {
+      const f = tf - df;
+      const r = tr - 2 * fr;
+      if (!onBoard(f, r)) continue;
+      const p = pos2.board[sq(f, r)];
+      if (p && p.side === bySide && p.kind === "N" && !p.promoted) return true;
+    }
+    const silverDeltas = [
+      [0, fr],
+      [1, fr],
+      [-1, fr],
+      [1, -fr],
+      [-1, -fr]
+    ];
+    for (const [df, dr] of silverDeltas) {
+      const f = tf - df;
+      const r = tr - dr;
+      if (!onBoard(f, r)) continue;
+      const p = pos2.board[sq(f, r)];
+      if (p && p.side === bySide && p.kind === "S" && !p.promoted) return true;
+    }
+    const goldDeltas = [
+      [0, fr],
+      [1, fr],
+      [-1, fr],
+      [1, 0],
+      [-1, 0],
+      [0, -fr]
+    ];
+    for (const [df, dr] of goldDeltas) {
+      const f = tf - df;
+      const r = tr - dr;
+      if (!onBoard(f, r)) continue;
+      const p = pos2.board[sq(f, r)];
+      if (!p || p.side !== bySide) continue;
+      if (p.kind === "G") return true;
+      if (p.promoted && (p.kind === "S" || p.kind === "N" || p.kind === "L" || p.kind === "P")) return true;
+    }
+    for (let df = -1; df <= 1; df++) {
+      for (let dr = -1; dr <= 1; dr++) {
+        if (df === 0 && dr === 0) continue;
+        const f = tf + df;
+        const r = tr + dr;
+        if (!onBoard(f, r)) continue;
+        const p = pos2.board[sq(f, r)];
+        if (p && p.side === bySide && p.kind === "K") return true;
+        if (p && p.side === bySide && p.promoted && p.kind === "R") return true;
+        if (p && p.side === bySide && p.promoted && p.kind === "B" && (df === 0 || dr === 0)) return true;
+      }
+    }
+    {
+      let f = tf;
+      let r = tr - fr;
+      while (onBoard(f, r)) {
+        const p = pos2.board[sq(f, r)];
+        if (p) {
+          if (p.side === bySide && p.kind === "L" && !p.promoted) return true;
+          break;
+        }
+        r -= fr;
+      }
+    }
+    const orth = [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0]
+    ];
+    for (const [df, dr] of orth) {
+      let f = tf + df;
+      let r = tr + dr;
+      while (onBoard(f, r)) {
+        const p = pos2.board[sq(f, r)];
+        if (p) {
+          if (p.side === bySide && (p.kind === "R" || p.promoted && p.kind === "B")) {
+            if (p.kind === "R") return true;
+            if (Math.abs(f - tf) + Math.abs(r - tr) === 1) return true;
+          }
+          if (p.side === bySide && p.promoted && p.kind === "R") return true;
+          if (p.side === bySide && p.kind === "R" && !p.promoted) return true;
+          break;
+        }
+        f += df;
+        r += dr;
+      }
+    }
+    const diag = [
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1]
+    ];
+    for (const [df, dr] of diag) {
+      let f = tf + df;
+      let r = tr + dr;
+      while (onBoard(f, r)) {
+        const p = pos2.board[sq(f, r)];
+        if (p) {
+          if (p.side === bySide && p.kind === "B") return true;
+          break;
+        }
+        f += df;
+        r += dr;
+      }
+    }
+    return false;
+  }
+
+  // src/rules/moves.ts
+  var ORTH = [
+    [0, 1],
+    [0, -1],
+    [1, 0],
+    [-1, 0]
+  ];
+  var DIAG = [
+    [1, 1],
+    [1, -1],
+    [-1, 1],
+    [-1, -1]
+  ];
+  var KING8 = [...ORTH, ...DIAG];
+  function onBoard2(f, r) {
+    return f >= 0 && f < 9 && r >= 0 && r < 9;
+  }
+  function sq2(f, r) {
+    return f * 9 + r;
+  }
+  function fwd2(side) {
+    return side === SENTE ? 1 : -1;
+  }
+  function goldDirs(side) {
+    const f = fwd2(side);
+    return [
+      [0, f],
+      [1, f],
+      [-1, f],
+      [1, 0],
+      [-1, 0],
+      [0, -f]
+    ];
+  }
+  function silverDirs(side) {
+    const f = fwd2(side);
+    return [
+      [0, f],
+      [1, f],
+      [-1, f],
+      [1, -f],
+      [-1, -f]
+    ];
+  }
+  function pushBoardMoves(pos2, from, to, piece, capture, out) {
+    const kind = piece.kind;
+    const side = piece.side;
+    const canProm = !piece.promoted && canPromoteKind(kind) && (inPromotionZone(from, side) || inPromotionZone(to, side));
+    const forced = !piece.promoted && mustPromote(kind, to, side);
+    const cap = capture ? pos2.board[to] : null;
+    if (forced) {
+      out.push({ from, to, piece: kind, promote: true, drop: false, captured: cap });
+    } else if (canProm) {
+      out.push({ from, to, piece: kind, promote: true, drop: false, captured: cap });
+      out.push({ from, to, piece: kind, promote: false, drop: false, captured: cap });
+    } else {
+      out.push({ from, to, piece: kind, promote: false, drop: false, captured: cap });
+    }
+  }
+  function addSteps(pos2, from, side, dirs, out) {
+    const f0 = fileOf(from);
+    const r0 = rankOf(from);
+    const piece = pos2.board[from];
+    for (const [df, dr] of dirs) {
+      const f = f0 + df;
+      const r = r0 + dr;
+      if (!onBoard2(f, r)) continue;
+      const to = sq2(f, r);
+      const t = pos2.board[to];
+      if (t && t.side === side) continue;
+      pushBoardMoves(pos2, from, to, piece, !!t, out);
+    }
+  }
+  function addSlides(pos2, from, side, dirs, out) {
+    const f0 = fileOf(from);
+    const r0 = rankOf(from);
+    const piece = pos2.board[from];
+    for (const [df, dr] of dirs) {
+      let f = f0 + df;
+      let r = r0 + dr;
+      while (onBoard2(f, r)) {
+        const to = sq2(f, r);
+        const t = pos2.board[to];
+        if (t) {
+          if (t.side !== side) pushBoardMoves(pos2, from, to, piece, true, out);
+          break;
+        }
+        pushBoardMoves(pos2, from, to, piece, false, out);
+        f += df;
+        r += dr;
+      }
+    }
+  }
+  function hasUnpromotedPawnOnFile(pos2, side, file) {
+    for (let r = 0; r < 9; r++) {
+      const p = pos2.board[sq2(file, r)];
+      if (p && p.side === side && p.kind === "P" && !p.promoted) return true;
+    }
+    return false;
+  }
+  function canDropAt(kind, to, side) {
+    const r = rankOf(to);
+    if (side === SENTE) {
+      if (kind === "P" || kind === "L") return r < 8;
+      if (kind === "N") return r < 7;
+    } else {
+      if (kind === "P" || kind === "L") return r > 0;
+      if (kind === "N") return r > 1;
+    }
+    return true;
+  }
+  function generatePseudoLegalMoves(pos2) {
+    const side = pos2.sideToMove;
+    const out = [];
+    for (let from = 0; from < 81; from++) {
+      const p = pos2.board[from];
+      if (!p || p.side !== side) continue;
+      if (p.promoted) {
+        if (p.kind === "R") {
+          addSlides(pos2, from, side, ORTH, out);
+          addSteps(pos2, from, side, DIAG, out);
+        } else if (p.kind === "B") {
+          addSlides(pos2, from, side, DIAG, out);
+          addSteps(pos2, from, side, ORTH, out);
+        } else {
+          addSteps(pos2, from, side, goldDirs(side), out);
+        }
+        continue;
+      }
+      switch (p.kind) {
+        case "K":
+          addSteps(pos2, from, side, KING8, out);
+          break;
+        case "G":
+          addSteps(pos2, from, side, goldDirs(side), out);
+          break;
+        case "S":
+          addSteps(pos2, from, side, silverDirs(side), out);
+          break;
+        case "N": {
+          const f0 = fileOf(from);
+          const r0 = rankOf(from);
+          const fr = fwd2(side);
+          for (const df of [-1, 1]) {
+            const f = f0 + df;
+            const r = r0 + 2 * fr;
+            if (!onBoard2(f, r)) continue;
+            const to = sq2(f, r);
+            const t = pos2.board[to];
+            if (t && t.side === side) continue;
+            pushBoardMoves(pos2, from, to, p, !!t, out);
+          }
+          break;
+        }
+        case "L":
+          addSlides(pos2, from, side, [[0, fwd2(side)]], out);
+          break;
+        case "P": {
+          const f0 = fileOf(from);
+          const r0 = rankOf(from);
+          const r = r0 + fwd2(side);
+          if (onBoard2(f0, r)) {
+            const to = sq2(f0, r);
+            const t = pos2.board[to];
+            if (!t) pushBoardMoves(pos2, from, to, p, false, out);
+            else if (t.side !== side) pushBoardMoves(pos2, from, to, p, true, out);
+          }
+          break;
+        }
+        case "R":
+          addSlides(pos2, from, side, ORTH, out);
+          break;
+        case "B":
+          addSlides(pos2, from, side, DIAG, out);
+          break;
+      }
+    }
+    const hand = pos2.hands[side];
+    const kinds = ["R", "B", "G", "S", "N", "L", "P"];
+    for (const kind of kinds) {
+      if (hand[kind] <= 0) continue;
+      for (let to = 0; to < 81; to++) {
+        if (pos2.board[to]) continue;
+        if (!canDropAt(kind, to, side)) continue;
+        if (kind === "P" && hasUnpromotedPawnOnFile(pos2, side, fileOf(to))) continue;
+        out.push({ from: null, to, piece: kind, promote: false, drop: true, captured: null });
+      }
+    }
+    return out;
+  }
+  function applyMoveRaw(pos2, move) {
+    const next = {
+      board: pos2.board.slice(),
+      hands: [{ ...pos2.hands[0] }, { ...pos2.hands[1] }],
+      sideToMove: opposite(pos2.sideToMove),
+      historyKeys: pos2.historyKeys,
+      ply: pos2.ply + 1,
+      trophies: [pos2.trophies[0], pos2.trophies[1]],
+      trophyPieces: [pos2.trophyPieces[0], pos2.trophyPieces[1]]
+    };
+    const side = pos2.sideToMove;
+    if (move.drop) {
+      next.hands[side] = { ...next.hands[side] };
+      next.hands[side][move.piece]--;
+      next.board[move.to] = { kind: move.piece, promoted: false, side };
+    } else {
+      const from = move.from;
+      const piece = pos2.board[from];
+      next.board[from] = null;
+      const captured = pos2.board[move.to] ?? move.captured ?? null;
+      if (captured) {
+        next.hands[side] = { ...next.hands[side] };
+        if (captured.kind !== "K") {
+          next.hands[side][captured.kind]++;
+        }
+        if (countsAsTrophy(captured)) {
+          next.trophies = [next.trophies[0], next.trophies[1]];
+          next.trophies[side] = next.trophies[side] + 1;
+          next.trophyPieces = [
+            next.trophyPieces[0].slice(),
+            next.trophyPieces[1].slice()
+          ];
+          next.trophyPieces[side] = next.trophyPieces[side].concat({
+            kind: captured.kind,
+            promoted: captured.promoted
+          });
+        }
+      }
+      next.board[move.to] = {
+        kind: piece.kind,
+        promoted: piece.promoted || move.promote,
+        side: piece.side
+      };
+    }
+    return next;
+  }
+  function isInstantWinMove(pos2, move) {
+    const cap = move.captured ?? (move.from != null ? pos2.board[move.to] : null);
+    if (!cap || cap.side === pos2.sideToMove) return false;
+    if (cap.kind === "K") return true;
+    return countsAsTrophy(cap) && pos2.trophies[pos2.sideToMove] + 1 >= TROPHY_GOAL;
+  }
+  function detectResult(pos2) {
+    if (isSennichite(pos2)) return { draw: true, reason: "sennichite" };
+    const sk = findKing(pos2, SENTE);
+    const gk = findKing(pos2, 1);
+    if (sk < 0 && gk >= 0) return { winner: 1, reason: "king_capture" };
+    if (gk < 0 && sk >= 0) return { winner: SENTE, reason: "king_capture" };
+    if (pos2.trophies[SENTE] >= TROPHY_GOAL) return { winner: SENTE, reason: "trophies" };
+    if (pos2.trophies[1] >= TROPHY_GOAL) return { winner: 1, reason: "trophies" };
+    const legal = generateLegalMoves(pos2);
+    if (legal.length === 0) {
+      const winner = opposite(pos2.sideToMove);
+      if (inCheck(pos2, pos2.sideToMove)) return { winner, reason: "mate" };
+      return { winner, reason: "no_moves" };
+    }
+    return null;
+  }
+  function applyMove(pos2, move) {
+    const next = applyMoveRaw(pos2, move);
+    next.historyKeys = pos2.historyKeys.slice();
+    next.historyKeys.push(computeHash(next));
+    return next;
+  }
+  function inCheck(pos2, side) {
+    const k = findKing(pos2, side);
+    if (k < 0) return true;
+    return isSquareAttacked(pos2, k, opposite(side));
+  }
+  function generateLegalMoves(pos2) {
+    const pseudo = generatePseudoLegalMoves(pos2);
+    const legal = [];
+    const side = pos2.sideToMove;
+    for (const m of pseudo) {
+      if (isInstantWinMove(pos2, m)) {
+        legal.push(m);
+        continue;
+      }
+      const next = applyMoveRaw(pos2, m);
+      if (inCheck(next, side)) continue;
+      if (m.drop && m.piece === "P" && inCheck(next, next.sideToMove)) {
+        if (isMatePosition(next)) continue;
+      }
+      legal.push(m);
+    }
+    return legal;
+  }
+  function isMatePosition(pos2) {
+    if (!inCheck(pos2, pos2.sideToMove)) return false;
+    const side = pos2.sideToMove;
+    for (const m of generatePseudoLegalMoves(pos2)) {
+      const next = applyMoveRaw(pos2, m);
+      if (!inCheck(next, side)) return false;
+    }
+    return true;
+  }
+  function movesEqual(a, b) {
+    return a.from === b.from && a.to === b.to && a.piece === b.piece && a.promote === b.promote && a.drop === b.drop;
+  }
+  function isLegalMove(pos2, move) {
+    return generateLegalMoves(pos2).some((m) => movesEqual(m, move));
+  }
+  function isSennichite(pos2) {
+    if (pos2.historyKeys.length === 0) return false;
+    const key = pos2.historyKeys[pos2.historyKeys.length - 1];
+    let count = 0;
+    for (const k of pos2.historyKeys) if (k === key) count++;
+    return count >= 4;
+  }
+
+  // src/rules/notation.ts
+  var FILE_KANJI = ["\uFF19", "\uFF18", "\uFF17", "\uFF16", "\uFF15", "\uFF14", "\uFF13", "\uFF12", "\uFF11"];
+  var RANK_KANJI = ["\u4E5D", "\u516B", "\u4E03", "\u516D", "\u4E94", "\u56DB", "\u4E09", "\u4E8C", "\u4E00"];
+  function squareToJa(sq3) {
+    return FILE_KANJI[fileOf(sq3)] + RANK_KANJI[rankOf(sq3)];
+  }
+  function pieceToJa(kind, promoted = false) {
+    if (promoted) {
+      const map = {
+        R: "\u9F8D",
+        B: "\u99AC",
+        S: "\u6210\u9280",
+        N: "\u6210\u6842",
+        L: "\u6210\u9999",
+        P: "\u3068"
+      };
+      return map[kind] || PIECE_KANJI[kind];
+    }
+    return PIECE_KANJI[kind];
+  }
+  function moveToJa(move, side, _posBefore) {
+    const prefix = side === SENTE ? "\u25B2" : "\u25B3";
+    const dest = squareToJa(move.to);
+    const piece = pieceToJa(move.piece, false);
+    if (move.drop) return `${prefix}${dest}${piece}\u6253`;
+    if (move.promote) return `${prefix}${dest}${piece}\u6210`;
+    return `${prefix}${dest}${piece}`;
+  }
+
+  // src/ui/sound.ts
+  var ctx = null;
+  var enabled = true;
+  var unlocked = false;
+  function setSoundEnabled(on) {
+    enabled = on;
+    if (on) unlock();
+  }
+  function ac() {
+    if (!enabled) return null;
+    try {
+      if (!ctx) {
+        const C = window.AudioContext || window.webkitAudioContext;
+        if (!C) return null;
+        ctx = new C();
+      }
+      if (ctx.state === "suspended") void ctx.resume();
+      return ctx;
+    } catch {
+      return null;
+    }
+  }
+  function unlock() {
+    const c = ac();
+    if (!c) return;
+    if (c.state === "suspended") void c.resume();
+    unlocked = true;
+  }
+  function env(c, dur, peak, when = 0) {
+    const g = c.createGain();
+    const t = c.currentTime + when;
+    g.gain.setValueAtTime(1e-4, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(2e-4, peak), t + 0.012);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+    return g;
+  }
+  function osc(c, type, freq, dur, peak, when = 0, dest) {
+    const o = c.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, c.currentTime + when);
+    const g = env(c, dur, peak, when);
+    o.connect(g);
+    g.connect(dest ?? c.destination);
+    o.start(c.currentTime + when);
+    o.stop(c.currentTime + when + dur + 0.02);
+  }
+  function noiseBurst(c, dur, peak, when = 0, hp = 400) {
+    const n = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, n, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const filter = c.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = hp;
+    filter.Q.value = 0.8;
+    const g = env(c, dur, peak, when);
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(c.destination);
+    src.start(c.currentTime + when);
+  }
+  function playMove() {
+    const c = ac();
+    if (!c) return;
+    noiseBurst(c, 0.07, 0.18, 0, 280);
+    osc(c, "triangle", 180, 0.08, 0.07);
+  }
+  function playCapture() {
+    const c = ac();
+    if (!c) return;
+    noiseBurst(c, 0.1, 0.22, 0, 180);
+    osc(c, "square", 140, 0.12, 0.06);
+    osc(c, "triangle", 420, 0.09, 0.05, 0.04);
+  }
+  function playDrop() {
+    const c = ac();
+    if (!c) return;
+    osc(c, "sine", 520, 0.06, 0.05);
+    noiseBurst(c, 0.05, 0.1, 0.02, 600);
+  }
+  function playSelect() {
+    const c = ac();
+    if (!c) return;
+    osc(c, "sine", 740, 0.04, 0.03);
+  }
+  function playPromote() {
+    const c = ac();
+    if (!c) return;
+    osc(c, "sine", 660, 0.1, 0.05);
+    osc(c, "sine", 880, 0.12, 0.05, 0.07);
+    osc(c, "triangle", 1320, 0.16, 0.04, 0.14);
+  }
+  function playCheck() {
+    const c = ac();
+    if (!c) return;
+    osc(c, "sawtooth", 380, 0.12, 0.05);
+    osc(c, "square", 190, 0.16, 0.04, 0.08);
+  }
+  function playTrophy(count) {
+    const c = ac();
+    if (!c) return;
+    const base = 660 + count * 40;
+    osc(c, "sine", base, 0.12, 0.07);
+    osc(c, "sine", base * 1.5, 0.16, 0.05, 0.06);
+    osc(c, "triangle", base * 2, 0.2, 0.04, 0.12);
+    if (count >= 5) {
+      osc(c, "sine", 1560, 0.22, 0.045, 0.18);
+    }
+    if (count >= 7) {
+      osc(c, "sine", 880, 0.28, 0.06, 0.22);
+      osc(c, "sine", 1174, 0.32, 0.05, 0.3);
+      osc(c, "sine", 1568, 0.4, 0.045, 0.38);
+    }
+  }
+  function playWin() {
+    const c = ac();
+    if (!c) return;
+    const notes = [523, 659, 784, 1046, 1318];
+    notes.forEach((f, i) => {
+      osc(c, "triangle", f, 0.32, 0.07, i * 0.11);
+      osc(c, "sine", f * 2, 0.22, 0.025, i * 0.11 + 0.02);
+    });
+  }
+  function playLose() {
+    const c = ac();
+    if (!c) return;
+    osc(c, "sawtooth", 220, 0.35, 0.045);
+    osc(c, "triangle", 165, 0.45, 0.05, 0.12);
+    osc(c, "sine", 98, 0.7, 0.06, 0.22);
+  }
+  function playDraw() {
+    const c = ac();
+    if (!c) return;
+    osc(c, "sine", 330, 0.2, 0.04);
+    osc(c, "sine", 247, 0.28, 0.04, 0.15);
+  }
+  function playThinking() {
+    const c = ac();
+    if (!c) return;
+    osc(c, "sine", 494, 0.1, 0.035);
+    osc(c, "sine", 740, 0.14, 0.03, 0.08);
+  }
+  function playYourTurn() {
+    const c = ac();
+    if (c) {
+      osc(c, "sine", 784, 0.1, 0.05);
+      osc(c, "sine", 988, 0.14, 0.045, 0.09);
+    }
+    speakJa("\u8CB4\u65B9\u306E\u756A\u3067\u3059");
+  }
+  function playRiichi(you = true) {
+    const c = ac();
+    if (c) {
+      osc(c, "sawtooth", 220, 0.22, 0.05);
+      osc(c, "triangle", 440, 0.28, 0.06, 0.08);
+      osc(c, "sine", 880, 0.36, 0.07, 0.16);
+      osc(c, "sine", 1320, 0.42, 0.05, 0.28);
+    }
+    speakJa(you ? "\u30EA\u30FC\u30C1\u3001\u3042\u30681\u679A" : "\u76F8\u624B\u30EA\u30FC\u30C1\u3001\u3042\u30681\u679A");
+  }
+  function playPreSeventh() {
+    const c = ac();
+    if (c) {
+      osc(c, "sawtooth", 165, 0.22, 0.05);
+      osc(c, "triangle", 330, 0.28, 0.06, 0.08);
+      osc(c, "sine", 660, 0.35, 0.07, 0.18);
+      osc(c, "sine", 990, 0.42, 0.05, 0.32);
+    }
+    speakJa("7\u3064\u76EE");
+  }
+  function playSeventhTaken(name) {
+    const c = ac();
+    if (c) {
+      osc(c, "triangle", 330, 0.22, 0.05);
+      osc(c, "sine", 196, 0.35, 0.04, 0.1);
+      osc(c, "sine", 784, 0.4, 0.05, 0.12);
+    }
+    speakJa(`\u53D6\u3089\u308C\u305F\u306E\u306F${name}`);
+  }
+  function speakJa(text) {
+    if (!enabled) return;
+    try {
+      const syn = window.speechSynthesis;
+      if (!syn) return;
+      syn.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "ja-JP";
+      u.rate = 1;
+      u.pitch = 1.05;
+      const ja = syn.getVoices().find((v) => v.lang.startsWith("ja"));
+      if (ja) u.voice = ja;
+      syn.speak(u);
+    } catch {
+    }
+  }
+  function playKickoff(label) {
+    const c = ac();
+    if (c) {
+      noiseBurst(c, 0.16, 0.2, 0, 160);
+      osc(c, "triangle", 196, 0.28, 0.07);
+      osc(c, "sine", 392, 0.22, 0.05, 0.12);
+      osc(c, "sine", 784, 0.28, 0.05, 0.28);
+      osc(c, "triangle", 1046, 0.35, 0.045, 0.46);
+    }
+    speakJa(`${label}\u3001\u5BFE\u5C40\u958B\u59CB`);
+  }
+  function playCongrats(rank) {
+    const c = ac();
+    if (c) {
+      const notes = [784, 988, 1174, 1568, 1976];
+      notes.forEach((f, i) => {
+        osc(c, "triangle", f, 0.28, 0.065, i * 0.09);
+        osc(c, "sine", f * 2, 0.18, 0.02, i * 0.09 + 0.02);
+      });
+      osc(c, "sine", 523, 0.7, 0.04, 0.5);
+    }
+    speakJa(rank === 1 ? "\u304A\u3081\u3067\u3068\u3046\u3001\u4E00\u4F4D\u3067\u3059" : `\u304A\u3081\u3067\u3068\u3046\u3001${rank}\u4F4D\u3067\u3059`);
+  }
+
+  // src/ui/ranking.ts
+  var PLAIN_KEY = "shogi-serious-rank-v1";
+  var STORE_KEY = "shogi-serious-rank-v6";
+  var PLAIN_RANK_KEY = "shogi-rank-plain-v2";
+  var LEGACY_STORE = "shogi-serious-rank-v2";
+  var SALT_KEY = "shogi-serious-rank-salt";
+  var MAX = 100;
+  var PEPPER = "shogi-serious-rank/aes-gcm/2026-09-12/nikkukyuu";
+  function formatMs(ms) {
+    const total = Math.max(0, Math.round(ms));
+    const hours = Math.floor(total / 3600000);
+    const minutes = Math.floor((total % 3600000) / 60000);
+    const seconds = Math.floor((total % 60000) / 1000);
+    const millis = total % 1000;
+    return hours + "時間" + String(minutes).padStart(2, "0") + "分" + String(seconds).padStart(2, "0") + "秒" + String(millis).padStart(3, "0");
+  }
+  var PLAYER_KEY = "shogi-player-id";
+  var MY_NAME_KEY = "shogi-player-name";
+  function playerId() {
+    let id = localStorage.getItem(PLAYER_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(PLAYER_KEY, id);
+    }
+    return id;
+  }
+  function normalizeNick(raw) {
+    return raw.replace(/\s+/g, " ").trim().slice(0, 12);
+  }
+  function savedNickname() {
+    return normalizeNick(localStorage.getItem(MY_NAME_KEY) || "");
+  }
+  function rememberMine(name) {
+    localStorage.setItem(MY_NAME_KEY, name);
+  }
+  function setPlayerName(raw) {
+    const name = normalizeNick(raw) || "\u540D\u7121\u3057";
+    const prev = savedNickname();
+    rememberMine(name);
+    if (prev !== name) void rewriteMyRankNames(name);
+    return name;
+  }
+  async function rewriteMyRankNames(name) {
+    const sealed = await readSealedList() ?? await migrateLegacy();
+    if (!sealed.length) return;
+    const me = playerId();
+    const next = [];
+    let changed = false;
+    for (const item of sealed) {
+      const row = await decryptResignTime(item);
+      if (!row) continue;
+      if ((!row.playerId || row.playerId === me) && row.name !== name) {
+        const s = await encryptResignTime(row.ms, name, row.difficulty);
+        s.at = row.at;
+        next.push(s);
+        changed = true;
+      } else {
+        next.push(item);
+      }
+    }
+    if (changed) await writeSealedList(next);
+  }
+  function hydrateNickname(pref) {
+    const name = savedNickname() || normalizeNick(pref) || "\u540D\u7121\u3057";
+    if (!savedNickname()) rememberMine(name);
+    return name;
+  }
+  function toB64(bytes) {
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function fromB64(s) {
+    const bin = atob(s);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function deviceSalt() {
+    const existing = localStorage.getItem(SALT_KEY);
+    if (existing) return fromB64(existing);
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    localStorage.setItem(SALT_KEY, toB64(salt));
+    return salt;
+  }
+  function aadFor(kind) {
+    return new TextEncoder().encode(`shogi-serious-${kind}|${location.origin}`);
+  }
+  async function rankKey() {
+    if (!crypto?.subtle) throw new Error("crypto unavailable");
+    const salt = deviceSalt();
+    const material = new Uint8Array(
+      await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(`${PEPPER}|${location.origin}|${toB64(salt)}`)
+      )
+    );
+    return crypto.subtle.importKey("raw", material, "AES-GCM", false, ["encrypt", "decrypt"]);
+  }
+  async function encryptBytes(plain, kind) {
+    const key = await rankKey();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(
+      await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: aadFor(kind) }, key, plain)
+    );
+    return { iv: toB64(iv), ct: toB64(ct) };
+  }
+  async function decryptBytes(iv, ct, kind) {
+    const key = await rankKey();
+    return new Uint8Array(
+      await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: fromB64(iv), additionalData: aadFor(kind) },
+        key,
+        fromB64(ct)
+      )
+    );
+  }
+  var RANK_DIFFS = ["beginner", "intermediate", "advanced", "serious"];
+  function normalizeDiff(d) {
+    return RANK_DIFFS.includes(d) ? d : "serious";
+  }
+  async function encryptResignTime(ms, name, difficulty) {
+    const sealedMs = Math.max(0, Math.round(ms));
+    const packed = new TextEncoder().encode(JSON.stringify({ ms: sealedMs, name, playerId: playerId(), difficulty: normalizeDiff(difficulty) }));
+    const { iv, ct } = await encryptBytes(packed, "time");
+    return { iv, ct, at: Date.now() };
+  }
+  async function decryptResignTime(sealed) {
+    try {
+      const pt = JSON.parse(new TextDecoder().decode(await decryptBytes(sealed.iv, sealed.ct, "time")));
+      if (typeof pt.ms !== "number" || !Number.isFinite(pt.ms) || pt.ms < 0) return null;
+      return {
+        ms: pt.ms,
+        at: sealed.at,
+        name: typeof pt.name === "string" && pt.name ? pt.name : "\u540D\u7121\u3057",
+        playerId: typeof pt.playerId === "string" ? pt.playerId : void 0,
+        difficulty: normalizeDiff(pt.difficulty)
+      };
+    } catch {
+      return null;
+    }
+  }
+  function isSealed(x) {
+    if (!x || typeof x !== "object") return false;
+    const e = x;
+    return typeof e.iv === "string" && typeof e.ct === "string" && typeof e.at === "number";
+  }
+  async function writeSealedList(list) {
+    const { iv, ct } = await encryptBytes(new TextEncoder().encode(JSON.stringify(list.slice(0, MAX))), "store");
+    localStorage.setItem(STORE_KEY, JSON.stringify({ v: 6, iv, ct }));
+    localStorage.removeItem(PLAIN_KEY);
+    localStorage.removeItem(LEGACY_STORE);
+  }
+  async function readSealedList() {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    try {
+      const packed = JSON.parse(raw);
+      if (!packed.iv || !packed.ct) return [];
+      const parsed = JSON.parse(new TextDecoder().decode(await decryptBytes(packed.iv, packed.ct, "store")));
+      return Array.isArray(parsed) ? parsed.filter(isSealed).slice(0, MAX) : [];
+    } catch {
+      return [];
+    }
+  }
+  async function openEntries(sealed) {
+    const out = [];
+    for (const item of sealed) {
+      const row = await decryptResignTime(item);
+      if (row) out.push(row);
+    }
+    return out.sort((a, b) => a.ms - b.ms || a.at - b.at).slice(0, MAX);
+  }
+  async function migrateLegacy() {
+    return [];
+    /* ranking reset: ignore legacy stores */
+    const v2 = localStorage.getItem(LEGACY_STORE);
+    if (v2) {
+      try {
+        const packed = JSON.parse(v2);
+        if (packed.iv && packed.ct) {
+          const key = await rankKey();
+          const aad = new TextEncoder().encode(`shogi-serious-rank|${location.origin}`);
+          const pt = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: fromB64(packed.iv), additionalData: aad },
+            key,
+            fromB64(packed.ct)
+          );
+          const rows = JSON.parse(new TextDecoder().decode(pt));
+          if (Array.isArray(rows)) {
+            const sealed = [];
+            for (const row of rows) {
+              if (row && typeof row === "object" && typeof row.ms === "number") {
+                const s = await encryptResignTime(row.ms, row.name || "\u540D\u7121\u3057");
+                s.at = typeof row.at === "number" ? row.at : s.at;
+                sealed.push(s);
+              }
+            }
+            if (sealed.length) {
+              await writeSealedList(sealed);
+              return sealed;
+            }
+          }
+        }
+      } catch {
+      }
+    }
+    const plain = localStorage.getItem(PLAIN_KEY);
+    if (!plain) return [];
+    try {
+      const rows = JSON.parse(plain);
+      if (!Array.isArray(rows)) return [];
+      const sealed = [];
+      for (const row of rows) {
+        if (row && typeof row === "object" && typeof row.ms === "number") {
+          const s = await encryptResignTime(row.ms, row.name || "\u540D\u7121\u3057");
+          s.at = typeof row.at === "number" ? row.at : s.at;
+          sealed.push(s);
+        }
+      }
+      if (sealed.length) await writeSealedList(sealed);
+      return sealed;
+    } catch {
+      return [];
+    }
+  }
+  async function submitResignTime(ms, name, difficulty) {
+    const diff = normalizeDiff(difficulty);
+    const nextMs = Math.max(0, Math.round(ms));
+    const me = playerId();
+    const now = Date.now();
+    let all = [];
+    try { all = JSON.parse(localStorage.getItem(PLAIN_RANK_KEY) || "[]"); } catch (e) { all = []; }
+    if (!Array.isArray(all)) all = [];
+    const list = all.filter((e) => e && normalizeDiff(e.difficulty) === diff).sort((a, b) => a.ms - b.ms || a.at - b.at);
+    const mine = (e) => !e.playerId || e.playerId === me;
+    const best = list.filter(mine).reduce((a, e) => a == null || e.ms < a.ms ? e : a, null);
+    if (best && nextMs >= best.ms) {
+      const rank2 = list.findIndex((e) => e.ms === best.ms && e.at === best.at) + 1;
+      return { entry: best, rank: rank2 > 0 ? rank2 : 1, list, updated: false, attemptMs: nextMs };
+    }
+    const kept = all.filter((e) => e && !(mine(e) && normalizeDiff(e.difficulty) === diff));
+    const entry = { ms: nextMs, at: now, name, playerId: me, difficulty: diff };
+    const stored = [...kept, entry].slice(-400);
+    localStorage.setItem(PLAIN_RANK_KEY, JSON.stringify(stored));
+    try { await writeSealedList(stored.map((row) => ({ iv: "plain", ct: JSON.stringify(row), at: row.at }))); } catch (e) {}
+    const nextList = stored.filter((e) => normalizeDiff(e.difficulty) === diff).sort((a, b) => a.ms - b.ms || a.at - b.at).slice(0, MAX);
+    const rank = nextList.findIndex((e) => e.ms === entry.ms && e.at === entry.at) + 1;
+    return { entry, rank: rank > 0 ? rank : nextList.length, list: nextList, updated: true, attemptMs: nextMs };
+  }
+  async function loadRanks(difficulty) {
+    const diff = normalizeDiff(difficulty);
+    let all = [];
+    try { all = JSON.parse(localStorage.getItem(PLAIN_RANK_KEY) || "[]"); } catch (e) { all = []; }
+    if (!Array.isArray(all) || !all.length) {
+      const sealed = await readSealedList();
+      if (sealed && sealed.length) all = await openEntries(sealed);
+    }
+    return all.filter((e) => e && typeof e.ms === "number" && normalizeDiff(e.difficulty) === diff).sort((a, b) => a.ms - b.ms || a.at - b.at).slice(0, MAX);
+  }
+  async function showRanking(highlightAt, difficulty) {
+    const viewDiff = normalizeDiff(difficulty ?? (typeof settings !== "undefined" ? settings.difficulty : "serious"));
+    const labels = { beginner: "\u521D\u7D1A", intermediate: "\u4E2D\u7D1A", advanced: "\u4E0A\u7D1A", serious: "\u771F\u5263" };
+    document.querySelector(".rank-overlay")?.remove();
+    const overlay = document.createElement("div");
+    overlay.className = "rank-overlay";
+    overlay.innerHTML = `
+    <div class="rank-card" role="dialog" aria-label="\u30E9\u30F3\u30AD\u30F3\u30B0">
+      <h2>\u30E9\u30F3\u30AD\u30F3\u30B0</h2>
+      <p class="rank-lead">\u6295\u4E86\u3059\u308B\u307E\u3067\u306E\u3001\u81EA\u5206\u306E\u624B\u756A\u3060\u3051\u306E\u6642\u9593\u3067\u3059\u3002\u76F8\u624B\u306E\u601D\u8003\u306F\u5165\u308A\u307E\u305B\u3093\u3002\u77ED\u3044\u307B\u3069\u4E0A\u4F4D\uFF08\u96E3\u6613\u5EA6\u5225\u30FB100\u4F4D\u307E\u3067\uFF09</p>
+      <div class="rank-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px;">
+        ${RANK_DIFFS.map((d) => `<button type="button" class="rank-tab${d === viewDiff ? " on" : ""}" data-diff="${d}">${labels[d]}</button>`).join("")}
+      </div>
+      <ol><li class="empty">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</li></ol>
+      <button type="button" id="btn-rank-close">\u9589\u3058\u308B</button>
+    </div>`;
+    const close = () => overlay.remove();
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+    overlay.querySelector("#btn-rank-close").addEventListener("click", close);
+    overlay.querySelectorAll(".rank-tab").forEach((btn) => {
+      btn.addEventListener("click", () => void showRanking(highlightAt, btn.getAttribute("data-diff")));
+    });
+    document.body.appendChild(overlay);
+    const list = await loadRanks(viewDiff);
+    if (!overlay.isConnected) return;
+    const rows = list.length ? list.map((e, i) => {
+      const hi = highlightAt && e.at === highlightAt ? ' class="me"' : "";
+      const d = new Date(e.at);
+      const when = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+      const nm = savedNickname() || e.name || "\u540D\u7121\u3057";
+      return `<li${hi}><span class="rk">${i + 1}</span><span class="nm">${nm}</span><span class="ms">${formatMs(e.ms)}</span><span class="when">${when}</span></li>`;
+    }).join("") : '<li class="empty">\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093</li>';
+    overlay.querySelector("ol").innerHTML = rows;
+  }
+
+  // src/.standalone-main.ts
+  var PREF_KEY = "shogi-pref-v1";
+  var settings = {
+    difficulty: "advanced",
+    humanSide: SENTE,
+    sound: true,
+    nickname: ""
+  };
+  function loadPrefs() {
+    try {
+      const raw = localStorage.getItem(PREF_KEY);
+      if (!raw) return;
+      const p = JSON.parse(raw);
+      if (p.difficulty === "beginner" || p.difficulty === "intermediate" || p.difficulty === "advanced" || p.difficulty === "serious") {
+        settings.difficulty = p.difficulty;
+      }
+      if (typeof p.nickname === "string") settings.nickname = normalizeNick(p.nickname);
+    } catch {
+    }
+  }
+  function savePrefs() {
+    localStorage.setItem(PREF_KEY, JSON.stringify({ difficulty: settings.difficulty, nickname: settings.nickname }));
+  }
+  loadPrefs();
+  settings.nickname = hydrateNickname(settings.nickname);
+  savePrefs();
+  var pos = initialPosition();
+  var history = [clonePosition(pos)];
+  var kifu = [];
+  var selected = null;
+  var selectedDrop = null;
+  var legalTargets = [];
+  var lastMove = null;
+  var endState = null;
+  var thinking = false;
+  var thinkStartedAt = 0;
+  var thinkHoldTimer = 0;
+  var engineInfo = null;
+  var searchId = 0;
+  var flipped = false;
+  var dragFrom = null;
+  var animTrophy = null;
+  var pendingYourTurn = false;
+  var cinematic = false;
+  var holdLastTrophy = false;
+  var pendingRiichi = null;
+  var pendingSeventhReveal = null;
+  var pendingMateReveal = null;
+  var preSeventhGen = 0;
+  var seriousActive = false;
+  var seriousAccumMs = 0;
+  var seriousRunAt = null;
+  var lastRecordedMs = null;
+  var lastAttemptMs = null;
+  var lastRank = null;
+  var lastRankUpdated = false;
+  var lastRecordAt = null;
+  var clockRaf = 0;
+  var starting = false;
+  var inMatch = false;
+  var netMode = false;
+  var netRole = null;
+  var netRoom = "";
+  var netPeer = null;
+  var netConn = null;
+  var netStatus = "";
+  var netLobby = false;
+  var netRematchMine = false;
+  var netRematchTheirs = false;
+  var DIFF_LABEL = {
+    beginner: "\u521D\u7D1A",
+    intermediate: "\u4E2D\u7D1A",
+    advanced: "\u4E0A\u7D1A",
+    serious: "\u771F\u5263"
+  };
+  function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+  function isSerious() {
+    return true;
+  }
+  function pauseSeriousClock() {
+    if (seriousRunAt == null) return;
+    seriousAccumMs += performance.now() - seriousRunAt;
+    seriousRunAt = null;
+  }
+  function playerClockShouldRun() {
+    return seriousActive && inMatch && !starting && !endState && !cinematic && !thinking && pos.sideToMove === settings.humanSide;
+  }
+  function elapsedSeriousMs() {
+    let ms = seriousAccumMs;
+    if (seriousRunAt != null) ms += performance.now() - seriousRunAt;
+    return Math.max(0, Math.round(ms));
+  }
+  function paintSeriousClock() {
+    const el = document.querySelector("#serious-clock");
+    if (!el) return;
+    if (!isSerious()) {
+      el.textContent = "";
+      return;
+    }
+    const ms = lastRecordedMs != null ? lastRecordedMs : elapsedSeriousMs();
+    el.textContent = formatMs(ms);
+  }
+  function tickSeriousClock() {
+    if (playerClockShouldRun()) {
+      if (seriousRunAt == null) seriousRunAt = performance.now();
+    } else {
+      pauseSeriousClock();
+    }
+    paintSeriousClock();
+    if (isSerious() && endState == null && (seriousActive || inMatch)) {
+      clockRaf = requestAnimationFrame(tickSeriousClock);
+    }
+  }
+  function syncSeriousClock() {
+    if (clockRaf) cancelAnimationFrame(clockRaf);
+    clockRaf = 0;
+    if (playerClockShouldRun()) {
+      if (seriousRunAt == null) seriousRunAt = performance.now();
+    } else {
+      pauseSeriousClock();
+    }
+    paintSeriousClock();
+    if (isSerious() && endState == null && (seriousActive || inMatch)) {
+      clockRaf = requestAnimationFrame(tickSeriousClock);
+    }
+  }
+  var worker = new Worker(URL.createObjectURL(new Blob(['"use strict";\n(() => {\n  // src/rules/types.ts\n  var SENTE = 0;\n  var TROPHY_GOAL = 7;\n  function countsAsTrophy(captured) {\n    if (captured.kind === "K") return false;\n    if (captured.kind === "P") return captured.promoted;\n    return true;\n  }\n  function fileOf(sq3) {\n    return sq3 / 9 | 0;\n  }\n  function rankOf(sq3) {\n    return sq3 % 9;\n  }\n  function makeSquare(file, rank) {\n    return file * 9 + rank;\n  }\n  function opposite(side) {\n    return 1 - side;\n  }\n  function inPromotionZone(sq3, side) {\n    const r = rankOf(sq3);\n    return side === SENTE ? r >= 6 : r <= 2;\n  }\n  function canPromoteKind(kind) {\n    return kind !== "K" && kind !== "G";\n  }\n  function mustPromote(kind, to, side) {\n    const r = rankOf(to);\n    if (side === SENTE) {\n      if (kind === "P" || kind === "L") return r === 8;\n      if (kind === "N") return r >= 7;\n    } else {\n      if (kind === "P" || kind === "L") return r === 0;\n      if (kind === "N") return r <= 1;\n    }\n    return false;\n  }\n\n  // src/rules/zobrist.ts\n  var KINDS = ["K", "R", "B", "G", "S", "N", "L", "P"];\n  function mulberry32(a) {\n    return function() {\n      let t = a += 1831565813;\n      t = Math.imul(t ^ t >>> 15, t | 1);\n      t ^= t + Math.imul(t ^ t >>> 7, t | 61);\n      return (t ^ t >>> 14) >>> 0;\n    };\n  }\n  var rng = mulberry32(1515870810);\n  var pieceKeys = [];\n  for (let sq3 = 0; sq3 < 81; sq3++) {\n    pieceKeys[sq3] = [];\n    for (let k = 0; k < 8; k++) {\n      pieceKeys[sq3][k] = [[rng(), rng()], [rng(), rng()]];\n    }\n  }\n  var handKeys = [];\n  for (let s = 0; s < 2; s++) {\n    handKeys[s] = [];\n    for (let k = 0; k < 8; k++) {\n      handKeys[s][k] = [0];\n      for (let c = 1; c <= 18; c++) handKeys[s][k][c] = rng();\n    }\n  }\n  var sideKey = rng();\n  function kindIndex(kind) {\n    return KINDS.indexOf(kind);\n  }\n  function hashPiece(sq3, p) {\n    return pieceKeys[sq3][kindIndex(p.kind)][p.promoted ? 1 : 0][p.side];\n  }\n  function hashHand(side, hand) {\n    let h = 0;\n    for (const k of KINDS) {\n      const c = hand[k];\n      if (c > 0) h ^= handKeys[side][kindIndex(k)][Math.min(c, 18)];\n    }\n    return h;\n  }\n  function computeHash(pos) {\n    let h = 0;\n    for (let sq3 = 0; sq3 < 81; sq3++) {\n      const p = pos.board[sq3];\n      if (p) h ^= hashPiece(sq3, p);\n    }\n    h ^= hashHand(0, pos.hands[0]);\n    h ^= hashHand(1, pos.hands[1]);\n    if (pos.sideToMove === 1) h ^= sideKey;\n    return h;\n  }\n\n  // src/rules/board.ts\n  function findKing(pos, side) {\n    for (let sq3 = 0; sq3 < 81; sq3++) {\n      const p = pos.board[sq3];\n      if (p && p.kind === "K" && p.side === side) return sq3;\n    }\n    return -1;\n  }\n\n  // src/rules/attack.ts\n  function onBoard(f, r) {\n    return f >= 0 && f < 9 && r >= 0 && r < 9;\n  }\n  function sq(f, r) {\n    return f * 9 + r;\n  }\n  function fwd(side) {\n    return side === SENTE ? 1 : -1;\n  }\n  function isSquareAttacked(pos, target, bySide) {\n    const tf = fileOf(target);\n    const tr = rankOf(target);\n    const fr = fwd(bySide);\n    {\n      const f = tf;\n      const r = tr - fr;\n      if (onBoard(f, r)) {\n        const p = pos.board[sq(f, r)];\n        if (p && p.side === bySide && p.kind === "P" && !p.promoted) return true;\n      }\n    }\n    for (const df of [-1, 1]) {\n      const f = tf - df;\n      const r = tr - 2 * fr;\n      if (!onBoard(f, r)) continue;\n      const p = pos.board[sq(f, r)];\n      if (p && p.side === bySide && p.kind === "N" && !p.promoted) return true;\n    }\n    const silverDeltas = [\n      [0, fr],\n      [1, fr],\n      [-1, fr],\n      [1, -fr],\n      [-1, -fr]\n    ];\n    for (const [df, dr] of silverDeltas) {\n      const f = tf - df;\n      const r = tr - dr;\n      if (!onBoard(f, r)) continue;\n      const p = pos.board[sq(f, r)];\n      if (p && p.side === bySide && p.kind === "S" && !p.promoted) return true;\n    }\n    const goldDeltas = [\n      [0, fr],\n      [1, fr],\n      [-1, fr],\n      [1, 0],\n      [-1, 0],\n      [0, -fr]\n    ];\n    for (const [df, dr] of goldDeltas) {\n      const f = tf - df;\n      const r = tr - dr;\n      if (!onBoard(f, r)) continue;\n      const p = pos.board[sq(f, r)];\n      if (!p || p.side !== bySide) continue;\n      if (p.kind === "G") return true;\n      if (p.promoted && (p.kind === "S" || p.kind === "N" || p.kind === "L" || p.kind === "P")) return true;\n    }\n    for (let df = -1; df <= 1; df++) {\n      for (let dr = -1; dr <= 1; dr++) {\n        if (df === 0 && dr === 0) continue;\n        const f = tf + df;\n        const r = tr + dr;\n        if (!onBoard(f, r)) continue;\n        const p = pos.board[sq(f, r)];\n        if (p && p.side === bySide && p.kind === "K") return true;\n        if (p && p.side === bySide && p.promoted && p.kind === "R") return true;\n        if (p && p.side === bySide && p.promoted && p.kind === "B" && (df === 0 || dr === 0)) return true;\n      }\n    }\n    {\n      let f = tf;\n      let r = tr - fr;\n      while (onBoard(f, r)) {\n        const p = pos.board[sq(f, r)];\n        if (p) {\n          if (p.side === bySide && p.kind === "L" && !p.promoted) return true;\n          break;\n        }\n        r -= fr;\n      }\n    }\n    const orth = [\n      [0, 1],\n      [0, -1],\n      [1, 0],\n      [-1, 0]\n    ];\n    for (const [df, dr] of orth) {\n      let f = tf + df;\n      let r = tr + dr;\n      while (onBoard(f, r)) {\n        const p = pos.board[sq(f, r)];\n        if (p) {\n          if (p.side === bySide && (p.kind === "R" || p.promoted && p.kind === "B")) {\n            if (p.kind === "R") return true;\n            if (Math.abs(f - tf) + Math.abs(r - tr) === 1) return true;\n          }\n          if (p.side === bySide && p.promoted && p.kind === "R") return true;\n          if (p.side === bySide && p.kind === "R" && !p.promoted) return true;\n          break;\n        }\n        f += df;\n        r += dr;\n      }\n    }\n    const diag = [\n      [1, 1],\n      [1, -1],\n      [-1, 1],\n      [-1, -1]\n    ];\n    for (const [df, dr] of diag) {\n      let f = tf + df;\n      let r = tr + dr;\n      while (onBoard(f, r)) {\n        const p = pos.board[sq(f, r)];\n        if (p) {\n          if (p.side === bySide && p.kind === "B") return true;\n          break;\n        }\n        f += df;\n        r += dr;\n      }\n    }\n    return false;\n  }\n\n  // src/rules/moves.ts\n  var ORTH = [\n    [0, 1],\n    [0, -1],\n    [1, 0],\n    [-1, 0]\n  ];\n  var DIAG = [\n    [1, 1],\n    [1, -1],\n    [-1, 1],\n    [-1, -1]\n  ];\n  var KING8 = [...ORTH, ...DIAG];\n  function onBoard2(f, r) {\n    return f >= 0 && f < 9 && r >= 0 && r < 9;\n  }\n  function sq2(f, r) {\n    return f * 9 + r;\n  }\n  function fwd2(side) {\n    return side === SENTE ? 1 : -1;\n  }\n  function goldDirs(side) {\n    const f = fwd2(side);\n    return [\n      [0, f],\n      [1, f],\n      [-1, f],\n      [1, 0],\n      [-1, 0],\n      [0, -f]\n    ];\n  }\n  function silverDirs(side) {\n    const f = fwd2(side);\n    return [\n      [0, f],\n      [1, f],\n      [-1, f],\n      [1, -f],\n      [-1, -f]\n    ];\n  }\n  function pushBoardMoves(pos, from, to, piece, capture, out) {\n    const kind = piece.kind;\n    const side = piece.side;\n    const canProm = !piece.promoted && canPromoteKind(kind) && (inPromotionZone(from, side) || inPromotionZone(to, side));\n    const forced = !piece.promoted && mustPromote(kind, to, side);\n    const cap = capture ? pos.board[to] : null;\n    if (forced) {\n      out.push({ from, to, piece: kind, promote: true, drop: false, captured: cap });\n    } else if (canProm) {\n      out.push({ from, to, piece: kind, promote: true, drop: false, captured: cap });\n      out.push({ from, to, piece: kind, promote: false, drop: false, captured: cap });\n    } else {\n      out.push({ from, to, piece: kind, promote: false, drop: false, captured: cap });\n    }\n  }\n  function addSteps(pos, from, side, dirs, out) {\n    const f0 = fileOf(from);\n    const r0 = rankOf(from);\n    const piece = pos.board[from];\n    for (const [df, dr] of dirs) {\n      const f = f0 + df;\n      const r = r0 + dr;\n      if (!onBoard2(f, r)) continue;\n      const to = sq2(f, r);\n      const t = pos.board[to];\n      if (t && t.side === side) continue;\n      pushBoardMoves(pos, from, to, piece, !!t, out);\n    }\n  }\n  function addSlides(pos, from, side, dirs, out) {\n    const f0 = fileOf(from);\n    const r0 = rankOf(from);\n    const piece = pos.board[from];\n    for (const [df, dr] of dirs) {\n      let f = f0 + df;\n      let r = r0 + dr;\n      while (onBoard2(f, r)) {\n        const to = sq2(f, r);\n        const t = pos.board[to];\n        if (t) {\n          if (t.side !== side) pushBoardMoves(pos, from, to, piece, true, out);\n          break;\n        }\n        pushBoardMoves(pos, from, to, piece, false, out);\n        f += df;\n        r += dr;\n      }\n    }\n  }\n  function hasUnpromotedPawnOnFile(pos, side, file) {\n    for (let r = 0; r < 9; r++) {\n      const p = pos.board[sq2(file, r)];\n      if (p && p.side === side && p.kind === "P" && !p.promoted) return true;\n    }\n    return false;\n  }\n  function canDropAt(kind, to, side) {\n    const r = rankOf(to);\n    if (side === SENTE) {\n      if (kind === "P" || kind === "L") return r < 8;\n      if (kind === "N") return r < 7;\n    } else {\n      if (kind === "P" || kind === "L") return r > 0;\n      if (kind === "N") return r > 1;\n    }\n    return true;\n  }\n  function generatePseudoLegalMoves(pos) {\n    const side = pos.sideToMove;\n    const out = [];\n    for (let from = 0; from < 81; from++) {\n      const p = pos.board[from];\n      if (!p || p.side !== side) continue;\n      if (p.promoted) {\n        if (p.kind === "R") {\n          addSlides(pos, from, side, ORTH, out);\n          addSteps(pos, from, side, DIAG, out);\n        } else if (p.kind === "B") {\n          addSlides(pos, from, side, DIAG, out);\n          addSteps(pos, from, side, ORTH, out);\n        } else {\n          addSteps(pos, from, side, goldDirs(side), out);\n        }\n        continue;\n      }\n      switch (p.kind) {\n        case "K":\n          addSteps(pos, from, side, KING8, out);\n          break;\n        case "G":\n          addSteps(pos, from, side, goldDirs(side), out);\n          break;\n        case "S":\n          addSteps(pos, from, side, silverDirs(side), out);\n          break;\n        case "N": {\n          const f0 = fileOf(from);\n          const r0 = rankOf(from);\n          const fr = fwd2(side);\n          for (const df of [-1, 1]) {\n            const f = f0 + df;\n            const r = r0 + 2 * fr;\n            if (!onBoard2(f, r)) continue;\n            const to = sq2(f, r);\n            const t = pos.board[to];\n            if (t && t.side === side) continue;\n            pushBoardMoves(pos, from, to, p, !!t, out);\n          }\n          break;\n        }\n        case "L":\n          addSlides(pos, from, side, [[0, fwd2(side)]], out);\n          break;\n        case "P": {\n          const f0 = fileOf(from);\n          const r0 = rankOf(from);\n          const r = r0 + fwd2(side);\n          if (onBoard2(f0, r)) {\n            const to = sq2(f0, r);\n            const t = pos.board[to];\n            if (!t) pushBoardMoves(pos, from, to, p, false, out);\n            else if (t.side !== side) pushBoardMoves(pos, from, to, p, true, out);\n          }\n          break;\n        }\n        case "R":\n          addSlides(pos, from, side, ORTH, out);\n          break;\n        case "B":\n          addSlides(pos, from, side, DIAG, out);\n          break;\n      }\n    }\n    const hand = pos.hands[side];\n    const kinds = ["R", "B", "G", "S", "N", "L", "P"];\n    for (const kind of kinds) {\n      if (hand[kind] <= 0) continue;\n      for (let to = 0; to < 81; to++) {\n        if (pos.board[to]) continue;\n        if (!canDropAt(kind, to, side)) continue;\n        if (kind === "P" && hasUnpromotedPawnOnFile(pos, side, fileOf(to))) continue;\n        out.push({ from: null, to, piece: kind, promote: false, drop: true, captured: null });\n      }\n    }\n    return out;\n  }\n  function applyMoveRaw(pos, move) {\n    const next = {\n      board: pos.board.slice(),\n      hands: [{ ...pos.hands[0] }, { ...pos.hands[1] }],\n      sideToMove: opposite(pos.sideToMove),\n      historyKeys: pos.historyKeys,\n      ply: pos.ply + 1,\n      trophies: [pos.trophies[0], pos.trophies[1]],\n      trophyPieces: [pos.trophyPieces[0], pos.trophyPieces[1]]\n    };\n    const side = pos.sideToMove;\n    if (move.drop) {\n      next.hands[side] = { ...next.hands[side] };\n      next.hands[side][move.piece]--;\n      next.board[move.to] = { kind: move.piece, promoted: false, side };\n    } else {\n      const from = move.from;\n      const piece = pos.board[from];\n      next.board[from] = null;\n      const captured = pos.board[move.to] ?? move.captured ?? null;\n      if (captured) {\n        next.hands[side] = { ...next.hands[side] };\n        if (captured.kind !== "K") {\n          next.hands[side][captured.kind]++;\n        }\n        if (countsAsTrophy(captured)) {\n          next.trophies = [next.trophies[0], next.trophies[1]];\n          next.trophies[side] = next.trophies[side] + 1;\n          next.trophyPieces = [\n            next.trophyPieces[0].slice(),\n            next.trophyPieces[1].slice()\n          ];\n          next.trophyPieces[side] = next.trophyPieces[side].concat({\n            kind: captured.kind,\n            promoted: captured.promoted\n          });\n        }\n      }\n      next.board[move.to] = {\n        kind: piece.kind,\n        promoted: piece.promoted || move.promote,\n        side: piece.side\n      };\n    }\n    return next;\n  }\n  function isInstantWinMove(pos, move) {\n    const cap = move.captured ?? (move.from != null ? pos.board[move.to] : null);\n    if (!cap || cap.side === pos.sideToMove) return false;\n    if (cap.kind === "K") return true;\n    return countsAsTrophy(cap) && pos.trophies[pos.sideToMove] + 1 >= TROPHY_GOAL;\n  }\n  function inCheck(pos, side) {\n    const k = findKing(pos, side);\n    if (k < 0) return true;\n    return isSquareAttacked(pos, k, opposite(side));\n  }\n  function generateLegalMoves(pos) {\n    const pseudo = generatePseudoLegalMoves(pos);\n    const legal = [];\n    const side = pos.sideToMove;\n    for (const m2 of pseudo) {\n      if (isInstantWinMove(pos, m2)) {\n        legal.push(m2);\n        continue;\n      }\n      const next = applyMoveRaw(pos, m2);\n      if (inCheck(next, side)) continue;\n      if (m2.drop && m2.piece === "P" && inCheck(next, next.sideToMove)) {\n        if (isMatePosition(next)) continue;\n      }\n      legal.push(m2);\n    }\n    return legal;\n  }\n  function isMatePosition(pos) {\n    if (!inCheck(pos, pos.sideToMove)) return false;\n    const side = pos.sideToMove;\n    for (const m2 of generatePseudoLegalMoves(pos)) {\n      const next = applyMoveRaw(pos, m2);\n      if (!inCheck(next, side)) return false;\n    }\n    return true;\n  }\n  function movesEqual(a, b) {\n    return a.from === b.from && a.to === b.to && a.piece === b.piece && a.promote === b.promote && a.drop === b.drop;\n  }\n\n  // src/engine/eval.ts\n  var MAT = {\n    K: 0,\n    R: 1e3,\n    B: 850,\n    G: 600,\n    S: 500,\n    N: 400,\n    L: 300,\n    P: 100\n  };\n  var PROMO_BONUS = {\n    R: 500,\n    B: 350,\n    S: 100,\n    N: 200,\n    L: 200,\n    P: 400\n  };\n  var PST_P = [];\n  var PST_N = [];\n  var PST_L = [];\n  var PST_S = [];\n  var PST_G = [];\n  var PST_B = [];\n  var PST_R = [];\n  var PST_K = [];\n  (function initPst() {\n    for (let sq3 = 0; sq3 < 81; sq3++) {\n      const f = fileOf(sq3);\n      const r = rankOf(sq3);\n      const center = 4 - Math.abs(f - 4);\n      PST_P[sq3] = r * 8 + (r >= 6 ? 20 : 0);\n      PST_N[sq3] = r * 6 + center * 2;\n      PST_L[sq3] = r * 5;\n      PST_S[sq3] = r * 4 + (r >= 5 ? 10 : 0) + center;\n      PST_G[sq3] = (r <= 2 ? 15 : 0) + (Math.abs(f - 4) <= 2 ? 5 : 0) - r * 2;\n      PST_B[sq3] = center * 6 + r * 2;\n      PST_R[sq3] = r * 3 + (f === 1 || f === 7 ? 10 : 0);\n      const edge = Math.abs(f - 4);\n      PST_K[sq3] = edge * 8 - r * 3 + (f <= 1 || f >= 7 ? 20 : 0);\n    }\n  })();\n  function pstFor(kind, sq3, side, promoted) {\n    let table;\n    switch (kind) {\n      case "P":\n        table = PST_P;\n        break;\n      case "N":\n        table = PST_N;\n        break;\n      case "L":\n        table = PST_L;\n        break;\n      case "S":\n        table = PST_S;\n        break;\n      case "G":\n        table = PST_G;\n        break;\n      case "B":\n        table = PST_B;\n        break;\n      case "R":\n        table = PST_R;\n        break;\n      case "K":\n        table = PST_K;\n        break;\n      default:\n        table = PST_P;\n    }\n    const mapped = side === SENTE ? sq3 : (8 - fileOf(sq3)) * 9 + (8 - rankOf(sq3));\n    let v = table[mapped] || 0;\n    if (promoted) v += 15;\n    return v;\n  }\n  function castleBonus(pos, side) {\n    const k = findKing(pos, side);\n    if (k < 0) return -5e4;\n    const kf = fileOf(k);\n    const kr = rankOf(k);\n    const back = side === SENTE ? 0 : 8;\n    let score = 0;\n    if (kr === back) score += 30;\n    if (kf <= 1 || kf >= 7) score += 40;\n    const near = [\n      [-1, 0],\n      [1, 0],\n      [0, side === SENTE ? 1 : -1],\n      [-1, side === SENTE ? 1 : -1],\n      [1, side === SENTE ? 1 : -1],\n      [-2, 0],\n      [2, 0]\n    ];\n    for (const [df, dr] of near) {\n      const f = kf + df;\n      const r = kr + dr;\n      if (f < 0 || f > 8 || r < 0 || r > 8) continue;\n      const p = pos.board[f * 9 + r];\n      if (!p || p.side !== side) continue;\n      if (p.kind === "G") score += 35;\n      if (p.kind === "S") score += 25;\n    }\n    if ((kf === 0 || kf === 8) && kr === back) score += 50;\n    return score;\n  }\n  function mobilityRough(pos, side) {\n    let m2 = 0;\n    for (let sq3 = 0; sq3 < 81; sq3++) {\n      const p = pos.board[sq3];\n      if (!p || p.side !== side) continue;\n      if (p.kind === "R" || p.kind === "B") m2 += p.promoted ? 12 : 8;\n      else if (p.kind === "G" || p.kind === "S") m2 += 3;\n    }\n    return m2;\n  }\n  function trophyScore(count) {\n    if (count >= TROPHY_GOAL) return 1e5;\n    const base = count * 900;\n    const urgency = count * count * 180;\n    const clutch = count >= 5 ? (count - 4) * 1200 : 0;\n    return base + urgency + clutch;\n  }\n  function evaluate(pos) {\n    const sk = findKing(pos, SENTE);\n    const gk = findKing(pos, 1);\n    if (sk < 0 && gk >= 0) return -1e5;\n    if (gk < 0 && sk >= 0) return 1e5;\n    if (pos.trophies[SENTE] >= TROPHY_GOAL) return 1e5;\n    if (pos.trophies[1] >= TROPHY_GOAL) return -1e5;\n    let score = 0;\n    for (let sq3 = 0; sq3 < 81; sq3++) {\n      const p = pos.board[sq3];\n      if (!p) continue;\n      let v = MAT[p.kind] + pstFor(p.kind, sq3, p.side, p.promoted);\n      if (p.promoted && p.kind !== "K" && p.kind !== "G") {\n        v += PROMO_BONUS[p.kind] || 0;\n      }\n      score += p.side === SENTE ? v : -v;\n    }\n    const handVals = ["R", "B", "G", "S", "N", "L", "P"];\n    for (const k of handVals) {\n      const hv = k === "P" ? MAT[k] + 10 : MAT[k] + 50;\n      score += pos.hands[0][k] * hv;\n      score -= pos.hands[1][k] * hv;\n    }\n    score += trophyScore(pos.trophies[SENTE]) - trophyScore(pos.trophies[1]);\n    score += castleBonus(pos, SENTE) - castleBonus(pos, 1);\n    score += mobilityRough(pos, SENTE) - mobilityRough(pos, 1);\n    if (inCheck(pos, SENTE)) score -= 80;\n    if (inCheck(pos, 1)) score += 80;\n    if (sk >= 0) {\n      let threats = 0;\n      for (let df = -2; df <= 2; df++) {\n        for (let dr = -2; dr <= 2; dr++) {\n          const f = fileOf(sk) + df;\n          const r = rankOf(sk) + dr;\n          if (f < 0 || f > 8 || r < 0 || r > 8) continue;\n          const p = pos.board[f * 9 + r];\n          if (p && p.side !== SENTE) threats += 1;\n        }\n      }\n      score -= threats * 8;\n    }\n    if (gk >= 0) {\n      let threats = 0;\n      for (let df = -2; df <= 2; df++) {\n        for (let dr = -2; dr <= 2; dr++) {\n          const f = fileOf(gk) + df;\n          const r = rankOf(gk) + dr;\n          if (f < 0 || f > 8 || r < 0 || r > 8) continue;\n          const p = pos.board[f * 9 + r];\n          if (p && p.side === SENTE) threats += 1;\n        }\n      }\n      score += threats * 8;\n    }\n    return score;\n  }\n\n  // src/engine/opening.ts\n  function m(ff, fr, tf, tr, promote = false) {\n    return { from: makeSquare(ff, fr), to: makeSquare(tf, tr), promote };\n  }\n  var BOOKS = [\n    // \u5C45\u98DB\u8ECA \u68D2\u9280\u7CFB: \u25B2\uFF17\u516D\u6B69\n    { seq: [m(2, 2, 2, 3)] },\n    // \u25B2\uFF12\u516D\u6B69\n    { seq: [m(7, 2, 7, 3)] },\n    // \u25B2\uFF15\u516D\u6B69\n    { seq: [m(4, 2, 4, 3)] },\n    // \u25B2\uFF16\u516B\u9280\n    { seq: [m(2, 0, 2, 1)] }\n  ];\n  var GOTE_COMMON = [\n    m(2, 6, 2, 5),\n    // \u25B3\uFF13\u56DB\u6B69 (file 2 = 7\u7B4B? wait file0=9\u7B4B, file2=7\u7B4B)\n    m(6, 6, 6, 5),\n    // \u25B3\uFF13\u56DB\u6B69 \u2014 file6 = 3\u7B4B\n    m(7, 6, 7, 5),\n    // \u25B3\uFF12\u56DB\u6B69\n    m(4, 6, 4, 5)\n    // \u25B3\uFF15\u56DB\u6B69\n  ];\n  function bookMove(pos, legal) {\n    if (pos.ply > 8) return null;\n    const candidates = pos.sideToMove === 0 ? BOOKS.flatMap((b) => b.seq) : GOTE_COMMON;\n    for (const c of candidates) {\n      const found = legal.find(\n        (mv) => mv.from === c.from && mv.to === c.to && !mv.drop && mv.promote === !!c.promote\n      );\n      if (found) {\n        if (Math.random() < 0.55) return found;\n      }\n    }\n    const hits = [];\n    for (const c of candidates) {\n      const found = legal.find(\n        (mv) => mv.from === c.from && mv.to === c.to && !mv.drop && mv.promote === !!c.promote\n      );\n      if (found && !hits.some((h) => movesEqual(h, found))) hits.push(found);\n    }\n    if (hits.length) return hits[Math.random() * hits.length | 0];\n    return null;\n  }\n\n  // src/engine/search.ts\n  function evalSTM(pos) {\n    const v = evaluate(pos);\n    return pos.sideToMove === SENTE ? v : -v;\n  }\n  var TIME_BUDGET_MS = {\n    beginner: 80,\n    intermediate: 500,\n    advanced: 1800,\n    serious: 3600\n  };\n  var TT_SIZE = 1 << 20;\n  var TT_MASK = TT_SIZE - 1;\n  var TTFlag = { Exact: 0, Lower: 1, Upper: 2 };\n  var tt = new Array(TT_SIZE);\n  for (let i = 0; i < TT_SIZE; i++) {\n    tt[i] = { key: 0, depth: -1, score: 0, flag: TTFlag.Exact, move: null };\n  }\n  var killerMoves = Array.from({ length: 128 }, () => [null, null]);\n  var historyTable = Array.from({ length: 81 }, () => new Array(81).fill(0));\n  var nodes = 0;\n  var startTime = 0;\n  var timeLimit = 0;\n  var timedOut = false;\n  var controls = { stop: false };\n  var MATE_SCORE = 1e5;\n  function isTimeUp() {\n    if (controls.stop || timedOut) return true;\n    if ((nodes & 255) === 0) {\n      if (performance.now() - startTime >= timeLimit) {\n        timedOut = true;\n        return true;\n      }\n    }\n    return false;\n  }\n  function moveScore(pos, m2, ttMove, ply) {\n    if (ttMove && movesEqual(m2, ttMove)) return 1e6;\n    if (m2.captured) {\n      if (m2.captured.kind === "K") return 5e6;\n      const victim = MAT[m2.captured.kind] || 0;\n      const attacker = MAT[m2.piece] || 0;\n      let s = 5e5 + victim * 10 - attacker;\n      if (countsAsTrophy(m2.captured)) {\n        s += 2e5;\n        const after = pos.trophies[pos.sideToMove] + 1;\n        if (after >= 7) s += 2e6;\n        else if (after >= 6) s += 8e5;\n        else if (after >= 5) s += 4e5;\n      }\n      return s;\n    }\n    if (m2.promote) return 4e5;\n    const k0 = killerMoves[ply]?.[0];\n    const k1 = killerMoves[ply]?.[1];\n    if (k0 && movesEqual(m2, k0)) return 3e5;\n    if (k1 && movesEqual(m2, k1)) return 29e4;\n    if (!m2.drop && m2.from !== null) {\n      return historyTable[m2.from][m2.to] || 0;\n    }\n    if (m2.drop) {\n      return (MAT[m2.piece] || 0) - 50;\n    }\n    return 0;\n  }\n  function orderMoves(pos, moves, ttMove, ply) {\n    return moves.map((m2) => ({ m: m2, s: moveScore(pos, m2, ttMove, ply) })).sort((a, b) => b.s - a.s).map((x) => x.m);\n  }\n  function isCaptureOrPromo(m2) {\n    return !!m2.captured || m2.promote;\n  }\n  function quiescence(pos, alpha, beta, ply) {\n    nodes++;\n    if (isTimeUp()) return evalSTM(pos);\n    const term = terminalEval(pos, ply);\n    if (term !== null) return term;\n    const standPat = evalSTM(pos);\n    if (standPat >= beta) return beta;\n    if (standPat > alpha) alpha = standPat;\n    if (ply > 20) return standPat;\n    let moves = generateLegalMoves(pos).filter(isCaptureOrPromo);\n    moves = orderMoves(pos, moves, null, ply);\n    for (const m2 of moves) {\n      const next = applyMoveRaw(pos, m2);\n      const score = -quiescence(next, -beta, -alpha, ply + 1);\n      if (score >= beta) return beta;\n      if (score > alpha) alpha = score;\n      if (isTimeUp()) break;\n    }\n    return alpha;\n  }\n  function ttProbe(key) {\n    const e = tt[key & TT_MASK];\n    return e.key === key ? e : null;\n  }\n  function ttStore(key, depth, score, flag, move) {\n    const idx = key & TT_MASK;\n    const e = tt[idx];\n    if (e.key === key && e.depth > depth) return;\n    e.key = key;\n    e.depth = depth;\n    e.score = score;\n    e.flag = flag;\n    e.move = move;\n  }\n  function terminalEval(pos, ply) {\n    const sk = findKing(pos, SENTE);\n    const gk = findKing(pos, 1);\n    if (sk < 0) return pos.sideToMove === SENTE ? -MATE_SCORE + ply : MATE_SCORE - ply;\n    if (gk < 0) return pos.sideToMove === SENTE ? MATE_SCORE - ply : -MATE_SCORE + ply;\n    if (pos.trophies[0] >= 7) return pos.sideToMove === SENTE ? MATE_SCORE - ply : -MATE_SCORE + ply;\n    if (pos.trophies[1] >= 7) return pos.sideToMove === SENTE ? -MATE_SCORE + ply : MATE_SCORE - ply;\n    return null;\n  }\n  function alphaBeta(pos, depth, alpha, beta, ply, doNull) {\n    nodes++;\n    if (isTimeUp()) return evalSTM(pos);\n    const term = terminalEval(pos, ply);\n    if (term !== null) return term;\n    const key = computeHash(pos);\n    const inChk = inCheck(pos, pos.sideToMove);\n    if (depth <= 0) {\n      return quiescence(pos, alpha, beta, ply);\n    }\n    const entry = ttProbe(key);\n    if (entry && entry.depth >= depth) {\n      if (entry.flag === TTFlag.Exact) return entry.score;\n      if (entry.flag === TTFlag.Lower) alpha = Math.max(alpha, entry.score);\n      if (entry.flag === TTFlag.Upper) beta = Math.min(beta, entry.score);\n      if (alpha >= beta) return entry.score;\n    }\n    if (doNull && !inChk && depth >= 3 && ply > 0) {\n      const nullPos = {\n        ...pos,\n        sideToMove: opposite(pos.sideToMove),\n        historyKeys: pos.historyKeys,\n        ply: pos.ply + 1\n      };\n      const R = depth > 6 ? 3 : 2;\n      const score = -alphaBeta(nullPos, depth - 1 - R, -beta, -beta + 1, ply + 1, false);\n      if (score >= beta) return beta;\n    }\n    let moves = generateLegalMoves(pos);\n    if (moves.length === 0) {\n      if (inChk) return -MATE_SCORE + ply;\n      return 0;\n    }\n    const instant = moves.find((m2) => isInstantWinMove(pos, m2));\n    if (instant) {\n      ttStore(key, depth, MATE_SCORE - ply - 1, TTFlag.Exact, instant);\n      return MATE_SCORE - ply - 1;\n    }\n    moves = orderMoves(pos, moves, entry?.move ?? null, ply);\n    let bestMove = null;\n    let bestScore = -Infinity;\n    let flag = TTFlag.Upper;\n    let moveIndex = 0;\n    for (const m2 of moves) {\n      const next = applyMoveRaw(pos, m2);\n      let newDepth = depth - 1;\n      if (inCheck(next, next.sideToMove)) {\n        newDepth += 1;\n      }\n      let score;\n      if (moveIndex >= 3 && depth >= 3 && !inChk && !m2.captured && !m2.promote && !inCheck(next, next.sideToMove)) {\n        const reduction = 1 + (moveIndex >= 6 && depth >= 4 ? 1 : 0);\n        score = -alphaBeta(next, newDepth - reduction, -alpha - 1, -alpha, ply + 1, true);\n        if (score > alpha) {\n          score = -alphaBeta(next, newDepth, -beta, -alpha, ply + 1, true);\n        }\n      } else {\n        score = -alphaBeta(next, newDepth, -beta, -alpha, ply + 1, true);\n      }\n      moveIndex++;\n      if (score > bestScore) {\n        bestScore = score;\n        bestMove = m2;\n      }\n      if (score > alpha) {\n        alpha = score;\n        flag = TTFlag.Exact;\n        bestMove = m2;\n        if (!m2.captured && m2.from !== null) {\n          historyTable[m2.from][m2.to] += depth * depth;\n        }\n      }\n      if (alpha >= beta) {\n        flag = TTFlag.Lower;\n        if (!m2.captured) {\n          const k = killerMoves[ply];\n          if (!k[0] || !movesEqual(k[0], m2)) {\n            k[1] = k[0];\n            k[0] = m2;\n          }\n        }\n        break;\n      }\n      if (isTimeUp()) break;\n    }\n    ttStore(key, depth, bestScore, flag, bestMove);\n    return bestScore;\n  }\n  function extractPv(pos, maxLen) {\n    const pv = [];\n    let cur = pos;\n    for (let i = 0; i < maxLen; i++) {\n      const key = computeHash(cur);\n      const e = ttProbe(key);\n      if (!e || !e.move) break;\n      const legal = generateLegalMoves(cur);\n      const m2 = legal.find((x) => movesEqual(x, e.move));\n      if (!m2) break;\n      pv.push(m2);\n      cur = applyMoveRaw(cur, m2);\n    }\n    return pv;\n  }\n  function searchBestMove(pos, difficulty, ctrl2) {\n    controls = ctrl2;\n    controls.stop = false;\n    nodes = 0;\n    startTime = performance.now();\n    timeLimit = TIME_BUDGET_MS[difficulty];\n    timedOut = false;\n    const legal = generateLegalMoves(pos);\n    const instant = legal.find((m2) => isInstantWinMove(pos, m2));\n    if (instant) {\n      const info = {\n        depth: 0,\n        nodes: 1,\n        score: MATE_SCORE,\n        pv: [instant],\n        timeMs: performance.now() - startTime,\n        bestMove: instant,\n        thinking: false\n      };\n      ctrl2.onInfo?.(info);\n      return info;\n    }\n    if (legal.length === 0) {\n      return {\n        depth: 0,\n        nodes: 0,\n        score: 0,\n        pv: [],\n        timeMs: 0,\n        bestMove: null,\n        thinking: false\n      };\n    }\n    const bm = bookMove(pos, legal);\n    if (bm && difficulty !== "serious" && pos.ply < 6) {\n    }\n    if (bm && pos.ply < 6 && difficulty !== "beginner") {\n      const info = {\n        depth: 1,\n        nodes: 1,\n        score: 0,\n        pv: [bm],\n        timeMs: performance.now() - startTime,\n        bestMove: bm,\n        thinking: false\n      };\n      ctrl2.onInfo?.(info);\n      return info;\n    }\n    const safe = legal.filter((m2) => {\n      const next = applyMoveRaw(pos, m2);\n      return !generateLegalMoves(next).some((om) => isInstantWinMove(next, om));\n    });\n    const rootMoves = safe.length ? safe : legal;\n    let bestMove = rootMoves[0];\n    let bestScore = -Infinity;\n    let maxDepthReached = 0;\n    const maxDepth = difficulty === "beginner" ? 1 : difficulty === "intermediate" ? 3 : difficulty === "advanced" ? 10 : 16;\n    for (let depth = 1; depth <= maxDepth; depth++) {\n      if (depth > 1 && (timedOut || performance.now() - startTime >= timeLimit)) break;\n      let alpha = -MATE_SCORE;\n      let beta = MATE_SCORE;\n      if (depth >= 3 && Math.abs(bestScore) < MATE_SCORE / 2) {\n        alpha = bestScore - 50;\n        beta = bestScore + 50;\n      }\n      let score = alphaBeta(pos, depth, alpha, beta, 0, true);\n      if (score <= alpha || score >= beta) {\n        score = alphaBeta(pos, depth, -MATE_SCORE, MATE_SCORE, 0, true);\n      }\n      if (isTimeUp() && depth > 1) {\n        break;\n      }\n      const pv = extractPv(pos, depth);\n      if (pv.length > 0) {\n        bestMove = pv[0];\n        bestScore = score;\n      } else {\n        const e = ttProbe(computeHash(pos));\n        if (e?.move) {\n          const found = legal.find((m2) => movesEqual(m2, e.move));\n          if (found) {\n            bestMove = found;\n            bestScore = score;\n          }\n        }\n      }\n      maxDepthReached = depth;\n      const info = {\n        depth,\n        nodes,\n        score: bestScore,\n        pv: extractPv(pos, 6),\n        timeMs: performance.now() - startTime,\n        bestMove,\n        thinking: true\n      };\n      ctrl2.onInfo?.(info);\n      if (Math.abs(bestScore) > MATE_SCORE - 1e3) break;\n    }\n    if (!legal.some((m2) => movesEqual(m2, bestMove))) {\n      bestMove = rootMoves[0] ?? legal[0];\n    }\n    const pool = (safe.length ? safe : legal);\n    if (difficulty === "beginner" && pool.length > 1 && Math.random() < 0.55) {\n      bestMove = pool[Math.floor(Math.random() * pool.length)];\n    } else if (difficulty === "intermediate" && pool.length > 1 && Math.random() < 0.16) {\n      bestMove = pool[Math.floor(Math.random() * pool.length)];\n    }\n    if (safe.length && !isInstantWinMove(pos, bestMove)) {\n      const reply = applyMoveRaw(pos, bestMove);\n      if (generateLegalMoves(reply).some((om) => isInstantWinMove(reply, om))) {\n        let pick = safe[0];\n        let pickScore = -Infinity;\n        for (const m2 of safe) {\n          const s = -evalSTM(applyMoveRaw(pos, m2));\n          if (s > pickScore) {\n            pickScore = s;\n            pick = m2;\n          }\n        }\n        bestMove = pick;\n      }\n    }\n    const finalInfo = {\n      depth: maxDepthReached,\n      nodes,\n      score: bestScore,\n      pv: extractPv(pos, 8),\n      timeMs: performance.now() - startTime,\n      bestMove,\n      thinking: false\n    };\n    ctrl2.onInfo?.(finalInfo);\n    return finalInfo;\n  }\n  function clearSearchTables() {\n    for (let i = 0; i < TT_SIZE; i++) {\n      tt[i].depth = -1;\n      tt[i].key = 0;\n      tt[i].move = null;\n    }\n    for (let i = 0; i < 81; i++) historyTable[i].fill(0);\n    for (const k of killerMoves) {\n      k[0] = null;\n      k[1] = null;\n    }\n  }\n\n  // src/engine/worker.ts\n  var ctrl = { stop: false };\n  self.onmessage = (ev) => {\n    const msg = ev.data;\n    try {\n      if (msg.type === "stop") {\n        ctrl.stop = true;\n        return;\n      }\n      if (msg.type === "clear") {\n        clearSearchTables();\n        return;\n      }\n      if (msg.type === "search") {\n        ctrl = { stop: false };\n        const id = msg.id;\n        const pos = msg.pos;\n        const info = searchBestMove(pos, msg.difficulty, {\n          get stop() {\n            return ctrl.stop;\n          },\n          set stop(v) {\n            ctrl.stop = v;\n          },\n          onInfo: (inf) => {\n            const out2 = { type: "info", info: serializeInfo(inf), id };\n            self.postMessage(out2);\n          }\n        });\n        const out = { type: "result", info: serializeInfo(info), id };\n        self.postMessage(out);\n      }\n    } catch (e) {\n      const out = {\n        type: "error",\n        message: e instanceof Error ? e.message : String(e),\n        id: msg.type === "search" ? msg.id : void 0\n      };\n      self.postMessage(out);\n    }\n  };\n  function serializeInfo(info) {\n    return {\n      depth: info.depth,\n      nodes: info.nodes,\n      score: info.score,\n      pv: info.pv,\n      timeMs: info.timeMs,\n      bestMove: info.bestMove,\n      thinking: info.thinking\n    };\n  }\n})();\n'], { type: "text/javascript" })));
+  var app = document.querySelector("#app");
+  function pieceGlyph(p) {
+    const key = p.promoted ? `+${p.kind}` : p.kind;
+    if (p.kind === "K") return p.side === SENTE ? "\u7389" : "\u738B";
+    return PIECE_KANJI_SHORT[key] || key;
+  }
+  function trophyGlyph(t) {
+    const key = t.promoted ? `+${t.kind}` : t.kind;
+    return PIECE_KANJI_SHORT[key] || t.kind;
+  }
+  function trophyName(t) {
+    return pieceCallName(t.kind, t.promoted);
+  }
+  function squareAtDisplay(col, row) {
+    if (!flipped) {
+      return col * 9 + (8 - row);
+    }
+    return (8 - col) * 9 + row;
+  }
+  function squareFromPoint(boardEl, clientX, clientY) {
+    const r = boardEl.getBoundingClientRect();
+    const x = clientX - r.left - boardEl.clientLeft;
+    const y = clientY - r.top - boardEl.clientTop;
+    const w = boardEl.clientWidth;
+    const h = boardEl.clientHeight;
+    if (w <= 0 || h <= 0 || x < 0 || y < 0 || x >= w || y >= h) return null;
+    const col = Math.min(8, Math.max(0, Math.floor(x / w * 9)));
+    const row = Math.min(8, Math.max(0, Math.floor(y / h * 9)));
+    return squareAtDisplay(col, row);
+  }
+  function isCoarsePointer() {
+    return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+  }
+  function allLegal() {
+    return generateLegalMoves(pos);
+  }
+  function movesFromSelection() {
+    const all = allLegal();
+    if (selectedDrop) return all.filter((m) => m.drop && m.piece === selectedDrop);
+    if (selected !== null) return all.filter((m) => !m.drop && m.from === selected);
+    return [];
+  }
+  function isHumanTurn() {
+    return inMatch && !endState && !cinematic && !starting && pos.sideToMove === settings.humanSide && !thinking;
+  }
+  function startEngineIfNeeded() {
+    if (netMode) return;
+    if (!inMatch || endState || thinking || starting || cinematic) return;
+    if (pos.sideToMove === settings.humanSide) return;
+    runEngine();
+  }
+  function clearThinkHold() {
+    if (thinkHoldTimer) {
+      window.clearTimeout(thinkHoldTimer);
+      thinkHoldTimer = 0;
+    }
+  }
+  function runEngine() {
+    clearThinkHold();
+    thinking = true;
+    thinkStartedAt = performance.now();
+    engineInfo = null;
+    const id = ++searchId;
+    playThinking();
+    render();
+    paintThinkBanner();
+    worker.postMessage({
+      type: "search",
+      pos: clonePosition(pos),
+      difficulty: settings.difficulty,
+      id
+    });
+  }
+  worker.onmessage = (ev) => {
+    const msg = ev.data;
+    if (msg.type === "info") {
+      if (msg.id !== searchId) return;
+      engineInfo = msg.info;
+      renderStatusOnly();
+      return;
+    }
+    if (msg.type === "error") {
+      console.error(msg.message);
+      clearThinkHold();
+      thinking = false;
+      const legal = generateLegalMoves(pos);
+      if (legal.length) applyHumanOrEngineMove(legal[0], false);
+      else checkEnd();
+      render();
+      return;
+    }
+    if (msg.type === "result") {
+      if (msg.id !== searchId) return;
+      engineInfo = msg.info;
+      const applyResult = () => {
+        if (msg.id !== searchId) return;
+        thinkHoldTimer = 0;
+        thinking = false;
+        let move = msg.info.bestMove;
+        const legal = generateLegalMoves(pos);
+        if (!move || !legal.some((m) => movesEqual(m, move))) {
+          move = legal[0] ?? null;
+        }
+        if (move) applyHumanOrEngineMove(move, false);
+        else checkEnd();
+        render();
+        startEngineIfNeeded();
+      };
+      const wait2 = Math.max(0, 80 - (performance.now() - thinkStartedAt));
+      if (wait2 > 0) thinkHoldTimer = window.setTimeout(applyResult, wait2);
+      else applyResult();
+    }
+  };
+  function stopEngine() {
+    worker.postMessage({ type: "stop" });
+  }
+  function reasonSubtitle(reason, winnerIsHuman) {
+    switch (reason) {
+      case "trophies":
+        return "\u6B69\u4EE5\u59167\u679A\u53D6\u5F97";
+      case "king_capture":
+        return winnerIsHuman ? "\u7389\u5C06\u3092\u8A0E\u3061\u53D6\u3063\u305F" : "\u7389\u5C06\u3092\u8A0E\u305F\u308C\u305F";
+      case "mate":
+        return winnerIsHuman ? "\u8A70\u307E\u305B\u3066\u52DD\u3061" : "\u8A70\u307E\u3055\u308C\u305F";
+      case "resign":
+        return "\u6295\u4E86";
+      case "sennichite":
+        return "\u5343\u65E5\u624B";
+      case "no_moves":
+        return "\u6307\u3057\u624B\u306A\u3057";
+      default:
+        return "";
+    }
+  }
+  function isSeventhTrophyMove(move, side) {
+    if (pos.trophies[side] !== TROPHY_GOAL - 1) return false;
+    const cap = move.captured ?? (move.from != null ? pos.board[move.to] : null);
+    return !!cap && cap.kind !== "K" && countsAsTrophy(cap);
+  }
+  function playPreSeventh2(side, done) {
+    document.querySelector(".pre-seventh")?.remove();
+    document.querySelector(".seventh-reveal")?.remove();
+    const gen = ++preSeventhGen;
+    const youLose = side !== settings.humanSide;
+    const el = document.createElement("div");
+    el.className = "pre-seventh";
+    el.innerHTML = `
+    <div class="pre-seventh-vignette"></div>
+    <div class="pre-seventh-word">7\u3064\u76EE</div>
+    <p>${youLose ? "\u53D6\u3089\u308C\u307E\u3059" : "\u53D6\u308A\u307E\u3059"}</p>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("show"));
+    playPreSeventh();
+    window.setTimeout(() => {
+      if (gen !== preSeventhGen) return;
+      el.classList.add("out");
+      window.setTimeout(() => {
+        el.remove();
+        if (gen === preSeventhGen) done();
+      }, 320);
+    }, 2e3);
+  }
+  function applyHumanOrEngineMove(move, fromHuman) {
+    if (!isLegalMove(pos, move)) {
+      if (!fromHuman) {
+        const legal = generateLegalMoves(pos);
+        if (legal.length) move = legal[0];
+        else {
+          checkEnd();
+          return;
+        }
+      } else {
+        return;
+      }
+    }
+    const side = pos.sideToMove;
+    if (isSeventhTrophyMove(move, side)) {
+      cinematic = true;
+      playPreSeventh2(side, () => {
+        finishAppliedMove(move, fromHuman);
+        render();
+        startEngineIfNeeded();
+      });
+      return;
+    }
+    finishAppliedMove(move, fromHuman);
+  }
+  function finishAppliedMove(move, fromHuman) {
+    const side = pos.sideToMove;
+    const beforeT = [pos.trophies[0], pos.trophies[1]];
+    const text = moveToJa(move, side);
+    pos = applyMove(pos, move);
+    history.push(clonePosition(pos));
+    kifu.push({ move, side, text });
+    lastMove = move;
+    selected = null;
+    selectedDrop = null;
+    legalTargets = [];
+    const capturedKing = move.captured?.kind === "K";
+    const gainedTrophy = !capturedKing && pos.trophies[side] > beforeT[side];
+    if (capturedKing) {
+      cinematic = false;
+      holdLastTrophy = false;
+      playMove();
+    } else if (gainedTrophy) {
+      animTrophy = { side, index: pos.trophies[side] - 1 };
+      const n = pos.trophies[side];
+      if (n === 6) {
+        pendingRiichi = side;
+        playTrophy(6);
+      } else if (n === 7) {
+        cinematic = true;
+        holdLastTrophy = false;
+        const last = pos.trophyPieces[side][pos.trophyPieces[side].length - 1];
+        pendingSeventhReveal = {
+          side,
+          glyph: last ? trophyGlyph(last) : "\u99D2",
+          name: last ? trophyName(last) : "\u99D2"
+        };
+        playTrophy(7);
+      } else {
+        playTrophy(n);
+      }
+    } else if (move.captured) {
+      playCapture();
+    } else if (move.drop) {
+      playDrop();
+    } else {
+      playMove();
+    }
+    if (move.promote) playPromote();
+    if (!detectResult(pos) && inCheck(pos, pos.sideToMove)) playCheck();
+    checkEnd();
+    if (!fromHuman && !endState && pos.sideToMove === settings.humanSide) {
+      pendingYourTurn = true;
+    }
+  }
+  function checkEnd() {
+    const r = detectResult(pos);
+    if (!r) return;
+    if ("draw" in r) {
+      endState = {
+        humanWon: null,
+        reason: "sennichite",
+        winner: null,
+        title: "\u5F15\u304D\u5206\u3051",
+        subtitle: "\u5343\u65E5\u624B"
+      };
+      playDraw();
+      return;
+    }
+    const humanWon = r.winner === settings.humanSide;
+    endState = {
+      humanWon,
+      reason: r.reason,
+      winner: r.winner,
+      title: humanWon ? "\u52DD\u3061" : "\u8CA0\u3051",
+      subtitle: reasonSubtitle(r.reason, humanWon)
+    };
+    if (r.reason === "mate" || r.reason === "king_capture") {
+      cinematic = true;
+      holdLastTrophy = false;
+      pendingMateReveal = { humanWon, reason: r.reason };
+    } else if (r.reason === "king_capture") {
+      cinematic = false;
+      holdLastTrophy = false;
+    }
+    if (!cinematic) {
+      if (humanWon) playWin();
+      else playLose();
+    }
+    if (humanWon && !netMode) rankRecordP = recordWinRank();
+  }
+  function trySelectSquare(sq3) {
+    unlock();
+    if (!isHumanTurn()) return;
+    const piece = pos.board[sq3];
+    if (selected !== null || selectedDrop) {
+      const opts = movesFromSelection().filter((m) => m.to === sq3);
+      if (opts.length === 1) {
+        commitMove(opts[0]);
+        return;
+      }
+      if (opts.length === 2) {
+        askPromotion(opts);
+        return;
+      }
+    }
+    selectedDrop = null;
+    if (piece && piece.side === pos.sideToMove) {
+      selected = sq3;
+      legalTargets = movesFromSelection();
+      playSelect();
+    } else {
+      selected = null;
+      legalTargets = [];
+    }
+    render();
+  }
+  function tryDropSelect(kind) {
+    if (!isHumanTurn()) return;
+    if (pos.hands[pos.sideToMove][kind] <= 0) return;
+    selected = null;
+    selectedDrop = kind;
+    legalTargets = movesFromSelection();
+    render();
+  }
+  function commitMove(move) {
+    applyHumanOrEngineMove(move, true);
+    if (netMode) netSend({ type: "move", move });
+    render();
+    startEngineIfNeeded();
+  }
+  function askPromotion(opts) {
+    const promote = opts.find((m) => m.promote);
+    const plain = opts.find((m) => !m.promote);
+    const overlay = document.createElement("div");
+    overlay.className = "promo-dialog";
+    overlay.innerHTML = `
+    <div class="box">
+      <h3>\u6210\u308A\u307E\u3059\u304B\uFF1F</h3>
+      <div class="btns" style="justify-content:center">
+        <button class="primary" data-p="1">\u6210\u308B</button>
+        <button data-p="0">\u4E0D\u6210</button>
+      </div>
+    </div>`;
+    overlay.addEventListener("click", (e) => {
+      const t = e.target;
+      if (t.tagName !== "BUTTON") return;
+      overlay.remove();
+      commitMove(t.getAttribute("data-p") === "1" ? promote : plain);
+    });
+    document.body.appendChild(overlay);
+  }
+  async function playStartIntro() {
+    document.querySelector(".start-cinematic")?.remove();
+    document.querySelector(".end-overlay")?.remove();
+    const el = document.createElement("div");
+    el.className = "start-cinematic";
+    el.innerHTML = `
+    <div class="start-vignette"></div>
+    <div class="start-seal">${DIFF_LABEL[settings.difficulty]}</div>
+    <div class="start-word">\u5BFE\u5C40\u958B\u59CB</div>`;
+    document.body.appendChild(el);
+    playKickoff(DIFF_LABEL[settings.difficulty]);
+    requestAnimationFrame(() => el.classList.add("show"));
+    await wait(1500);
+    el.classList.add("go");
+    await wait(700);
+    el.classList.add("out");
+    await wait(320);
+    el.remove();
+  }
+  function playCongrats2(rank) {
+    document.querySelector(".congrats-cinematic")?.remove();
+    const petals = Array.from({ length: 36 }, (_, i) => {
+      const dx = (Math.random() - 0.5) * 520;
+      const dy = 80 + Math.random() * 420;
+      const left = 8 + Math.random() * 84;
+      const top = 8 + Math.random() * 36;
+      const delay = Math.random() * 0.45;
+      const alt = i % 3 === 0 ? " alt" : "";
+      return `<span class="congrats-petal${alt}" style="left:${left}%;top:${top}%;--dx:${dx}px;--dy:${dy}px;animation-delay:${delay}s"></span>`;
+    }).join("");
+    const el = document.createElement("div");
+    el.className = "congrats-cinematic";
+    el.innerHTML = `
+    <div class="congrats-vignette"></div>
+    ${petals}
+    <div class="congrats-word">\u304A\u3081\u3067\u3068\u3046</div>
+    <div class="congrats-rank">${rank}\u4F4D\u5165\u8CDE</div>`;
+    document.body.appendChild(el);
+    playCongrats(rank);
+    requestAnimationFrame(() => el.classList.add("show"));
+    window.setTimeout(() => {
+      el.classList.add("out");
+      window.setTimeout(() => el.remove(), 420);
+    }, 2600);
+  }
+  function displayNick() {
+    return settings.nickname || "\u540D\u7121\u3057";
+  }
+  function applyNickname(raw) {
+    settings.nickname = setPlayerName(raw);
+    savePrefs();
+    const btn = document.querySelector("#btn-nick");
+    if (btn) btn.textContent = settings.nickname;
+    document.querySelectorAll("#inp-nick, #inp-nick-edit").forEach((inp) => {
+      inp.value = settings.nickname;
+    });
+    return settings.nickname;
+  }
+  function openNickEditor() {
+    document.querySelector(".nick-overlay")?.remove();
+    const el = document.createElement("div");
+    el.className = "nick-overlay";
+    el.innerHTML = `
+    <div class="start-card nick-card">
+      <h2>\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0</h2>
+      <label class="nick-field">
+        <input id="inp-nick-edit" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${settings.nickname.replace(/"/g, "&quot;")}" />
+        <small id="nick-edit-hint">\u3053\u306E\u7AEF\u672B\u3067\u4E00\u4EBA\u4E00\u3064\u3002\u7A7A\u306A\u3089\u540D\u7121\u3057</small>
+      </label>
+      <button type="button" class="start-btn" id="btn-nick-save">\u5909\u66F4</button>
+    </div>`;
+    el.addEventListener("click", (e) => {
+      if (e.target === el) el.remove();
+    });
+    el.querySelector("#btn-nick-save").addEventListener("click", () => {
+      void (async () => {
+        const inp = el.querySelector("#inp-nick-edit");
+        applyNickname(inp?.value ?? "");
+        el.remove();
+      })();
+    });
+    document.body.appendChild(el);
+    el.querySelector("#inp-nick-edit")?.focus();
+  }
+  function bindMenuControls(root) {
+    const paintStartRanks = () => {
+      const ol = root.querySelector("#start-rank-list");
+      if (!ol) return;
+      void loadRanks(settings.difficulty).then((list) => {
+        if (!ol.isConnected) return;
+        const top = list.slice(0, 5);
+        ol.innerHTML = top.length ? top.map((e, i) => {
+          const nm = (e.name || "名無し").replace(/[<>&]/g, "");
+          return `<li><span class="rk">${i + 1}</span><span class="nm">${nm}</span><span class="ms">${formatMs(e.ms)}</span></li>`;
+        }).join("") : '<li class="empty">まだ記録がありません</li>';
+      });
+    };
+    const pickDiff = (next) => {
+      settings.difficulty = next;
+      savePrefs();
+      root.querySelectorAll("[data-diff]").forEach((btn) => {
+        btn.classList.toggle("on", btn.dataset.diff === next);
+      });
+      const rankBtn = root.querySelector("#btn-rank");
+      if (rankBtn) rankBtn.hidden = false;
+      const nick = root.querySelector("#nick-field");
+      if (nick) nick.hidden = false;
+      paintStartRanks();
+    };
+    root.querySelectorAll("[data-diff]").forEach((btn) => {
+      btn.classList.toggle("on", btn.dataset.diff === settings.difficulty);
+      btn.addEventListener("click", () => pickDiff(btn.dataset.diff));
+    });
+    paintStartRanks();
+    const pickSide = (side) => {
+      settings.humanSide = side;
+      root.querySelectorAll("[data-side]").forEach((btn) => {
+        btn.classList.toggle("on", Number(btn.dataset.side) === side);
+      });
+      if (!inMatch) {
+        flipped = settings.humanSide === GOTE;
+        render();
+      }
+    };
+    root.querySelectorAll("[data-side]").forEach((btn) => {
+      btn.classList.toggle("on", Number(btn.dataset.side) === settings.humanSide);
+      btn.addEventListener("click", () => pickSide(Number(btn.dataset.side)));
+    });
+    const chk = root.querySelector("#chk-sound");
+    if (chk) {
+      chk.checked = settings.sound;
+      setSoundEnabled(settings.sound);
+      chk.addEventListener("change", () => {
+        settings.sound = chk.checked;
+        setSoundEnabled(settings.sound);
+      });
+    }
+    root.querySelector("#btn-rank")?.addEventListener("click", () => {
+      void showRanking(lastRecordAt ?? void 0);
+    });
+  }
+  function showStartScreen() {
+    closeNet();
+    inMatch = false;
+    starting = false;
+    stopEngine();
+    searchId++;
+    clearThinkHold();
+    thinking = false;
+    engineInfo = null;
+    endState = null;
+    selected = null;
+    selectedDrop = null;
+    legalTargets = [];
+    lastMove = null;
+    kifu = [];
+    pos = initialPosition();
+    history = [clonePosition(pos)];
+    flipped = settings.humanSide === GOTE;
+    seriousActive = false;
+    seriousAccumMs = 0;
+    seriousRunAt = null;
+    lastRecordedMs = null;
+    lastAttemptMs = null;
+    lastRank = null;
+    lastRankUpdated = false;
+    lastRecordAt = null;
+    document.querySelector(".end-overlay")?.remove();
+    document.querySelector(".start-overlay")?.remove();
+    document.querySelector(".rank-overlay")?.remove();
+    document.querySelector(".start-cinematic")?.remove();
+    document.querySelector(".congrats-cinematic")?.remove();
+    document.querySelector(".riichi-banner")?.remove();
+    document.querySelector(".cinematic")?.remove();
+    document.querySelector(".pre-seventh")?.remove();
+    document.querySelector(".seventh-reveal")?.remove();
+    preSeventhGen++;
+    render();
+    mountStartOverlay();
+  }
+
+  function netPeerId(code) {
+    return "nk7shogi" + String(code || "").toUpperCase();
+  }
+  function makeRoomCode() {
+    const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+    let c = "";
+    for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
+    return c;
+  }
+  function loadPeerLib() {
+    return new Promise((resolve, reject) => {
+      if (window.Peer) return resolve(window.Peer);
+      const t = window.setTimeout(() => reject(new Error("PeerJS timeout")), 8000);
+      const tick = () => {
+        if (window.Peer) {
+          window.clearTimeout(t);
+          resolve(window.Peer);
+        } else {
+          window.setTimeout(tick, 50);
+        }
+      };
+      tick();
+    });
+  }
+  function netSend(msg) {
+    try {
+      if (netConn && netConn.open) netConn.send(msg);
+    } catch (e) {}
+  }
+  function closeNet() {
+    try { netConn?.close(); } catch (e) {}
+    try { netPeer?.destroy(); } catch (e) {}
+    netMode = false;
+    netLobby = false;
+    netRematchMine = false;
+    netRematchTheirs = false;
+    netRole = null;
+    netRoom = "";
+    netPeer = null;
+    netConn = null;
+    netStatus = "";
+    document.querySelector(".net-overlay")?.remove();
+  }
+  function wireNetConn(conn) {
+    netConn = conn;
+    conn.on("data", (raw) => {
+      const msg = raw && typeof raw === "object" ? raw : null;
+      if (!msg || !msg.type) return;
+      if (msg.type === "hello") {
+        if (netRole === "guest") {
+          settings.humanSide = typeof msg.youAre === "number" ? msg.youAre : 1;
+          beginNetMatch();
+        }
+      } else if (msg.type === "move") {
+        if (endState || !msg.move) return;
+        if (pos.sideToMove === settings.humanSide) return;
+        applyHumanOrEngineMove(msg.move, false);
+        render();
+      } else if (msg.type === "resign") {
+        if (endState) return;
+        endState = {
+          humanWon: true,
+          reason: "resign",
+          winner: settings.humanSide,
+          title: "勝ち",
+          subtitle: "相手が投了"
+        };
+        playWin();
+        render();
+      } else if (msg.type === "rematch") {
+        netRematchTheirs = true;
+        if (netRematchMine) startNetRematch();
+        else {
+          const b = document.querySelector("#btn-again");
+          if (b) b.textContent = "相手が再戦希望　再戦する";
+          const sub = document.querySelector(".end-overlay .sub");
+          if (sub) sub.textContent = (sub.textContent || "") + "　相手が再戦を希望";
+        }
+      }
+    });
+    conn.on("close", () => {
+      if (!inMatch || endState) return;
+      netStatus = "切断";
+      endState = {
+        humanWon: null,
+        reason: "disconnect",
+        winner: null,
+        title: "切断",
+        subtitle: "相手との接続が切れました"
+      };
+      render();
+    });
+    conn.on("error", () => {});
+  }
+  function startNetRematch() {
+    if (!netMode || !netConn || !netConn.open) {
+      showStartScreen();
+      return;
+    }
+    netRematchMine = false;
+    netRematchTheirs = false;
+    endState = null;
+    cinematic = false;
+    document.querySelector(".end-overlay")?.remove();
+    document.querySelector(".mate-reveal")?.remove();
+    document.querySelector(".seventh-reveal")?.remove();
+    inMatch = true;
+    starting = false;
+    newGame();
+  }
+  function requestNetRematch() {
+    if (!netMode || !netConn || !netConn.open) {
+      showStartScreen();
+      return;
+    }
+    netRematchMine = true;
+    netSend({ type: "rematch" });
+    if (netRematchTheirs) {
+      startNetRematch();
+      return;
+    }
+    const b = document.querySelector("#btn-again");
+    if (b) {
+      b.textContent = "相手の応答待ち";
+      b.disabled = true;
+    }
+  }
+  function beginNetMatch() {
+    document.querySelector(".net-overlay")?.remove();
+    document.querySelector(".start-overlay")?.remove();
+    netLobby = false;
+    netMode = true;
+    starting = false;
+    inMatch = true;
+    newGame();
+  }
+  function setNetCard(html) {
+    let el = document.querySelector(".net-overlay");
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "net-overlay";
+      document.body.appendChild(el);
+    }
+    el.innerHTML = `<div class="net-card">${html}</div>`;
+    return el;
+  }
+  function enterNetLobby() {
+    netLobby = true;
+    document.querySelector(".start-overlay")?.remove();
+    inMatch = false;
+    starting = false;
+    pos = initialPosition();
+    history = [clonePosition(pos)];
+    kifu = [];
+    lastMove = null;
+    endState = null;
+    selected = null;
+    selectedDrop = null;
+    legalTargets = [];
+    render();
+  }
+  function openNetMenu() {
+    enterNetLobby();
+    const el = setNetCard(`
+      <h2>ネット対戦</h2>
+      <p>同じページを開いた相手と、部屋番号で対戦します。</p>
+      <div class="row">
+        <button type="button" class="primary" id="net-host">部屋を作る</button>
+        <button type="button" id="net-join">部屋に入る</button>
+      </div>
+      <div class="row"><button type="button" id="net-back">戻る</button></div>
+    `);
+    el.querySelector("#net-host").onclick = () => void hostNetRoom();
+    el.querySelector("#net-join").onclick = () => showJoinNet();
+    el.querySelector("#net-back").onclick = () => {
+      closeNet();
+      showStartScreen();
+    };
+  }
+  function showJoinNet() {
+    const el = setNetCard(`
+      <h2>部屋に入る</h2>
+      <p>相手の部屋番号を入力</p>
+      <p><input id="net-code" type="text" maxlength="6" autocomplete="off" /></p>
+      <div class="row">
+        <button type="button" class="primary" id="net-go">入室</button>
+        <button type="button" id="net-back">戻る</button>
+      </div>
+      <p class="net-note" id="net-msg"></p>
+    `);
+    el.querySelector("#net-back").onclick = () => openNetMenu();
+    el.querySelector("#net-go").onclick = () => void joinNetRoom(el.querySelector("#net-code").value);
+  }
+  async function hostNetRoom() {
+    closeNet();
+    netRole = "host";
+    netRoom = makeRoomCode();
+    settings.humanSide = 0;
+    setNetCard(`
+      <h2>部屋を作成中…</h2>
+      <p class="room-code">${netRoom}</p>
+      <p class="net-note">接続サーバーに繋いでいます</p>
+    `);
+    try {
+      const Peer = await loadPeerLib();
+      netPeer = new Peer(netPeerId(netRoom), { debug: 0 });
+      netPeer.on("error", (err) => {
+        setNetCard(`<h2>部屋を作れませんでした</h2><p>${String(err?.type || err || "")}</p><div class="row"><button id="net-back">戻る</button></div>`);
+        document.querySelector("#net-back")?.addEventListener("click", () => openNetMenu());
+      });
+      await new Promise((resolve, reject) => {
+        netPeer.on("open", resolve);
+        window.setTimeout(() => reject(new Error("timeout")), 10000);
+      });
+      setNetCard(`
+        <h2>部屋番号</h2>
+        <p class="room-code">${netRoom}</p>
+        <p>相手にこの番号を伝えてください。</p>
+        <p class="net-note">入室待ち…　あなたは先手です</p>
+        <div class="row"><button type="button" id="net-cancel">やめる</button></div>
+      `);
+      document.querySelector("#net-cancel")?.addEventListener("click", () => {
+        closeNet();
+        showStartScreen();
+      });
+      netPeer.on("connection", (conn) => {
+        if (netConn && netConn.open) {
+          try { conn.close(); } catch (e) {}
+          return;
+        }
+        wireNetConn(conn);
+        conn.on("open", () => {
+          netSend({ type: "hello", youAre: 1, nick: savedNickname() || settings.nickname || "名無し" });
+          beginNetMatch();
+        });
+      });
+    } catch (e) {
+      setNetCard(`<h2>接続できませんでした</h2><p class="net-note">通信ライブラリか回線を確認してください</p><div class="row"><button id="net-back">戻る</button></div>`);
+      document.querySelector("#net-back")?.addEventListener("click", () => openNetMenu());
+    }
+  }
+  async function joinNetRoom(raw) {
+    const code = String(raw || "").toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, 6);
+    const msg = document.querySelector("#net-msg");
+    if (code.length !== 6) {
+      if (msg) msg.textContent = "6桁で入力してください";
+      return;
+    }
+    closeNet();
+    netRole = "guest";
+    netRoom = code;
+    settings.humanSide = 1;
+    setNetCard(`
+      <h2>入室中…</h2>
+      <p class="room-code">${netRoom}</p>
+      <p class="net-note">相手の部屋を探しています</p>
+    `);
+    try {
+      const Peer = await loadPeerLib();
+      netPeer = new Peer({ debug: 0 });
+      netPeer.on("error", (err) => {
+        setNetCard(`<h2>入れませんでした</h2><p>${String(err?.type || err || "部屋が見つかりません")}</p><div class="row"><button id="net-back">戻る</button></div>`);
+        document.querySelector("#net-back")?.addEventListener("click", () => openNetMenu());
+      });
+      await new Promise((resolve, reject) => {
+        netPeer.on("open", resolve);
+        window.setTimeout(() => reject(new Error("timeout")), 10000);
+      });
+      const conn = netPeer.connect(netPeerId(code), { reliable: true });
+      wireNetConn(conn);
+      await new Promise((resolve, reject) => {
+        conn.on("open", resolve);
+        window.setTimeout(() => reject(new Error("部屋が見つかりません")), 10000);
+      });
+      netSend({ type: "join", nick: savedNickname() || settings.nickname || "名無し" });
+      setNetCard(`<h2>接続しました</h2><p class="room-code">${netRoom}</p><p class="net-note">対局開始を待っています</p>`);
+    } catch (e) {
+      setNetCard(`<h2>入れませんでした</h2><p class="net-note">番号が違うか、相手が部屋を開いていません</p><div class="row"><button id="net-back">戻る</button></div>`);
+      document.querySelector("#net-back")?.addEventListener("click", () => openNetMenu());
+    }
+  }
+
+  function mountStartOverlay() {
+    document.querySelector(".start-overlay")?.remove();
+    const el = document.createElement("div");
+    el.className = "start-overlay";
+    el.innerHTML = `
+    <div class="start-card">
+      <a class="home-link start-home" href="https://nikkukyuu-code.github.io/">トップへ戻る</a>
+      <h2 class="start-title">7GET将棋</h2>
+      <section class="win-show" aria-label="\u52DD\u3061\u65B9">
+        <p class="win-note">\u3075\u3064\u3046\u306E\u5C06\u68CB\u3068\u9055\u3044\u307E\u3059</p>
+        <ol class="win-lines">
+          <li class="a"><span>\u6B69\u4EE5\u5916\u3092<strong>7\u679A</strong>\u53D6\u308B</span></li>
+          <li class="b"><span><strong>\u738B\u5C06</strong>\u3092\u53D6\u308B</span></li>
+        </ol>
+        <p class="win-sub">\u3068\u91D1\u306F\u6570\u3048\u308B\u3000\u6B69\u3068\u7389\u306F\u6570\u3048\u306A\u3044\u3000\u5148\u306B\u3084\u3063\u305F\u65B9\u304C\u52DD\u3061</p>
+      </section>
+      <div class="diff-picks" role="group" aria-label="\u96E3\u6613\u5EA6">
+        <button type="button" data-diff="beginner">\u521D\u7D1A</button>
+        <button type="button" data-diff="intermediate">\u4E2D\u7D1A</button>
+        <button type="button" data-diff="advanced">\u4E0A\u7D1A</button>
+        <button type="button" data-diff="serious">\u771F\u5263</button>
+      </div>
+      <div class="start-rank-box">
+        <button type="button" id="btn-rank" class="start-rank">\u30E9\u30F3\u30AD\u30F3\u30B0<small>\u9078\u3093\u3060\u96E3\u6613\u5EA6\u306E\u4E0A\u4F4D\u30FB\u8A73\u3057\u304F\u306F\u30BF\u30C3\u30D7</small></button>
+        <ol id="start-rank-list" class="start-rank-list"><li class="empty">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</li></ol>
+      </div>
+      <label class="nick-field" id="nick-field">
+        <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0\uFF08\u7A7A\u306A\u3089\u540D\u7121\u3057\uFF09" value="${(savedNickname() || settings.nickname).replace(/"/g, "&quot;")}" />
+        <button type="button" id="btn-nick-save-start">\u56FA\u5B9A</button>
+      </label>
+      <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
+      <button type="button" class="start-btn net" id="btn-net">\u30CD\u30C3\u30C8\u5BFE\u6226</button>
+      <div class="side-picks" role="group" aria-label="\u624B\u756A">
+        <button type="button" data-side="0">\u5148\u624B</button>
+        <button type="button" data-side="1">\u5F8C\u624B</button>
+      </div>
+      <p class="start-ver"><span id="visit-count"></span><span>v101</span></p>
+      <div class="start-foot">
+        <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
+      </div>
+    </div>`;
+    document.body.appendChild(el);
+    if (lastVisitN != null) paintVisits(lastVisitN);
+    requestAnimationFrame(() => {
+      el.querySelector(".win-show")?.classList.add("play");
+      fitStartCard();
+      requestAnimationFrame(fitStartCard);
+    });
+    bindMenuControls(el);
+    el.querySelector("#btn-nick-save-start")?.addEventListener("click", () => {
+      const inp = el.querySelector("#inp-nick");
+      applyNickname(inp?.value ?? "");
+      const inp2 = el.querySelector("#inp-nick");
+      if (inp2) inp2.placeholder = `\u300C${settings.nickname}\u300D\u3067\u56FA\u5B9A`;
+    });
+    el.querySelector("#btn-start").addEventListener("click", () => {
+      unlock();
+      void startMatch();
+    });
+    el.querySelector("#btn-net")?.addEventListener("click", () => {
+      unlock();
+      openNetMenu();
+    });
+  }
+  async function startMatch() {
+    if (starting || inMatch) return;
+    starting = true;
+    document.querySelector(".start-overlay")?.remove();
+    try {
+      await playStartIntro();
+      inMatch = true;
+      newGame();
+    } finally {
+      starting = false;
+      startEngineIfNeeded();
+    }
+  }
+  function restartSameDifficulty() {
+    document.querySelector(".end-overlay")?.remove();
+    document.querySelector(".mate-reveal")?.remove();
+    document.querySelector(".seventh-reveal")?.remove();
+    inMatch = true;
+    starting = false;
+    endState = null;
+    cinematic = false;
+    newGame();
+  }
+  function newGame() {
+    stopEngine();
+    searchId++;
+    pos = initialPosition();
+    history = [clonePosition(pos)];
+    kifu = [];
+    lastMove = null;
+    endState = null;
+    selected = null;
+    selectedDrop = null;
+    legalTargets = [];
+    clearThinkHold();
+    thinking = false;
+    engineInfo = null;
+    animTrophy = null;
+    cinematic = false;
+    holdLastTrophy = false;
+    pendingRiichi = null;
+    flipped = settings.humanSide === GOTE;
+    lastRecordedMs = null;
+    lastAttemptMs = null;
+    lastRank = null;
+    lastRankUpdated = false;
+    lastRecordAt = null;
+    seriousActive = isSerious();
+    seriousAccumMs = 0;
+    seriousRunAt = null;
+    worker.postMessage({ type: "clear" });
+    document.querySelector(".end-overlay")?.remove();
+    document.querySelector(".rank-overlay")?.remove();
+    document.querySelector(".riichi-banner")?.remove();
+    document.querySelector(".cinematic")?.remove();
+    document.querySelector(".pre-seventh")?.remove();
+    document.querySelector(".seventh-reveal")?.remove();
+    preSeventhGen++;
+    render();
+    startEngineIfNeeded();
+  }
+  function undo() {
+    if (netMode) return;
+    if (thinking) {
+      stopEngine();
+      searchId++;
+      clearThinkHold();
+      thinking = false;
+    }
+    if (history.length <= 1) return;
+    history.pop();
+    kifu.pop();
+    pos = clonePosition(history[history.length - 1]);
+    if (pos.sideToMove !== settings.humanSide && history.length > 1) {
+      history.pop();
+      kifu.pop();
+      pos = clonePosition(history[history.length - 1]);
+    }
+    lastMove = kifu.length ? kifu[kifu.length - 1].move : null;
+    endState = null;
+    selected = null;
+    selectedDrop = null;
+    legalTargets = [];
+    animTrophy = null;
+    document.querySelector(".end-overlay")?.remove();
+    render();
+  }
+  var rankRecordP = null;
+  async function recordWinRank() {
+    lastRecordedMs = null;
+    lastAttemptMs = null;
+    lastRank = null;
+    lastRankUpdated = false;
+    if (netMode || !endState || endState.humanWon !== true) return;
+    if (!isSerious() || !seriousActive) return;
+    if (!kifu.some((k) => k.side === settings.humanSide)) return;
+    pauseSeriousClock();
+    const rec = await submitResignTime(elapsedSeriousMs(), savedNickname() || settings.nickname || "\u540D\u7121\u3057", settings.difficulty);
+    lastRecordedMs = rec.entry.ms;
+    lastAttemptMs = rec.attemptMs;
+    lastRank = rec.rank;
+    lastRankUpdated = rec.updated;
+    lastRecordAt = rec.updated ? rec.entry.at : lastRecordAt;
+  }
+  async function resign() {
+    if (endState || thinking) return;
+    if (netMode) netSend({ type: "resign" });
+    lastRecordedMs = null;
+    lastAttemptMs = null;
+    lastRank = null;
+    lastRankUpdated = false;
+    lastRecordAt = null;
+    const slower = isSerious() && !lastRankUpdated && lastAttemptMs != null && lastRecordedMs != null && lastAttemptMs > lastRecordedMs;
+    endState = {
+      humanWon: false,
+      reason: "resign",
+      winner: opposite(settings.humanSide),
+      title: "\u8CA0\u3051",
+      subtitle: slower ? `\u4ECA\u56DE ${formatMs(lastAttemptMs)}\u3000\u81EA\u5DF1\u30D9\u30B9\u30C8 ${formatMs(lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}` : lastRecordedMs != null ? `\u6295\u4E86\u3000${formatMs(lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}` : "\u6295\u4E86"
+    };
+    playLose();
+    render();
+    if (lastRankUpdated && lastRank != null && lastRank >= 1 && lastRank <= 100) {
+      window.setTimeout(() => playCongrats2(lastRank), 380);
+    }
+  }
+  function renderHand(side, el) {
+    const hand = pos.hands[side];
+    const kinds = ["R", "B", "G", "S", "N", "L", "P"];
+    const label = side === settings.humanSide ? "\u6301" : "\u76F8\u624B\u6301";
+    el.innerHTML = `<div class="hand-label">${label}</div>`;
+    for (const k of kinds) {
+      const n = hand[k];
+      if (n <= 0) continue;
+      const btn = document.createElement("div");
+      btn.className = "hand-piece" + (side !== settings.humanSide ? " gote" : "");
+      if (selectedDrop === k && pos.sideToMove === side) btn.classList.add("selected");
+      btn.textContent = PIECE_KANJI_SHORT[k];
+      if (n > 1) {
+        const c = document.createElement("span");
+        c.className = "count";
+        c.textContent = String(n);
+        btn.appendChild(c);
+      }
+      if (side === settings.humanSide) {
+        btn.addEventListener("click", () => tryDropSelect(k));
+      }
+      el.appendChild(btn);
+    }
+  }
+  function renderTrophyBar(side, el, isYou) {
+    const count = pos.trophies[side];
+    const pieces = pos.trophyPieces[side];
+    const who = side === settings.humanSide ? side === SENTE ? "\u3042\u306A\u305F\uFF08\u5148\u624B\uFF09" : "\u3042\u306A\u305F\uFF08\u5F8C\u624B\uFF09" : side === SENTE ? "\u76F8\u624B\uFF08\u5148\u624B\uFF09" : "\u76F8\u624B\uFF08\u5F8C\u624B\uFF09";
+    const shownCount = holdLastTrophy && count === TROPHY_GOAL ? TROPHY_GOAL - 1 : count;
+    const shownPieces = holdLastTrophy && pieces.length === TROPHY_GOAL ? pieces.slice(0, -1) : pieces;
+    const urgent = shownCount >= 5 && shownCount < TROPHY_GOAL && !endState;
+    const riichi = shownCount === 6 && !endState;
+    el.className = "trophy-bar" + (isYou ? " you" : "") + (urgent ? " urgent" : "") + (riichi ? " riichi" : "");
+    const pulse = animTrophy && animTrophy.side === side;
+    let slots = "";
+    for (let i = 0; i < TROPHY_GOAL; i++) {
+      const filled = i < shownPieces.length;
+      const pop = pulse && animTrophy.index === i && !(holdLastTrophy && i === 6);
+      const g = filled ? trophyGlyph(shownPieces[i]) : "";
+      slots += `<div class="trophy-slot${filled ? " filled" : ""}${pop ? " pop" : ""}${i === 6 && riichi ? " wait" : ""}" data-i="${i}">${g ? `<span>${g}</span>` : i === 6 && riichi ? '<span class="wait-mark">7</span>' : ""}${pop ? '<div class="spark"></div>' : ""}</div>`;
+    }
+    el.innerHTML = `
+    <div class="trophy-bar-head">
+      <span class="who">${who}</span>
+      <span class="count${pulse ? " pulse" : ""}">\u53D6\u5F97 ${shownCount} / ${TROPHY_GOAL}</span>
+    </div>
+    ${riichi ? `<div class="riichi-row${isYou ? " you" : " opp"}"><b>\u30EA\u30FC\u30C1</b><span>${isYou ? "\u3042\u30681\u679A\u3067\u52DD\u3061" : "\u76F8\u624B\u304C\u3042\u30681\u679A"}</span></div>` : ""}
+    <div class="trophy-slots">${slots}</div>
+  `;
+  }
+  function renderBoard(boardEl) {
+    boardEl.innerHTML = "";
+    const kingSq = inCheck(pos, pos.sideToMove) ? findKing(pos, pos.sideToMove) : -1;
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        const sq3 = squareAtDisplay(col, row);
+        const cell = document.createElement("div");
+        cell.className = "sq";
+        cell.dataset.sq = String(sq3);
+        if (selected === sq3) cell.classList.add("selected");
+        const oppLast = !!(lastMove && kifu.length && kifu[kifu.length - 1].side !== settings.humanSide);
+        if (lastMove && lastMove.from === sq3) cell.classList.add("last-from");
+        if (lastMove && lastMove.to === sq3) {
+          cell.classList.add("last-to");
+          if (oppLast) cell.classList.add("opp-last");
+        }
+        if (legalTargets.some((m) => m.to === sq3)) cell.classList.add("legal");
+        if (sq3 === kingSq) cell.classList.add("check");
+        const p = pos.board[sq3];
+        if (p) {
+          const pe = document.createElement("div");
+          const justOpp = !!(oppLast && lastMove && lastMove.to === sq3);
+          pe.className = "piece" + (p.side !== settings.humanSide ? " gote" : "") + (justOpp ? " just-played" : "");
+          pe.textContent = pieceGlyph(p);
+          if (justOpp) {
+            const mark = document.createElement("i");
+            mark.className = "just-mark";
+            mark.textContent = lastMove.drop ? "\u6253" : "\u76F8\u624B";
+            cell.appendChild(mark);
+          }
+          pe.draggable = !isCoarsePointer() && isHumanTurn() && p.side === pos.sideToMove;
+          if (pe.draggable) {
+            pe.style.pointerEvents = "auto";
+            pe.addEventListener("dragstart", (e) => {
+              dragFrom = sq3;
+              pe.classList.add("dragging");
+              e.dataTransfer?.setData("text/plain", String(sq3));
+              selected = sq3;
+              selectedDrop = null;
+              legalTargets = movesFromSelection();
+              renderBoard(boardEl);
+            });
+            pe.addEventListener("dragend", () => {
+              pe.classList.remove("dragging");
+              dragFrom = null;
+            });
+          }
+          cell.appendChild(pe);
+        }
+        cell.addEventListener("dragover", (e) => e.preventDefault());
+        cell.addEventListener("drop", (e) => {
+          e.preventDefault();
+          const from = dragFrom ?? selected;
+          if (from === null && !selectedDrop) return;
+          if (from !== null) {
+            selected = from;
+            selectedDrop = null;
+          }
+          legalTargets = movesFromSelection();
+          const opts = legalTargets.filter((m) => m.to === sq3);
+          if (opts.length === 1) commitMove(opts[0]);
+          else if (opts.length === 2) askPromotion(opts);
+          dragFrom = null;
+        });
+        boardEl.appendChild(cell);
+      }
+    }
+    boardEl.onpointerdown = (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      const sq3 = squareFromPoint(boardEl, e.clientX, e.clientY);
+      if (sq3 == null) return;
+      if (!isHumanTurn()) return;
+      e.preventDefault();
+      trySelectSquare(sq3);
+    };
+  }
+  var statusEl;
+  var statsEl;
+  var kifuEl;
+  function announceRiichi(side) {
+    document.querySelector(".riichi-banner")?.remove();
+    const you = side === settings.humanSide;
+    const el = document.createElement("div");
+    el.className = "riichi-banner" + (you ? " you" : " opp");
+    el.innerHTML = `<span>\u30EA\u30FC\u30C1</span><small>${you ? "\u3042\u30681\u679A\u3067\u52DD\u3061" : "\u76F8\u624B\u304C\u3042\u30681\u679A"}</small>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("show"));
+    playRiichi(you);
+    window.setTimeout(() => {
+      el.classList.remove("show");
+      window.setTimeout(() => el.remove(), 450);
+    }, 3800);
+  }
+    function playMateReveal(info) {
+    document.querySelector(".mate-reveal")?.remove();
+    const el = document.createElement("div");
+    el.className = "mate-reveal";
+    const tsumi = info.reason === "mate";
+    const kicker = tsumi ? "詰み" : "玉将";
+    const title = tsumi ? (info.humanWon ? "詰み" : "詰まされた") : (info.humanWon ? "討ち取った" : "討たれた");
+    el.innerHTML = `<p class="mr-kicker">${kicker}</p><p class="mr-title">${title}</p>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("show"));
+    window.setTimeout(() => {
+      el.classList.add("out");
+      window.setTimeout(() => {
+        el.remove();
+        cinematic = false;
+        if (endState) {
+          if (endState.humanWon) playWin();
+          else if (endState.humanWon === false) playLose();
+          showEndOverlay();
+        }
+      }, 450);
+    }, 2200);
+  }
+  function playSeventhReveal(info) {
+    document.querySelector(".seventh-reveal")?.remove();
+    const to = lastMove?.to;
+    const cell = to !== void 0 ? document.querySelector(`.sq[data-sq="${to}"]`) : null;
+    cell?.classList.add("seventh-taken");
+    const slot = document.querySelector(
+      `${info.side === settings.humanSide ? "#trophy-bot" : "#trophy-top"} .trophy-slot[data-i="6"]`
+    );
+    slot?.classList.add("reveal");
+    const el = document.createElement("div");
+    el.className = "seventh-reveal";
+    el.innerHTML = `
+    <p class="sr-kicker">7\u3064\u76EE</p>
+    <p class="sr-label">\u53D6\u3089\u308C\u305F\u306E\u306F</p>
+    <div class="sr-piece">${info.glyph}</div>
+    <p class="sr-name">${info.name}</p>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("show"));
+    playSeventhTaken(info.name);
+    window.setTimeout(() => {
+      el.classList.add("out");
+      cell?.classList.remove("seventh-taken");
+      slot?.classList.remove("reveal");
+      window.setTimeout(() => {
+        el.remove();
+        cinematic = false;
+        if (endState) {
+          if (endState.humanWon) playWin();
+          else if (endState.humanWon === false) playLose();
+          showEndOverlay();
+        }
+      }, 700);
+    }, 7200);
+  }
+  function announceYourTurn() {
+    document.querySelector(".your-turn")?.remove();
+    const el = document.createElement("div");
+    el.className = "your-turn";
+    el.textContent = "\u8CB4\u65B9\u306E\u756A\u3067\u3059";
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("show"));
+    playYourTurn();
+    window.setTimeout(() => {
+      el.classList.remove("show");
+      window.setTimeout(() => el.remove(), 350);
+    }, 2e3);
+  }
+  function paintThinkBanner() {
+    const el = document.querySelector("#think-banner");
+    if (!el) return;
+    el.classList.toggle("on", thinking);
+    el.innerHTML = thinking ? '\u8003\u3048\u4E2D<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>' : "";
+  }
+  function renderStatusOnly() {
+    if (!statusEl) return;
+    statusEl.innerHTML = statusHtml();
+    if (statsEl) statsEl.textContent = statsText();
+    paintThinkBanner();
+  }
+  function statusHtml() {
+    if (!inMatch && !starting) {
+      return "\u96E3\u6613\u5EA6\u3092\u9078\u3093\u3067\u30B9\u30BF\u30FC\u30C8";
+    }
+    if (endState) {
+      return `<strong>${endState.title}</strong> \u2014 ${endState.subtitle}`;
+    }
+    if (thinking) {
+      return "";
+    }
+    const check = inCheck(pos, pos.sideToMove) ? '\u3000<span style="color:#ff8080">\u738B\u624B\uFF01</span>' : "";
+    if (pos.sideToMove === settings.humanSide) {
+      const riichi = pos.trophies[settings.humanSide] === 6 ? '\u3000<span class="riichi-inline">\u30EA\u30FC\u30C1</span>' : "";
+      return `<strong class="your-turn-status">\u8CB4\u65B9\u306E\u756A\u3067\u3059</strong>${riichi}${check}`;
+    }
+    const side = pos.sideToMove === SENTE ? "\u5148\u624B" : "\u5F8C\u624B";
+    return `${side}\u306E\u756A\u3067\u3059\uFF08\u30B3\u30F3\u30D4\u30E5\u30FC\u30BF\uFF09${check}`;
+  }
+  function statsText() {
+    if (!engineInfo) return "";
+    const pv = (engineInfo.pv || []).slice(0, 5).map((m, i) => moveToJa(m, i % 2 === 0 ? pos.sideToMove : opposite(pos.sideToMove))).join(" ");
+    return `\u6DF1\u3055: ${engineInfo.depth}
+\u30CE\u30FC\u30C9: ${engineInfo.nodes.toLocaleString()}
+\u8A55\u4FA1: ${engineInfo.score}
+\u6642\u9593: ${Math.round(engineInfo.timeMs)}ms
+\u8AAD\u307F\u7B4B: ${pv || "\u2014"}
+\u53D6\u5F97: \u5148${pos.trophies[0]} \u5F8C${pos.trophies[1]}`;
+  }
+  async function showEndOverlay() {
+    if (!endState) return;
+    if (rankRecordP) {
+      await rankRecordP;
+      rankRecordP = null;
+    }
+    document.querySelector(".end-overlay")?.remove();
+    const win = endState.humanWon === true;
+    const lose = endState.humanWon === false;
+    const overlay = document.createElement("div");
+    overlay.className = "end-overlay " + (win ? "win" : lose ? "lose" : "lose");
+    const winnerSide = endState.winner;
+    const pieces = winnerSide !== null ? pos.trophyPieces[winnerSide] : pos.trophyPieces[settings.humanSide];
+    let slots = "";
+    for (let i = 0; i < TROPHY_GOAL; i++) {
+      const filled = i < pieces.length;
+      const g = filled ? trophyGlyph(pieces[i]) : "";
+      slots += `<div class="trophy-slot${filled ? " filled pop" : ""}">${g ? `<span>${g}</span>` : ""}</div>`;
+    }
+    const particles = Array.from({ length: 28 }, () => {
+      const dx = (Math.random() - 0.5) * 360;
+      const dy = (Math.random() - 0.8) * 320;
+      const left = 40 + Math.random() * 20;
+      const top = 40 + Math.random() * 20;
+      const delay = Math.random() * 0.4;
+      return `<span style="left:${left}%;top:${top}%;--dx:${dx}px;--dy:${dy}px;animation-delay:${delay}s"></span>`;
+    }).join("");
+    const btnLabel = win ? "\u3082\u3046\u4E00\u5EA6" : "\u518D\u6226";
+    overlay.innerHTML = `
+    <div class="end-card">
+      <div class="end-particles">${particles}</div>
+      <h2 class="big">${endState.title}</h2>
+      <div class="sub">${endState.subtitle}</div>
+      ${!netMode && lastRecordedMs != null ? `<div class="rank-record">${formatMs(lastRankUpdated ? lastRecordedMs : lastAttemptMs ?? lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}</div>` : ""}
+      ${!netMode && lastRankUpdated && lastRank != null && lastRank <= 100 ? '<div class="rank-record">\u304A\u3081\u3067\u3068\u3046</div>' : ""}
+      ${!netMode && !lastRankUpdated && lastAttemptMs != null && lastRecordedMs != null && lastAttemptMs > lastRecordedMs ? '<div class="rank-record miss">\u524D\u56DE\u3088\u308A\u9045\u304B\u3063\u305F\u306E\u3067\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u66F4\u65B0\u3057\u307E\u305B\u3093</div>' : ""}
+      <div class="end-trophies">${slots}</div>
+      <div class="btns" style="justify-content:center">
+        <button class="primary" id="btn-again">${btnLabel}</button>
+        ${!netMode && isSerious() ? '<button type="button" id="btn-end-rank">\u30E9\u30F3\u30AD\u30F3\u30B0</button>' : ""}
+        <button type="button" id="btn-end-menu">\u96E3\u6613\u5EA6\u9078\u629E\u3078</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector("#btn-again").addEventListener("click", () => {
+      if (netMode && netConn && netConn.open) requestNetRematch();
+      else restartSameDifficulty();
+    });
+    overlay.querySelector("#btn-end-rank")?.addEventListener("click", () => {
+      void showRanking(lastRecordAt ?? void 0);
+    });
+    overlay.querySelector("#btn-end-menu")?.addEventListener("click", () => showStartScreen());
+  }
+  var boardResize = null;
+  function visibleHeight() {
+    const vv = window.visualViewport;
+    const candidates = [window.innerHeight, document.documentElement.clientHeight];
+    if (vv?.height) candidates.push(vv.height);
+    return Math.max(280, Math.round(Math.min(...candidates.filter((n) => n > 0))));
+  }
+  function applyViewport() {
+    const vv = window.visualViewport;
+    const h = visibleHeight();
+    const top = Math.max(0, Math.round(vv?.offsetTop ?? 0));
+    const root = document.documentElement;
+    root.style.setProperty("--app-h", `${h}px`);
+    root.style.setProperty("--app-top", `${top}px`);
+    document.body.style.height = `${h}px`;
+    fitBoard();
+    fitStartCard();
+  }
+  function fitStartCard() {
+    const overlay = document.querySelector(".start-overlay");
+    const card = overlay?.querySelector(".start-card");
+    if (!overlay || !card) return;
+    card.style.transform = "none";
+    const avail = Math.max(200, overlay.clientHeight - 4);
+    const need = card.scrollHeight;
+    const scale = need > 0 ? Math.min(1, avail / need) : 1;
+    card.style.transformOrigin = "top center";
+    card.style.transform = scale < 0.995 ? `scale(${scale})` : "none";
+  }
+  function bindViewport() {
+    applyViewport();
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", applyViewport);
+    vv?.addEventListener("scroll", applyViewport);
+    window.addEventListener("resize", applyViewport);
+    window.addEventListener("orientationchange", applyViewport);
+  }
+  function fitBoard() {
+    const wrap = document.querySelector(".board-wrap");
+    const board = document.querySelector("#board");
+    if (!wrap || !board) return;
+    const s = Math.max(140, Math.floor(Math.min(wrap.clientWidth, wrap.clientHeight)));
+    board.style.width = `${s}px`;
+    board.style.height = `${s}px`;
+  }
+  function render() {
+    flipped = settings.humanSide === GOTE;
+    const topSide = opposite(settings.humanSide);
+    const botSide = settings.humanSide;
+    app.innerHTML = `
+    <header class="top">
+      <a class="home-link" href="https://nikkukyuu-code.github.io/" title="トップへ">トップ</a>
+      <h1>7GET将棋${netMode && netRoom ? `<span id="net-room-chip">部屋 ${netRoom}</span>` : ""}</h1>
+      <div class="status" id="status"></div>
+      <div class="clock-row">
+        <div id="think-banner" class="think-banner${thinking ? " on" : ""}">${thinking ? '\u8003\u3048\u4E2D<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>' : ""}</div>
+        <div class="serious-clock" id="serious-clock"${isSerious() ? "" : " hidden"}></div>
+      </div>
+      <div class="engine-stats" id="stats" hidden></div>
+    </header>
+    <div class="stage">
+      <div id="trophy-top" class="trophy-bar"></div>
+      <div class="hand" id="hand-top"></div>
+      <div class="board-wrap">
+        <div class="board" id="board"></div>
+      </div>
+      <div class="hand" id="hand-bottom"></div>
+      <div id="trophy-bot" class="trophy-bar you"></div>
+    </div>
+    <div class="dock">
+      <button id="btn-undo"${netMode ? " disabled" : ""}>\u5F85\u3063\u305F</button>
+      <button id="btn-resign">\u6295\u4E86</button>
+      <button id="btn-new">\u65B0\u898F</button>
+      <button class="stop" id="btn-stop" ${thinking ? "" : "disabled"}>\u4ECA\u3059\u3050\u6307\u3059</button>
+      <button id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0</button>
+      <button type="button" id="btn-nick">${displayNick()}</button>
+      <span class="diff-lock">${settings.humanSide === 0 ? "\u5148\u624B" : "\u5F8C\u624B"}</span>
+      <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
+      <div class="kifu" id="kifu" hidden></div>
+    </div>
+  `;
+    statusEl = app.querySelector("#status");
+    statsEl = app.querySelector("#stats");
+    kifuEl = app.querySelector("#kifu");
+    statusEl.innerHTML = statusHtml();
+    statsEl.textContent = statsText();
+    kifuEl.textContent = kifu.map((k, i) => `${i + 1}. ${k.text}`).join("\n") || "\uFF08\u307E\u3060\u6307\u3057\u624B\u304C\u3042\u308A\u307E\u305B\u3093\uFF09";
+    const boardEl = app.querySelector("#board");
+    renderBoard(boardEl);
+    const handTop = app.querySelector("#hand-top");
+    const handBot = app.querySelector("#hand-bottom");
+    renderHand(topSide, handTop);
+    renderHand(botSide, handBot);
+    renderTrophyBar(topSide, app.querySelector("#trophy-top"), false);
+    renderTrophyBar(botSide, app.querySelector("#trophy-bot"), true);
+    const chk = app.querySelector("#chk-sound");
+    chk.checked = settings.sound;
+    setSoundEnabled(settings.sound);
+    chk.addEventListener("change", () => {
+      settings.sound = chk.checked;
+      setSoundEnabled(settings.sound);
+    });
+    app.querySelector("#btn-new").addEventListener("click", () => showStartScreen());
+    app.querySelector("#btn-undo").addEventListener("click", () => undo());
+    app.querySelector("#btn-resign").addEventListener("click", () => {
+      void resign();
+    });
+    app.querySelector("#btn-stop").addEventListener("click", () => stopEngine());
+    app.querySelector("#btn-rank").addEventListener("click", () => {
+      void showRanking(lastRecordAt ?? void 0);
+    });
+    app.querySelector("#btn-nick").addEventListener("click", () => openNickEditor());
+    if (selected !== null || selectedDrop) {
+      legalTargets = movesFromSelection();
+      renderBoard(boardEl);
+    }
+    fitBoard();
+    boardResize?.disconnect();
+    const wrap = app.querySelector(".board-wrap");
+    if (wrap) {
+      boardResize = new ResizeObserver(() => fitBoard());
+      boardResize.observe(wrap);
+    }
+    if (!inMatch && !starting && !netLobby && !document.querySelector(".net-overlay") && !document.querySelector(".start-overlay")) mountStartOverlay();
+    syncSeriousClock();
+    if (endState && !cinematic) showEndOverlay();
+    if (pendingRiichi !== null) {
+      const s = pendingRiichi;
+      pendingRiichi = null;
+      announceRiichi(s);
+    }
+    if (pendingSeventhReveal) {
+      const info = pendingSeventhReveal;
+      pendingSeventhReveal = null;
+      requestAnimationFrame(() => playSeventhReveal(info));
+    }
+    if (pendingMateReveal) {
+      const info = pendingMateReveal;
+      pendingMateReveal = null;
+      requestAnimationFrame(() => playMateReveal(info));
+    }
+    if (pendingYourTurn && !cinematic) {
+      pendingYourTurn = false;
+      announceYourTurn();
+    }
+    if (animTrophy) {
+      const captured = animTrophy;
+      setTimeout(() => {
+        if (animTrophy === captured) {
+          animTrophy = null;
+          const top = document.querySelector("#trophy-top");
+          const bot = document.querySelector("#trophy-bot");
+          if (top) renderTrophyBar(topSide, top, false);
+          if (bot) renderTrophyBar(botSide, bot, true);
+        }
+      }, 700);
+    }
+  }
+
+  function formatVisits(n) {
+    return Number(n).toLocaleString("ja-JP");
+  }
+  var lastVisitN = null;
+  function paintVisits(n) {
+    lastVisitN = n;
+    const el = document.getElementById("visit-count");
+    if (el) el.textContent = "訪問 " + formatVisits(n);
+  }
+  async function bumpVisits() {
+    const localKey = "shogi-visit-local";
+    let local = parseInt(localStorage.getItem(localKey) || "0", 10) || 0;
+    local += 1;
+    localStorage.setItem(localKey, String(local));
+    paintVisits(local);
+    const urls = [
+      "https://api.counterapi.dev/v1/nikkukyuu-shogi/visits/up",
+      "https://api.countapi.xyz/hit/nikkukyuu-code.github.io/shogi"
+    ];
+    for (const url of urls) {
+      try {
+        const r = await fetch(url, { cache: "no-store" });
+        if (!r.ok) continue;
+        const d = await r.json();
+        const n = d.count ?? d.value ?? d.value_count;
+        if (typeof n === "number" && n > 0) {
+          paintVisits(n);
+          return;
+        }
+      } catch (e) {}
+    }
+  }
+  bindViewport();
+  showStartScreen();
+  void bumpVisits();
+})();
+
+</script>
 </body>
 </html>
