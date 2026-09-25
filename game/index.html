@@ -4252,7 +4252,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver"><span id="visit-count"></span><span>v101</span></p>
+      <p class="start-ver"><span id="visit-count"></span><span>v102</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
@@ -4875,21 +4875,36 @@ label.setting {
   function formatVisits(n) {
     return Number(n).toLocaleString("ja-JP");
   }
-  var lastVisitN = null;
+  var LAST_VISIT_KEY = "shogi_visitLast";
+  function readLastVisit() {
+    try {
+      var n = Number(localStorage.getItem(LAST_VISIT_KEY));
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+  function writeLastVisit(n) {
+    try {
+      var prev = readLastVisit();
+      if (n > prev) localStorage.setItem(LAST_VISIT_KEY, String(n));
+    } catch (e) {}
+  }
+  var lastVisitN = readLastVisit();
   function paintVisits(n) {
-    lastVisitN = n;
+    var best = Math.max(Math.floor(Number(n)) || 0, lastVisitN || 0, readLastVisit());
+    if (best <= 0) return;
+    lastVisitN = best;
+    writeLastVisit(best);
     const el = document.getElementById("visit-count");
-    if (el) el.textContent = "訪問 " + formatVisits(n);
+    if (el) el.textContent = "訪問 " + formatVisits(best);
   }
   async function bumpVisits() {
-    const localKey = "shogi-visit-local";
-    let local = parseInt(localStorage.getItem(localKey) || "0", 10) || 0;
-    local += 1;
-    localStorage.setItem(localKey, String(local));
-    paintVisits(local);
+    // Show last known first so the number never flashes backwards.
+    if (lastVisitN > 0) paintVisits(lastVisitN);
     const urls = [
-      "https://api.counterapi.dev/v1/nikkukyuu-shogi/visits/up",
-      "https://api.countapi.xyz/hit/nikkukyuu-code.github.io/shogi"
+      "https://api.counterapi.dev/v1/nikkukyuu-shogi/visits/up?_=" + Date.now(),
+      "https://api.countapi.xyz/hit/nikkukyuu-code.github.io/shogi?_=" + Date.now()
     ];
     for (const url of urls) {
       try {
