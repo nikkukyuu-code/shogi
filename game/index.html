@@ -1287,10 +1287,10 @@ label.setting {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
+  justify-content: flex-start;
+  gap: 10px;
   min-height: 0;
-  padding: 12px 16px 20px;
+  padding: max(10px, env(safe-area-inset-top, 0px)) 16px 20px;
 }
 .start-screen h1 {
   margin: 0;
@@ -1515,6 +1515,17 @@ label.setting {
   .side-picks button { min-height: 38px; }
   header.top { display: none; }
 }
+
+@media (min-width: 900px) and (min-height: 800px) {
+  .start-overlay {
+    align-items: flex-start;
+    padding-top: 24px;
+  }
+  .start-card {
+    width: min(480px, 92vw);
+  }
+}
+
 .start-btn {
   min-width: min(280px, 80vw);
   min-height: 58px;
@@ -1573,10 +1584,10 @@ label.setting {
   position: fixed;
   z-index: 200;
   display: flex;
-  align-items: stretch;
+  align-items: flex-start; /* pack card at top; leftover empty space below (phone + tall PC) */
   justify-content: center;
   overflow: hidden;
-  padding: 6px 6px max(8px, env(safe-area-inset-bottom));
+  padding: max(6px, env(safe-area-inset-top, 0px)) 6px max(8px, env(safe-area-inset-bottom));
   background: rgba(8, 4, 2, 0.38);
   pointer-events: auto;
 }
@@ -1586,6 +1597,7 @@ label.setting {
   max-height: none;
   min-height: 0;
   margin: 0;
+  flex: 0 0 auto; /* never stretch to fill tall overlay */
   overflow: visible;
   display: flex;
   flex-direction: column;
@@ -4252,7 +4264,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver"><span id="visit-count"></span><span id="app-version">2026-09-26 00:15:53</span></p>
+      <p class="start-ver"><span id="visit-count"></span><span id="app-version">2026-09-26 02:15:50</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
@@ -4872,8 +4884,13 @@ label.setting {
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-26 00:15:53";
-  var SHOGI_BUILD_TIME = 1790349353953;
+    var SHOGI_VERSION_LABEL = "2026-09-26 02:15:50";
+  var SHOGI_BUILD_TIME = 1790356550909;
+  (function paintShogiVersion() {
+    var el = document.getElementById("app-version");
+    if (el) el.textContent = SHOGI_VERSION_LABEL;
+  })();
+
   function formatVisits(n) {
     return Number(n).toLocaleString("ja-JP");
   }
