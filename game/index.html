@@ -4264,7 +4264,7 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver"><span id="visit-count"></span><span id="app-version">2026-09-26 02:15:50</span></p>
+      <p class="start-ver"><span id="visit-count"></span><span id="app-version">2026-09-26 02:21:33</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
@@ -4884,8 +4884,8 @@ label.setting {
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-26 02:15:50";
-  var SHOGI_BUILD_TIME = 1790356550909;
+    var SHOGI_VERSION_LABEL = "2026-09-26 02:21:33";
+  var SHOGI_BUILD_TIME = 1790356893328;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
@@ -4922,8 +4922,7 @@ label.setting {
     // Show last known first so the number never flashes backwards.
     if (lastVisitN > 0) paintVisits(lastVisitN);
     const urls = [
-      "https://api.counterapi.dev/v1/nikkukyuu-shogi/visits/up?_=" + Date.now(),
-      "https://api.countapi.xyz/hit/nikkukyuu-code.github.io/shogi?_=" + Date.now()
+      "https://abacus.jasoncameron.dev/hit/nikkukyuu/shogi?_=" + Date.now()
     ];
     for (const url of urls) {
       try {
