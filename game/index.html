@@ -2971,8 +2971,11 @@ label.setting {
   }
 
   // src/ui/ranking.ts
+  // NEVER rename STORE_KEY / SALT_KEY — that wipes rankings & player progress on update.
+  // Backup STORE_BAK_KEY before every write; read falls back to backup if primary fails.
   var PLAIN_KEY = "shogi-serious-rank-v1";
   var STORE_KEY = "shogi-serious-rank-v6";
+  var STORE_BAK_KEY = "shogi-serious-rank-v6-bak";
   var PLAIN_RANK_KEY = "shogi-rank-plain-v2";
   var LEGACY_STORE = "shogi-serious-rank-v2";
   var SALT_KEY = "shogi-serious-rank-salt";
@@ -3119,12 +3122,19 @@ label.setting {
   }
   async function writeSealedList(list) {
     const { iv, ct } = await encryptBytes(new TextEncoder().encode(JSON.stringify(list.slice(0, MAX))), "store");
-    localStorage.setItem(STORE_KEY, JSON.stringify({ v: 6, iv, ct }));
-    localStorage.removeItem(PLAIN_KEY);
-    localStorage.removeItem(LEGACY_STORE);
+    const blob = JSON.stringify({ v: 6, iv, ct });
+    try {
+      const prev = localStorage.getItem(STORE_KEY);
+      if (prev) localStorage.setItem(STORE_BAK_KEY, prev);
+    } catch (_) { /* ignore */ }
+    localStorage.setItem(STORE_KEY, blob);
+    // Only drop legacy after a successful primary write (keep backup forever)
+    try {
+      localStorage.removeItem(PLAIN_KEY);
+      localStorage.removeItem(LEGACY_STORE);
+    } catch (_) { /* ignore */ }
   }
-  async function readSealedList() {
-    const raw = localStorage.getItem(STORE_KEY);
+  async function decodeSealedRaw(raw) {
     if (!raw) return null;
     try {
       const packed = JSON.parse(raw);
@@ -3132,8 +3142,18 @@ label.setting {
       const parsed = JSON.parse(new TextDecoder().decode(await decryptBytes(packed.iv, packed.ct, "store")));
       return Array.isArray(parsed) ? parsed.filter(isSealed).slice(0, MAX) : [];
     } catch {
-      return [];
+      return null;
     }
+  }
+  async function readSealedList() {
+    const primary = await decodeSealedRaw(localStorage.getItem(STORE_KEY));
+    if (primary) return primary;
+    const bak = await decodeSealedRaw(localStorage.getItem(STORE_BAK_KEY));
+    if (bak) {
+      try { localStorage.setItem(STORE_KEY, localStorage.getItem(STORE_BAK_KEY)); } catch (_) { /* ignore */ }
+      return bak;
+    }
+    return null;
   }
   async function openEntries(sealed) {
     const out = [];
