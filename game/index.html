@@ -2106,9 +2106,60 @@ label.setting {
 .net-card button.primary { background: linear-gradient(#8b2a2a, #5c1818); }
 .net-note { opacity: .85; font-size: .8rem !important; }
 #net-room-chip {
-  margin-left: 8px;
+  flex-shrink: 0;
   font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .04em;
   color: #ffe08a;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+header.top .status { min-width: 0; overflow: hidden; }
+/* Phones (portrait): one row can't hold links + title + room + status + clock.
+   Row 1: トップ 説明 7GET将棋 …… clock   Row 2: [部屋 123456] status / 考え中
+   (the clock used to be pushed off the right edge in net matches by the room chip). */
+@media (max-width: 560px) {
+  header.top { flex-wrap: wrap; row-gap: 2px; column-gap: 6px; }
+  header.top h1 { font-size: 0.88rem; letter-spacing: 0.08em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1; }
+  header.top .clock-row { display: contents; }
+  header.top .serious-clock { order: 1; margin-left: auto; font-size: clamp(0.66rem, 2.9vw, 0.78rem); padding: 2px 5px; letter-spacing: 0.02em; }
+  header.top .home-link { padding: 3px 8px; letter-spacing: 0.04em; }
+  header.top #net-room-chip { order: 2; }
+  header.top .status { order: 2; flex: 1 1 62%; white-space: nowrap; text-overflow: ellipsis; line-height: 1.3; }
+  header.top .status .your-turn-status { font-size: 0.85rem; letter-spacing: 0.08em; }
+  header.top .think-banner { order: 2; font-size: 0.9rem; }
+  header.top .think-banner:not(.on) { display: none; }
+  /* dock: every button visible without sideways scrolling */
+  .dock { gap: 3px; overflow-x: hidden; }
+  .dock button, .dock select { flex: 1 1 auto; min-width: 0; padding: 6px 4px; font-size: clamp(0.64rem, 2.85vw, 0.8rem); letter-spacing: 0; white-space: nowrap; }
+  .dock #btn-nick { max-width: 5.5em; min-width: 3.9em; flex-shrink: 0.4; }
+  .dock .diff-lock { flex-shrink: 0; font-size: 0.72rem; padding: 6px 4px; letter-spacing: 0.02em; }
+  .dock .sound-toggle { font-size: 0.72rem; gap: 2px; }
+}
+/* Short screens (≤640px tall, incl. landscape phones): the header used to be hidden completely,
+   so net matches lost the room number, whose turn it is and the clock. Keep one slim row instead. */
+@media (max-height: 640px) {
+  header.top { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; margin: 0 0 1px; padding: 0 2px 2px; }
+  header.top .home-link, header.top h1 { display: none; }
+  header.top .clock-row { display: contents; }
+  header.top #net-room-chip { order: 1; font-size: 0.72rem; }
+  header.top .status { order: 2; flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.78rem; line-height: 1.25; }
+  header.top .status .your-turn-status { font-size: 0.8rem; letter-spacing: 0.06em; }
+  header.top .think-banner { order: 2; font-size: 0.8rem; }
+  header.top .think-banner:not(.on) { display: none; }
+  header.top .serious-clock { order: 3; margin-left: auto; font-size: 0.66rem; padding: 1px 5px; letter-spacing: 0.02em; }
+}
+/* Landscape phones: stacking trophies + hands + board vertically left the board ~140px tall and the
+   pieces overlapped. Put the board in the middle, opponent's bars top-left, yours bottom-right. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-rows: auto auto 1fr auto auto; column-gap: 8px; row-gap: 4px; }
+  .stage > #trophy-top { grid-column: 1; grid-row: 1; }
+  .stage > #hand-top { grid-column: 1; grid-row: 2; }
+  .stage > .board-wrap { grid-column: 2; grid-row: 1 / 6; min-height: 0; width: auto; display: flex; align-items: center; justify-content: center; }
+  .stage > #hand-bottom { grid-column: 3; grid-row: 4; }
+  .stage > #trophy-bot { grid-column: 3; grid-row: 5; }
+  .stage .trophy-bar-head { gap: 4px; white-space: nowrap; }
+  .stage .trophy-bar-head .who, .stage .trophy-bar-head .count { font-size: clamp(0.66rem, 1.9vw, 1rem); letter-spacing: 0; white-space: nowrap; }
 }
 
 
@@ -5046,6 +5097,7 @@ label.setting {
       return `<strong class="your-turn-status">\u8CB4\u65B9\u306E\u756A\u3067\u3059</strong>${riichi}${check}`;
     }
     const side = pos.sideToMove === SENTE ? "\u5148\u624B" : "\u5F8C\u624B";
+    if (netMode) return `\u76F8\u624B\u306E\u756A\u3067\u3059\uFF08${side}\uFF09${check}`;
     return `${side}\u306E\u756A\u3067\u3059\uFF08\u30B3\u30F3\u30D4\u30E5\u30FC\u30BF\uFF09${check}`;
   }
   function statsText() {
@@ -5156,7 +5208,12 @@ label.setting {
     const wrap = document.querySelector(".board-wrap");
     const board = document.querySelector("#board");
     if (!wrap || !board) return;
-    const s = Math.max(140, Math.floor(Math.min(wrap.clientWidth, wrap.clientHeight)));
+    const stage = wrap.parentElement;
+    const grid = stage && getComputedStyle(stage).display === "grid";
+    // landscape grid: the board column is sized by the board itself → size from the stage instead
+    const s = grid
+      ? Math.max(140, Math.floor(Math.min(stage.clientHeight - 6, stage.clientWidth * 0.52)))
+      : Math.max(140, Math.floor(Math.min(wrap.clientWidth, wrap.clientHeight)));
     board.style.width = `${s}px`;
     board.style.height = `${s}px`;
   }
@@ -5168,7 +5225,8 @@ label.setting {
     <header class="top">
       <a class="home-link" href="https://nikkukyuu-code.github.io/" title="トップページに戻る">トップ</a>
       <a class="home-link" href="../" title="ルール説明へ">説明</a>
-      <h1>7GET将棋${netMode && netRoom ? `<span id="net-room-chip">部屋 ${netRoom}</span>` : ""}</h1>
+      <h1>7GET将棋</h1>
+      ${netMode && netRoom ? `<span id="net-room-chip">部屋 ${netRoom}</span>` : ""}
       <div class="status" id="status"></div>
       <div class="clock-row">
         <div id="think-banner" class="think-banner${thinking ? " on" : ""}">${thinking ? '\u8003\u3048\u4E2D<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>' : ""}</div>
@@ -5186,11 +5244,11 @@ label.setting {
       <div id="trophy-bot" class="trophy-bar you"></div>
     </div>
     <div class="dock">
-      <button id="btn-undo"${netMode ? " disabled" : ""}>\u5F85\u3063\u305F</button>
+      <button id="btn-undo"${netMode ? " disabled hidden" : ""}>\u5F85\u3063\u305F</button>
       <button id="btn-resign">\u6295\u4E86</button>
       <button id="btn-new">\u65B0\u898F</button>
-      <button class="stop" id="btn-stop" ${thinking ? "" : "disabled"}>\u4ECA\u3059\u3050\u6307\u3059</button>
-      <button id="btn-rank"${isSerious() ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0</button>
+      <button class="stop" id="btn-stop" ${thinking ? "" : "disabled"}${netMode ? " hidden" : ""}>\u4ECA\u3059\u3050\u6307\u3059</button>
+      <button id="btn-rank"${isSerious() && !netMode ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0</button>
       <button type="button" id="btn-nick">${displayNick()}</button>
       <span class="diff-lock">${settings.humanSide === 0 ? "\u5148\u624B" : "\u5F8C\u624B"}</span>
       <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
@@ -5285,8 +5343,8 @@ label.setting {
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-28 05:49:33";
-  var SHOGI_BUILD_TIME = 1790542173450;
+    var SHOGI_VERSION_LABEL = "2026-09-28 06:23:48";
+  var SHOGI_BUILD_TIME = 1790544228010;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
