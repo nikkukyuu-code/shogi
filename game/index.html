@@ -1662,6 +1662,14 @@ label.setting {
   justify-content: center;
   align-items: baseline;
   gap: 0.8em;
+  flex-wrap: wrap;
+}
+#battle-count[hidden] { display: none; }
+#battle-count {
+  font-size: inherit;
+  letter-spacing: inherit;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 #visit-count {
   font-size: inherit;
@@ -4264,13 +4272,14 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
-      <p class="start-ver"><span id="visit-count"></span><span id="app-version">2026-09-26 02:21:33</span></p>
+      <p class="start-ver"><span id="visit-count"></span><span id="battle-count" hidden></span><span id="app-version">${SHOGI_VERSION_LABEL}</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
     </div>`;
     document.body.appendChild(el);
     if (lastVisitN != null) paintVisits(lastVisitN);
+    void loadBattleCount();
     requestAnimationFrame(() => {
       el.querySelector(".win-show")?.classList.add("play");
       fitStartCard();
@@ -4316,6 +4325,8 @@ label.setting {
     newGame();
   }
   function newGame() {
+    // bc: +1 per match start (CPU always; online: host side only)
+    if (!(netMode && netRole === "guest")) hitBattleCounter();
     stopEngine();
     searchId++;
     pos = initialPosition();
@@ -4884,8 +4895,8 @@ label.setting {
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-26 02:21:33";
-  var SHOGI_BUILD_TIME = 1790356893328;
+    var SHOGI_VERSION_LABEL = "2026-09-27 19:33:52";
+  var SHOGI_BUILD_TIME = 1790505232639;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
@@ -4936,6 +4947,56 @@ label.setting {
         }
       } catch (e) {}
     }
+  }
+  // Worldwide battle counter (bc) — abacus key nikkukyuu/shogi-battles.
+  // Never-decrease: localStorage shogi_battleLast, show max(server, last). Silent on failure.
+  var BATTLE_API = "https://abacus.jasoncameron.dev";
+  var BATTLE_KEY = "nikkukyuu/shogi-battles";
+  var BATTLE_LAST_KEY = "shogi_battleLast";
+  function readBattleLast() {
+    try {
+      var n = Number(localStorage.getItem(BATTLE_LAST_KEY));
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+  function writeBattleLast(n) {
+    try {
+      if (Number.isFinite(n) && n > readBattleLast()) localStorage.setItem(BATTLE_LAST_KEY, String(Math.floor(n)));
+    } catch (e) {}
+  }
+  function parseBattleValue(d) {
+    var n = d && (typeof d.value === "number" ? d.value : Number(d.value));
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+  }
+  function paintBattles(n) {
+    var el = document.getElementById("battle-count");
+    if (!el) return;
+    el.textContent = "bc " + Number(n).toLocaleString("ja-JP");
+    el.hidden = false;
+  }
+  function hitBattleCounter() {
+    try {
+      fetch(BATTLE_API + "/hit/" + BATTLE_KEY + "?_=" + Date.now(), { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { var n = parseBattleValue(d); if (n != null) writeBattleLast(n); })
+        .catch(function () {});
+    } catch (e) {}
+  }
+  async function loadBattleCount() {
+    var last = readBattleLast();
+    if (last > 0) paintBattles(last);
+    try {
+      const r = await fetch(BATTLE_API + "/get/" + BATTLE_KEY + "?_=" + Date.now(), { cache: "no-store" });
+      var n = null;
+      if (r.ok) n = parseBattleValue(await r.json());
+      else if (r.status === 404) n = 0;
+      if (n == null) return;
+      var best = Math.max(n, last);
+      writeBattleLast(best);
+      paintBattles(best);
+    } catch (e) {}
   }
   bindViewport();
   showStartScreen();
