@@ -2044,7 +2044,6 @@ label.setting {
 .start-overlay .net-picks .start-btn { min-width: 0; letter-spacing: 0.04em; padding: 0 6px; white-space: nowrap; }
 .start-overlay .net-picks .start-btn.find { font-size: clamp(1rem, 4vw, 1.2rem); font-weight: 900; }
 .start-overlay .net-picks .start-btn.room { font-size: clamp(0.9rem, 3.4vw, 1.05rem); background: linear-gradient(180deg, #3d5a3a, #243a22); }
-.end-card .rank-record.pvp-note { font-size: 0.85rem; color: #ffe08a; letter-spacing: 0.04em; font-weight: 700; }
 .net-card button.big { min-height: 52px; font-size: 1.1rem; padding: 0 22px; }
 .search-radar { position: relative; width: 120px; height: 120px; margin: 4px auto 6px; }
 .search-radar span { position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(224, 192, 96, 0.85); opacity: 0; transform: scale(0.3); }
@@ -5095,7 +5094,6 @@ label.setting {
       ${!netMode && lastRecordedMs != null ? `<div class="rank-record">${formatMs(lastRankUpdated ? lastRecordedMs : lastAttemptMs ?? lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}</div>` : ""}
       ${!netMode && lastRankUpdated && lastRank != null && lastRank <= 100 ? '<div class="rank-record">\u304A\u3081\u3067\u3068\u3046</div>' : ""}
       ${!netMode && !lastRankUpdated && lastAttemptMs != null && lastRecordedMs != null && lastAttemptMs > lastRecordedMs ? '<div class="rank-record miss">\u524D\u56DE\u3088\u308A\u9045\u304B\u3063\u305F\u306E\u3067\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u66F4\u65B0\u3057\u307E\u305B\u3093</div>' : ""}
-      ${netMode ? '<div class="rank-record pvp-note">対人戦ではポイント・ランキング・記録は入りません</div>' : ""}
       <div class="end-trophies">${slots}</div>
       <div class="btns" style="justify-content:center">
         <button class="primary" id="btn-again">${btnLabel}</button>
@@ -5287,8 +5285,8 @@ label.setting {
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-28 05:41:02";
-  var SHOGI_BUILD_TIME = 1790541662342;
+    var SHOGI_VERSION_LABEL = "2026-09-28 05:49:33";
+  var SHOGI_BUILD_TIME = 1790542173450;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
