@@ -1505,6 +1505,12 @@ label.setting {
   .win-show { padding: 5px 8px 6px; }
   .win-sub { margin-bottom: 0; }
 }
+@media (max-height: 720px) {
+  .start-card .start-rank-box { gap: 4px; }
+  .start-card .start-rank-list { min-height: 76px; padding: 2px 8px 4px; font-size: 0.74rem; line-height: 1.25; }
+  .start-card .start-rank-list li { padding: 1px 0; }
+  .start-overlay .start-card #btn-rank { min-height: 36px; }
+}
 @media (max-height: 640px) {
   .start-card { padding: 8px 10px 6px; gap: 5px; }
   .win-note { font-size: 0.78rem; padding: 2px 8px; }
@@ -2081,6 +2087,8 @@ label.setting {
 .start-rank-list .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .start-rank-list .ms { opacity: 0.9; font-variant-numeric: tabular-nums; }
 .start-rank-list .empty { justify-content: center; opacity: 0.7; }
+/* no ranking yet: don't reserve 5 empty rows (avoids a big blank gap on the start card) */
+.start-card .start-rank-list:has(> li.empty:only-child) { min-height: 0; }
 </style>
 </head>
 <body>
@@ -4284,6 +4292,10 @@ label.setting {
       el.querySelector(".win-show")?.classList.add("play");
       fitStartCard();
       requestAnimationFrame(fitStartCard);
+      const card = el.querySelector(".start-card");
+      if (card && typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(() => fitStartCard()).observe(card);
+      }
     });
     bindMenuControls(el);
     el.querySelector("#btn-nick-save-start")?.addEventListener("click", () => {
@@ -4758,11 +4770,15 @@ label.setting {
     const card = overlay?.querySelector(".start-card");
     if (!overlay || !card) return;
     card.style.transform = "none";
-    const avail = Math.max(200, overlay.clientHeight - 4);
-    const need = card.scrollHeight;
-    const scale = need > 0 ? Math.min(1, avail / need) : 1;
+    // Fit the whole border-box inside the overlay's content box (minus its padding),
+    // so the bottom edge never sits below the viewport.
+    const os = getComputedStyle(overlay);
+    const padY = (parseFloat(os.paddingTop) || 0) + (parseFloat(os.paddingBottom) || 0);
+    const avail = Math.max(200, overlay.clientHeight - padY);
+    const need = Math.max(card.offsetHeight, card.scrollHeight + card.offsetHeight - card.clientHeight);
+    const scale = need > 0 ? Math.min(1, (avail - 1) / need) : 1;
     card.style.transformOrigin = "top center";
-    card.style.transform = scale < 0.995 ? `scale(${scale})` : "none";
+    card.style.transform = scale < 0.999 ? `scale(${scale})` : "none";
   }
   function bindViewport() {
     applyViewport();
@@ -4895,8 +4911,8 @@ label.setting {
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-27 19:33:52";
-  var SHOGI_BUILD_TIME = 1790505232639;
+    var SHOGI_VERSION_LABEL = "2026-09-27 19:49:36";
+  var SHOGI_BUILD_TIME = 1790506176271;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
