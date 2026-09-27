@@ -3376,6 +3376,26 @@ label.setting {
   var thinking = false;
   var thinkStartedAt = 0;
   var thinkHoldTimer = 0;
+  // Human-like COM pacing: minimum "thinking" time before the COM move is shown.
+  // Rules are identical for both sides; this only affects presentation timing.
+  var thinkMinMs = 0;
+  var forceMoveNow = false;
+  var pendingEngineApply = null;
+  var HUMAN_THINK_MS = {
+    beginner: [700, 1500],
+    intermediate: [800, 1900],
+    advanced: [900, 2400],
+    serious: [1000, 2800]
+  };
+  function humanLikeThinkMs(p, difficulty) {
+    var legalN = 0;
+    try { legalN = generateLegalMoves(p).length; } catch (e) { legalN = 30; }
+    var r = Math.random();
+    if (legalN <= 1) return 350 + r * 300; // forced reply: quick but not instant
+    if ((p.ply || 0) < 6) return 500 + r * 600; // opening moves are played briskly
+    var range = HUMAN_THINK_MS[difficulty] || HUMAN_THINK_MS.advanced;
+    return range[0] + r * (range[1] - range[0]);
+  }
   var engineInfo = null;
   var searchId = 0;
   var flipped = false;
@@ -3529,6 +3549,9 @@ label.setting {
     clearThinkHold();
     thinking = true;
     thinkStartedAt = performance.now();
+    thinkMinMs = humanLikeThinkMs(pos, settings.difficulty);
+    forceMoveNow = false;
+    pendingEngineApply = null;
     engineInfo = null;
     const id = ++searchId;
     playThinking();
@@ -3563,6 +3586,7 @@ label.setting {
       if (msg.id !== searchId) return;
       engineInfo = msg.info;
       const applyResult = () => {
+        pendingEngineApply = null;
         if (msg.id !== searchId) return;
         thinkHoldTimer = 0;
         thinking = false;
@@ -3576,9 +3600,12 @@ label.setting {
         render();
         startEngineIfNeeded();
       };
-      const wait2 = Math.max(0, 80 - (performance.now() - thinkStartedAt));
-      if (wait2 > 0) thinkHoldTimer = window.setTimeout(applyResult, wait2);
-      else applyResult();
+      const minHold = forceMoveNow ? 80 : Math.max(80, thinkMinMs);
+      const wait2 = Math.max(0, minHold - (performance.now() - thinkStartedAt));
+      if (wait2 > 0) {
+        pendingEngineApply = applyResult;
+        thinkHoldTimer = window.setTimeout(applyResult, wait2);
+      } else applyResult();
     }
   };
   function stopEngine() {
@@ -4883,7 +4910,17 @@ label.setting {
     app.querySelector("#btn-resign").addEventListener("click", () => {
       void resign();
     });
-    app.querySelector("#btn-stop").addEventListener("click", () => stopEngine());
+    app.querySelector("#btn-stop").addEventListener("click", () => {
+      // 「今すぐ指す」: skip the human-like hold as well as the search.
+      forceMoveNow = true;
+      if (pendingEngineApply) {
+        const fn = pendingEngineApply;
+        clearThinkHold();
+        fn();
+        return;
+      }
+      stopEngine();
+    });
     app.querySelector("#btn-rank").addEventListener("click", () => {
       void showRanking(lastRecordAt ?? void 0);
     });
@@ -4935,8 +4972,8 @@ label.setting {
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-27 22:49:11";
-  var SHOGI_BUILD_TIME = 1790516951763;
+    var SHOGI_VERSION_LABEL = "2026-09-28 03:23:30";
+  var SHOGI_BUILD_TIME = 1790533410079;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
