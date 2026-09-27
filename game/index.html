@@ -118,6 +118,7 @@ header.top h1 {
   50% { box-shadow: 0 3px 0 #8a1830, 0 0 22px rgba(255, 120, 150, 0.85); }
 }
 @media (prefers-reduced-motion: reduce) { .start-transfer { animation: none; } }
+.save-note .easy-link { color: #ffe07a; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; font-weight: 900; }
 .save-note {
   appearance: none;
   -webkit-appearance: none;
@@ -4400,7 +4401,7 @@ label.setting {
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
       <a class="start-transfer" id="btn-transfer" href="/transfer/?from=/shogi/game/">🔄 引き継ぎ<small>（機種変更・データ移行）</small></a>
-      <a class="save-note" id="save-note" href="/transfer/?from=/shogi/game/">⚠ 記録はこの端末のブラウザ内だけに保存。iPhoneは7日ほど開かないと消えることがあります</a>
+      <a class="save-note" id="save-note" href="/transfer/?from=/shogi/game/">⚠ 記録はこの端末のブラウザ内だけ。iPhoneは7日ほど開かないと消えることも <span class="easy-link">→ かんたんな方法はこちら</span></a>
       <p class="start-ver"><span id="visit-count"></span><span id="battle-count" hidden></span><span id="app-version">${SHOGI_VERSION_LABEL}</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
@@ -5046,8 +5047,8 @@ label.setting {
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-28 04:09:24";
-  var SHOGI_BUILD_TIME = 1790536164896;
+    var SHOGI_VERSION_LABEL = "2026-09-28 04:19:08";
+  var SHOGI_BUILD_TIME = 1790536748685;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
