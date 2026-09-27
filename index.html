@@ -92,13 +92,54 @@
     font-size: 0.85rem;
   }
   footer a { color: var(--accent); }
+  /* β版 badge (beta) */
+  .beta-badge {
+    display: inline-block;
+    margin-left: 0.35em;
+    padding: 0.2em 0.55em 0.22em;
+    font-size: max(0.72rem, 0.42em);
+    font-weight: 900;
+    font-style: normal;
+    line-height: 1.1;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    vertical-align: middle;
+    color: #fff;
+    -webkit-text-fill-color: #fff;
+    -webkit-text-stroke: 0;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+    background: linear-gradient(135deg, #ff2d55, #ff8a00);
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    border-radius: 999px;
+    box-shadow: 0 0 12px rgba(255, 70, 70, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+    transform: rotate(-8deg);
+    filter: none;
+  }
+  .beta-banner {
+    margin: 10px auto 0;
+    max-width: 30em;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 2px solid #ff8a00;
+    background: linear-gradient(135deg, rgba(255, 45, 85, 0.2), rgba(255, 138, 0, 0.18));
+    box-shadow: 0 0 18px rgba(255, 110, 40, 0.22);
+    color: #fff1dc;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.55;
+    text-align: center;
+  }
+  .beta-banner strong { color: #c01830; font-weight: 900; letter-spacing: 0.04em; }
+  /* light page: dark text on warm tint for readability */
+  .beta-banner { color: #5a1a08; background: linear-gradient(135deg, #fff0e0, #ffe2c2); border-color: #e0561a; box-shadow: 0 2px 12px rgba(224, 86, 26, 0.18); }
 </style>
 </head>
 <body>
   <header>
     <p class="kicker">NIKKUKYUU-CODE</p>
-    <h1>7GET将棋</h1>
+    <h1>7GET将棋<span class="beta-badge">β版</span></h1>
     <p class="sub">歩以外7枚 or 玉取り — ゲームの説明</p>
+    <p class="beta-banner" role="note"><strong>⚠ β版（ベータ版）</strong> 現在ベータ版です。不具合や仕様変更があります</p>
   </header>
   <main>
     <article class="card">

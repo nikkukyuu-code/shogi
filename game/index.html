@@ -2087,6 +2087,30 @@ label.setting {
 .start-rank-list .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .start-rank-list .ms { opacity: 0.9; font-variant-numeric: tabular-nums; }
 .start-rank-list .empty { justify-content: center; opacity: 0.7; }
+/* β版 badge (beta) */
+.beta-badge {
+  display: inline-block;
+  margin-left: 0.35em;
+  padding: 0.2em 0.55em 0.22em;
+  font-size: max(0.72rem, 0.42em);
+  font-weight: 900;
+  font-style: normal;
+  line-height: 1.1;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  vertical-align: middle;
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+  -webkit-text-stroke: 0;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  background: linear-gradient(135deg, #ff2d55, #ff8a00);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  box-shadow: 0 0 12px rgba(255, 70, 70, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+  transform: rotate(-8deg);
+  filter: none;
+}
+.start-title .beta-badge { font-size: max(0.72rem, 0.55em); letter-spacing: 0.06em; }
 /* no ranking yet: don't reserve 5 empty rows (avoids a big blank gap on the start card) */
 .start-card .start-rank-list:has(> li.empty:only-child) { min-height: 0; }
 </style>
@@ -4251,7 +4275,7 @@ label.setting {
         <a class="home-link start-home" href="https://nikkukyuu-code.github.io/">トップページに戻る</a>
         <a class="home-link start-home" href="../">ルール説明へ</a>
       </div>
-      <h2 class="start-title">7GET将棋</h2>
+      <h2 class="start-title">7GET将棋<span class="beta-badge">β版</span></h2>
       <section class="win-show" aria-label="\u52DD\u3061\u65B9">
         <p class="win-note">\u3075\u3064\u3046\u306E\u5C06\u68CB\u3068\u9055\u3044\u307E\u3059</p>
         <ol class="win-lines">
@@ -4911,8 +4935,8 @@ label.setting {
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-27 19:49:36";
-  var SHOGI_BUILD_TIME = 1790506176271;
+    var SHOGI_VERSION_LABEL = "2026-09-27 22:49:11";
+  var SHOGI_BUILD_TIME = 1790516951763;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
