@@ -90,11 +90,34 @@ header.top h1 {
   flex-shrink: 0;
 }
 .start-transfer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 8px 0 4px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 2px solid #ffe07a;
+  background: linear-gradient(180deg, #ff7ab8 0%, #ff4f7a 45%, #d8301c 100%);
+  color: #fff;
   font-family: inherit;
-  cursor: pointer;
-  background: #5a2410;
-  border-color: #ff9a3c;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+  box-shadow: 0 3px 0 #8a1830, 0 0 16px rgba(255, 90, 120, 0.5);
+  animation: start-transfer-glow 2.4s ease-in-out infinite;
 }
+.start-transfer small { font-size: 0.78em; font-weight: 800; letter-spacing: 0.02em; }
+@keyframes start-transfer-glow {
+  0%, 100% { box-shadow: 0 3px 0 #8a1830, 0 0 10px rgba(255, 90, 120, 0.4); }
+  50% { box-shadow: 0 3px 0 #8a1830, 0 0 22px rgba(255, 120, 150, 0.85); }
+}
+@media (prefers-reduced-motion: reduce) { .start-transfer { animation: none; } }
 .save-note {
   appearance: none;
   -webkit-appearance: none;
@@ -102,8 +125,8 @@ header.top h1 {
   box-sizing: border-box;
   text-decoration: none;
   width: 100%;
-  margin: 0 0 8px;
-  padding: 4px 8px;
+  margin: 0 0 6px;
+  padding: 3px 8px;
   border-radius: 8px;
   border: 1px solid rgba(255, 154, 60, 0.8);
   background: rgba(60, 22, 6, 0.75);
@@ -4346,9 +4369,7 @@ label.setting {
       <div class="start-nav">
         <a class="home-link start-home" href="https://nikkukyuu-code.github.io/">トップページに戻る</a>
         <a class="home-link start-home" href="../">ルール説明へ</a>
-        <a class="home-link start-home start-transfer" id="btn-transfer" href="/transfer/?from=/shogi/game/">引き継ぎ</a>
       </div>
-      <a class="save-note" id="save-note" href="/transfer/?from=/shogi/game/">⚠ 記録はこの端末のブラウザ内だけに保存。iPhoneは7日ほど開かないと消えることも →「引き継ぎ」でコードを控えてください</a>
       <h2 class="start-title">7GET将棋<span class="beta-badge">β版</span></h2>
       <section class="win-show" aria-label="\u52DD\u3061\u65B9">
         <p class="win-note">\u3075\u3064\u3046\u306E\u5C06\u68CB\u3068\u9055\u3044\u307E\u3059</p>
@@ -4378,6 +4399,8 @@ label.setting {
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
+      <a class="start-transfer" id="btn-transfer" href="/transfer/?from=/shogi/game/">🔄 引き継ぎ<small>（機種変更・データ移行）</small></a>
+      <a class="save-note" id="save-note" href="/transfer/?from=/shogi/game/">⚠ 記録はこの端末のブラウザ内だけに保存。iPhoneは7日ほど開かないと消えることがあります</a>
       <p class="start-ver"><span id="visit-count"></span><span id="battle-count" hidden></span><span id="app-version">${SHOGI_VERSION_LABEL}</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
@@ -4479,8 +4502,6 @@ label.setting {
     startEngineIfNeeded();
   }
   function undo() {
-    // COM戦は「待ったなし」: take-backs are disabled in every mode.
-    return;
     if (netMode) return;
     if (thinking) {
       stopEngine();
@@ -4926,6 +4947,7 @@ label.setting {
       <div id="trophy-bot" class="trophy-bar you"></div>
     </div>
     <div class="dock">
+      <button id="btn-undo"${netMode ? " disabled" : ""}>\u5F85\u3063\u305F</button>
       <button id="btn-resign">\u6295\u4E86</button>
       <button id="btn-new">\u65B0\u898F</button>
       <button class="stop" id="btn-stop" ${thinking ? "" : "disabled"}>\u4ECA\u3059\u3050\u6307\u3059</button>
@@ -4958,6 +4980,7 @@ label.setting {
       setSoundEnabled(settings.sound);
     });
     app.querySelector("#btn-new").addEventListener("click", () => showStartScreen());
+    app.querySelector("#btn-undo").addEventListener("click", () => undo());
     app.querySelector("#btn-resign").addEventListener("click", () => {
       void resign();
     });
@@ -5023,8 +5046,8 @@ label.setting {
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-28 03:39:16";
-  var SHOGI_BUILD_TIME = 1790534356096;
+    var SHOGI_VERSION_LABEL = "2026-09-28 04:09:24";
+  var SHOGI_BUILD_TIME = 1790536164896;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
