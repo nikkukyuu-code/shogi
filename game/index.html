@@ -2040,8 +2040,24 @@ label.setting {
 }
 
 
+.net-picks { display: grid; grid-template-columns: 1.6fr 1fr; gap: 8px; width: 100%; }
+.start-overlay .net-picks .start-btn { min-width: 0; letter-spacing: 0.04em; padding: 0 6px; white-space: nowrap; }
+.start-overlay .net-picks .start-btn.find { font-size: clamp(1rem, 4vw, 1.2rem); font-weight: 900; }
+.start-overlay .net-picks .start-btn.room { font-size: clamp(0.9rem, 3.4vw, 1.05rem); background: linear-gradient(180deg, #3d5a3a, #243a22); }
+.net-card button.big { min-height: 52px; font-size: 1.1rem; padding: 0 22px; }
+.search-radar { position: relative; width: 120px; height: 120px; margin: 4px auto 6px; }
+.search-radar span { position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(224, 192, 96, 0.85); opacity: 0; transform: scale(0.3); }
+.search-radar.searching span { animation: qm-ping 2.1s ease-out infinite; }
+.search-radar.searching span:nth-child(2) { animation-delay: 0.7s; }
+.search-radar.searching span:nth-child(3) { animation-delay: 1.4s; }
+.search-radar b { position: absolute; inset: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 2rem; background: radial-gradient(circle, rgba(224, 192, 96, 0.35), rgba(40, 24, 10, 0.85)); box-shadow: 0 0 20px rgba(224, 192, 96, 0.4); }
+.search-radar.searching b { animation: qm-bob 1.4s ease-in-out infinite; }
+.search-radar.no-match b { filter: grayscale(0.8); opacity: 0.6; }
+@keyframes qm-ping { 0% { opacity: 0.9; transform: scale(0.3); } 100% { opacity: 0; transform: scale(1.05); } }
+@keyframes qm-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .search-radar span, .search-radar b { animation: none !important; } }
+.net-picks { margin-top: 8px; }
 .start-btn.net {
-  margin-top: 8px;
   background: linear-gradient(#3a5a3a, #2a3f2a);
   border-color: #8ecf8e;
 }
@@ -2065,6 +2081,8 @@ label.setting {
   font-size: clamp(1.8rem, 8vw, 2.6rem);
   letter-spacing: .28em;
   font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
   color: #ffe08a;
   margin: 10px 0 12px;
 }
@@ -4063,11 +4081,12 @@ label.setting {
   function netPeerId(code) {
     return "nk7shogi" + String(code || "").toUpperCase();
   }
+  // 部屋番号: 6-digit numbers only (000000–999999). Peer id = "nk7shogi" + code (namespace unchanged).
   function makeRoomCode() {
-    const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-    let c = "";
-    for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
-    return c;
+    return String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+  }
+  function normalizeRoomDigits(raw) {
+    return String(raw || "").replace(/[^0-9]/g, "").slice(0, 6);
   }
   function loadPeerLib() {
     return new Promise((resolve, reject) => {
@@ -4225,14 +4244,16 @@ label.setting {
     enterNetLobby();
     const el = setNetCard(`
       <h2>ネット対戦</h2>
-      <p>同じページを開いた相手と、部屋番号で対戦します。</p>
+      <div class="row"><button type="button" class="primary big" id="net-find">🌐 対戦相手を探す</button></div>
+      <p class="net-note">知り合いと遊ぶ時は、6桁の部屋番号で対戦できます。</p>
       <div class="row">
-        <button type="button" class="primary" id="net-host">部屋を作る</button>
+        <button type="button" id="net-host">部屋を作る</button>
         <button type="button" id="net-join">部屋に入る</button>
       </div>
       <div class="row"><button type="button" id="net-back">戻る</button></div>
     `);
     el.querySelector("#net-host").onclick = () => void hostNetRoom();
+    el.querySelector("#net-find").onclick = () => void findOpponent();
     el.querySelector("#net-join").onclick = () => showJoinNet();
     el.querySelector("#net-back").onclick = () => {
       closeNet();
@@ -4242,8 +4263,8 @@ label.setting {
   function showJoinNet() {
     const el = setNetCard(`
       <h2>部屋に入る</h2>
-      <p>相手の部屋番号を入力</p>
-      <p><input id="net-code" type="text" maxlength="6" autocomplete="off" /></p>
+      <p>相手の部屋番号（6桁の数字）を入力</p>
+      <p><input id="net-code" type="text" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="123456" aria-label="部屋番号（6桁の数字）" /></p>
       <div class="row">
         <button type="button" class="primary" id="net-go">入室</button>
         <button type="button" id="net-back">戻る</button>
@@ -4251,7 +4272,10 @@ label.setting {
       <p class="net-note" id="net-msg"></p>
     `);
     el.querySelector("#net-back").onclick = () => openNetMenu();
-    el.querySelector("#net-go").onclick = () => void joinNetRoom(el.querySelector("#net-code").value);
+    const codeInp = el.querySelector("#net-code");
+    codeInp.addEventListener("input", () => { const v = normalizeRoomDigits(codeInp.value); if (v !== codeInp.value) codeInp.value = v; });
+    codeInp.addEventListener("keydown", (e) => { if (e.key === "Enter") void joinNetRoom(codeInp.value); });
+    el.querySelector("#net-go").onclick = () => void joinNetRoom(codeInp.value);
   }
   async function hostNetRoom() {
     closeNet();
@@ -4277,6 +4301,7 @@ label.setting {
       setNetCard(`
         <h2>部屋番号</h2>
         <p class="room-code">${netRoom}</p>
+        <div class="row"><button type="button" id="net-copy">コピー</button>${navigator.share ? '<button type="button" id="net-share">共有</button>' : ""}</div>
         <p>相手にこの番号を伝えてください。</p>
         <p class="net-note">入室待ち…　あなたは先手です</p>
         <div class="row"><button type="button" id="net-cancel">やめる</button></div>
@@ -4284,6 +4309,15 @@ label.setting {
       document.querySelector("#net-cancel")?.addEventListener("click", () => {
         closeNet();
         showStartScreen();
+      });
+      const code = netRoom;
+      document.querySelector("#net-copy")?.addEventListener("click", async () => {
+        const note = document.querySelector(".net-card .net-note");
+        try { await navigator.clipboard.writeText(code); if (note) note.textContent = "番号をコピーしました：" + code; }
+        catch (e) { if (note) note.textContent = "コピーできませんでした。番号 " + code + " を伝えてください"; }
+      });
+      document.querySelector("#net-share")?.addEventListener("click", () => {
+        navigator.share({ title: "7GET将棋", text: "7GET将棋で対戦しよう！「部屋で対戦」→「部屋に入る」で番号 " + code + " を入力してね", url: "https://nikkukyuu-code.github.io/shogi/game/" }).catch(() => {});
       });
       netPeer.on("connection", (conn) => {
         if (netConn && netConn.open) {
@@ -4302,10 +4336,10 @@ label.setting {
     }
   }
   async function joinNetRoom(raw) {
-    const code = String(raw || "").toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, 6);
+    const code = normalizeRoomDigits(raw);
     const msg = document.querySelector("#net-msg");
     if (code.length !== 6) {
-      if (msg) msg.textContent = "6桁で入力してください";
+      if (msg) msg.textContent = "6桁の数字で入力してください";
       return;
     }
     closeNet();
@@ -4335,13 +4369,210 @@ label.setting {
         window.setTimeout(() => reject(new Error("部屋が見つかりません")), 10000);
       });
       netSend({ type: "join", nick: savedNickname() || settings.nickname || "名無し" });
-      setNetCard(`<h2>接続しました</h2><p class="room-code">${netRoom}</p><p class="net-note">対局開始を待っています</p>`);
+      // hello may already have arrived (beginNetMatch ran) — don't cover the board again
+      if (!netMode) setNetCard(`<h2>接続しました</h2><p class="room-code">${netRoom}</p><p class="net-note">対局開始を待っています</p>`);
     } catch (e) {
       setNetCard(`<h2>入れませんでした</h2><p class="net-note">番号が違うか、相手が部屋を開いていません</p><div class="row"><button id="net-back">戻る</button></div>`);
       document.querySelector("#net-back")?.addEventListener("click", () => openNetMenu());
     }
   }
 
+
+  // ---- 対戦相手を探す (random matchmaking) ----
+  // Same approach as Space Trick Battle: one well-known lobby peer id per game on the PeerJS broker.
+  //  1) connect to the lobby id as a guest (short timeout)  2) nobody → claim the lobby id and wait
+  //  3) the lobby holder opens a normal numeric room (nk7shogi<6 digits>), sends the number over the
+  //     lobby link and frees the lobby id; then both play through the normal room flow
+  //     (holder = host/先手, seeker = guest/後手), so rules and the bc counter stay the same.
+  // Namespace "nk7shogiquicklobbyv1": only 7GET将棋 players match each other. No automatic COM fallback.
+  var QUICK_LOBBY_ID = "nk7shogiquicklobbyv1";
+  var QUICK_WAIT_MS = 30000;
+  var quickToken = 0;
+  var quickPeers = [];
+  function qmSleep(ms) { return new Promise((r) => window.setTimeout(r, ms)); }
+  function qmDrop(p) { try { p.destroy(); } catch (e) {} quickPeers = quickPeers.filter((x) => x !== p); }
+  function cancelQuick() {
+    quickToken++;
+    quickPeers.slice().forEach(qmDrop);
+    quickPeers = [];
+  }
+  function qmOpenPeer(Peer, id) {
+    return new Promise((resolve, reject) => {
+      const p = id ? new Peer(id, { debug: 0 }) : new Peer({ debug: 0 });
+      quickPeers.push(p);
+      const t = window.setTimeout(() => { qmDrop(p); reject(new Error("timeout")); }, 10000);
+      p.on("open", () => { window.clearTimeout(t); resolve(p); });
+      p.on("error", (e) => { window.clearTimeout(t); qmDrop(p); reject(e); });
+    });
+  }
+  function paintSearch(msg, leftMs, state) {
+    const el = setNetCard(`
+      <div class="search-radar ${state || "searching"}" aria-hidden="true"><span></span><span></span><span></span><b>🌐</b></div>
+      <h2 class="search-msg">${msg}</h2>
+      <p class="net-note search-left">${leftMs != null ? "残り " + Math.max(0, Math.ceil(leftMs / 1000)) + " 秒" : (state === "no-match" ? "しばらくしてからもう一度探すか、COMと対戦してください" : "同じゲームを遊んでいる人と自動でつなぎます")}</p>
+      <div class="row">${state === "no-match"
+        ? '<button type="button" class="primary" id="qm-retry">もう一度探す</button><button type="button" id="qm-com">COMと対戦する</button><button type="button" id="qm-back">戻る</button>'
+        : '<button type="button" id="qm-cancel">キャンセル</button>'}</div>
+    `);
+    el.querySelector("#qm-cancel")?.addEventListener("click", () => { cancelQuick(); closeNet(); showStartScreen(); });
+    el.querySelector("#qm-back")?.addEventListener("click", () => { cancelQuick(); closeNet(); showStartScreen(); });
+    el.querySelector("#qm-retry")?.addEventListener("click", () => void findOpponent());
+    el.querySelector("#qm-com")?.addEventListener("click", () => { cancelQuick(); closeNet(); showStartScreen(); void startMatch(); });
+  }
+  function updateSearch(msg, leftMs) {
+    if (netMode) return; // match already started
+    const h = document.querySelector(".net-card .search-msg");
+    const l = document.querySelector(".net-card .search-left");
+    if (!h || !l) return paintSearch(msg, leftMs);
+    h.textContent = msg;
+    if (leftMs != null) l.textContent = "残り " + Math.max(0, Math.ceil(leftMs / 1000)) + " 秒";
+  }
+  async function qmSeek(Peer, token) {
+    let p;
+    try { p = await qmOpenPeer(Peer, null); } catch (e) { return null; }
+    try {
+      const conn = p.connect(QUICK_LOBBY_ID, { reliable: true });
+      return await new Promise((resolve) => {
+        const t = window.setTimeout(() => resolve(null), 4000);
+        p.on("error", () => { window.clearTimeout(t); resolve(null); });
+        conn.on("error", () => { window.clearTimeout(t); resolve(null); });
+        conn.on("close", () => { window.clearTimeout(t); resolve(null); });
+        conn.on("open", () => { try { conn.send({ type: "mm-hello", v: 1 }); } catch (e) {} });
+        conn.on("data", (d) => {
+          if (token !== quickToken) { window.clearTimeout(t); return resolve(null); }
+          if (d && d.type === "mm-room" && /^\d{6}$/.test(String(d.code))) { window.clearTimeout(t); resolve(String(d.code)); }
+          else if (d && d.type === "mm-busy") { window.clearTimeout(t); resolve(null); }
+        });
+      });
+    } finally { qmDrop(p); }
+  }
+  // Guest: join the room the lobby holder opened (normal join flow; hello → beginNetMatch).
+  async function qmJoin(Peer, code, token) {
+    for (let i = 0; i < 4 && token === quickToken; i++) {
+      try {
+        netRole = "guest";
+        netRoom = code;
+        settings.humanSide = 1;
+        netPeer = new Peer({ debug: 0 });
+        await new Promise((resolve, reject) => {
+          netPeer.on("open", resolve);
+          netPeer.on("error", reject);
+          window.setTimeout(() => reject(new Error("timeout")), 8000);
+        });
+        const conn = netPeer.connect(netPeerId(code), { reliable: true });
+        wireNetConn(conn); // attach before open so the host's hello can't be missed
+        await new Promise((resolve, reject) => {
+          conn.on("open", resolve);
+          conn.on("error", reject);
+          netPeer.on("error", reject);
+          window.setTimeout(() => reject(new Error("timeout")), 7000);
+        });
+        if (token !== quickToken) { try { netPeer.destroy(); } catch (e) {} return false; }
+        netSend({ type: "join", nick: savedNickname() || settings.nickname || "名無し" });
+        updateSearch("対戦相手が見つかりました！対局を準備中…", null);
+        return true;
+      } catch (e) {
+        try { netPeer?.destroy(); } catch (e2) {}
+        netPeer = null;
+        await qmSleep(700);
+      }
+    }
+    return false;
+  }
+  // Lobby holder: wait for a seeker; then open a numeric room and hand over its number.
+  async function qmHold(Peer, deadline, token) {
+    let lobby;
+    try { lobby = await qmOpenPeer(Peer, QUICK_LOBBY_ID); } catch (e) { return "taken"; }
+    updateSearch("対戦相手を待っています…", deadline - Date.now());
+    return await new Promise((resolve) => {
+      let busy = false, done = false;
+      const tick = window.setInterval(() => {
+        if (token !== quickToken) { finish(null); return; }
+        if (!busy && Date.now() >= deadline) { finish(null); return; }
+        if (!busy) updateSearch("対戦相手を待っています…", deadline - Date.now());
+      }, 250);
+      function finish(v) { if (done) return; done = true; window.clearInterval(tick); qmDrop(lobby); resolve(v); }
+      lobby.on("disconnected", () => { if (!busy) finish("taken"); });
+      lobby.on("connection", (conn) => {
+        if (busy) {
+          conn.on("open", () => { try { conn.send({ type: "mm-busy" }); } catch (e) {} window.setTimeout(() => { try { conn.close(); } catch (e) {} }, 300); });
+          return;
+        }
+        busy = true;
+        conn.on("open", async () => {
+          updateSearch("対戦相手が見つかりました！部屋を準備中…", null);
+          let code = null;
+          for (let i = 0; i < 3 && token === quickToken && !code; i++) {
+            const c = makeRoomCode();
+            const p = new Peer(netPeerId(c), { debug: 0 });
+            try {
+              await new Promise((res, rej) => { p.on("open", res); p.on("error", rej); window.setTimeout(() => rej(new Error("timeout")), 8000); });
+              netPeer = p; code = c;
+            } catch (e) { try { p.destroy(); } catch (e2) {} }
+          }
+          if (!code || token !== quickToken) { busy = false; try { conn.close(); } catch (e) {} return; }
+          netRole = "host";
+          netRoom = code;
+          settings.humanSide = 0;
+          let started = false;
+          netPeer.on("connection", (gc) => {
+            if (netConn && netConn.open) { try { gc.close(); } catch (e) {} return; }
+            wireNetConn(gc);
+            gc.on("open", () => {
+              if (token !== quickToken) return;
+              started = true;
+              netSend({ type: "hello", youAre: 1, nick: savedNickname() || settings.nickname || "名無し" });
+              beginNetMatch();
+            });
+          });
+          try { conn.send({ type: "mm-room", code }); } catch (e) {}
+          window.setTimeout(() => { if (!done) { done = true; window.clearInterval(tick); qmDrop(lobby); } }, 800);
+          const t0 = Date.now();
+          while (token === quickToken && Date.now() - t0 < 15000) {
+            if (started) return resolve("matched");
+            await qmSleep(150);
+          }
+          try { netPeer?.destroy(); } catch (e) {}
+          netPeer = null;
+          netConn = null;
+          resolve(null); // seeker never arrived → keep searching if time remains
+        });
+        conn.on("error", () => { busy = false; });
+      });
+    });
+  }
+  async function findOpponent() {
+    cancelQuick();
+    closeNet();
+    enterNetLobby();
+    const token = ++quickToken;
+    paintSearch("対戦相手を探しています…", null);
+    let Peer;
+    try { Peer = await loadPeerLib(); } catch (e) {
+      if (token === quickToken) paintSearch("接続できませんでした", null, "no-match");
+      return;
+    }
+    const deadline = Date.now() + QUICK_WAIT_MS;
+    while (token === quickToken && Date.now() < deadline) {
+      updateSearch("対戦相手を探しています…", deadline - Date.now());
+      const code = await qmSeek(Peer, token);
+      if (token !== quickToken) return;
+      if (code) {
+        updateSearch("対戦相手が見つかりました！接続中…", null);
+        if (await qmJoin(Peer, code, token)) return; // hello from host → beginNetMatch
+        continue;
+      }
+      const res = await qmHold(Peer, deadline, token);
+      if (token !== quickToken) return;
+      if (res === "matched") return;
+      if (res === "taken") { await qmSleep(300 + Math.random() * 500); continue; }
+    }
+    if (token !== quickToken) return;
+    cancelQuick();
+    try { netPeer?.destroy(); } catch (e) {}
+    netPeer = null;
+    paintSearch("今は対戦相手がいません", null, "no-match");
+  }
 
   // ---- 引き継ぎ: shared page https://nikkukyuu-code.github.io/transfer/ (all games, one code) ----
   // Older saves may only have the AES-sealed store (readable only here): write the plain list so the
@@ -4395,7 +4626,10 @@ label.setting {
         <button type="button" id="btn-nick-save-start">\u56FA\u5B9A</button>
       </label>
       <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
-      <button type="button" class="start-btn net" id="btn-net">\u30CD\u30C3\u30C8\u5BFE\u6226</button>
+      <div class="net-picks" role="group" aria-label="ネット対戦">
+        <button type="button" class="start-btn net find" id="btn-find">🌐 対戦相手を探す</button>
+        <button type="button" class="start-btn net room" id="btn-net">部屋で対戦</button>
+      </div>
       <div class="side-picks" role="group" aria-label="\u624B\u756A">
         <button type="button" data-side="0">\u5148\u624B</button>
         <button type="button" data-side="1">\u5F8C\u624B</button>
@@ -4437,6 +4671,10 @@ label.setting {
     el.querySelector("#btn-net")?.addEventListener("click", () => {
       unlock();
       openNetMenu();
+    });
+    el.querySelector("#btn-find")?.addEventListener("click", () => {
+      unlock();
+      void findOpponent();
     });
   }
   async function startMatch() {
@@ -5047,8 +5285,8 @@ label.setting {
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-28 04:19:08";
-  var SHOGI_BUILD_TIME = 1790536748685;
+    var SHOGI_VERSION_LABEL = "2026-09-28 05:18:29";
+  var SHOGI_BUILD_TIME = 1790540309303;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
