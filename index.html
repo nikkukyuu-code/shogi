@@ -132,6 +132,10 @@
   .beta-banner strong { color: #c01830; font-weight: 900; letter-spacing: 0.04em; }
   /* light page: dark text on warm tint for readability */
   .beta-banner { color: #5a1a08; background: linear-gradient(135deg, #fff0e0, #ffe2c2); border-color: #e0561a; box-shadow: 0 2px 12px rgba(224, 86, 26, 0.18); }
+  .save-banner { margin: 14px 0 4px; padding: 12px 14px; border-radius: 12px; border: 2px solid #e0561a; background: #fff4e6; color: #4a1a08; font-size: 0.9rem; line-height: 1.6; text-align: left; }
+  .save-banner strong { color: #b01830; }
+  .save-banner ul { margin: 6px 0 6px 1.2em; padding: 0; }
+  .save-banner li { margin: 2px 0; }
 </style>
 </head>
 <body>
@@ -149,6 +153,15 @@
         <a class="play" href="./game/">ゲームを遊ぶ</a>
         <a class="secondary" href="https://nikkukyuu-code.github.io/">サイトトップ</a>
       </p>
+      <div class="save-banner" role="note">
+        <strong>⚠ 記録（ランキング・ベストタイム・ニックネーム・設定）はこの端末のブラウザ内に保存されています。</strong>次の場合は消えることがあります：
+        <ul>
+          <li>iPhone/iPadのSafariでこのサイトを<strong>7日ほど開かなかった</strong>時</li>
+          <li>ブラウザの閲覧データ（サイトデータ/Cookie）を削除した時</li>
+          <li>シークレット/プライベートモードで遊んだ時（閉じると消えます）</li>
+        </ul>
+        別のブラウザや端末には自動では引き継がれません。大事な記録は<a href="/transfer/" style="color:inherit;font-weight:900">「引き継ぎ（全ゲーム共通コード）」</a>でコードを発行して控えておいてください（ゲーム画面の「引き継ぎ」ボタンからも開けます）。別の端末では同じページの「コードを入力」で記録を戻せます。
+      </div>
     </article>
 
     <h3>勝利条件</h3>
@@ -162,6 +175,7 @@
     <ul>
       <li>一人で AI（初級／中級／上級／真剣）と指せます</li>
       <li>部屋番号を使ったネット対戦もできます</li>
+      <li>AI（COM）戦は<strong>待ったなし</strong>です（一度指した手は戻せません）。AIが考えている間は「今すぐ指す」で急かせます</li>
       <li>駒の選択→移動、ドラッグ＆ドロップ、持ち駒打ちに対応</li>
     </ul>
   </main>

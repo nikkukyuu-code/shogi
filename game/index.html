@@ -89,6 +89,32 @@ header.top h1 {
   font-weight: 700;
   flex-shrink: 0;
 }
+.start-transfer {
+  font-family: inherit;
+  cursor: pointer;
+  background: #5a2410;
+  border-color: #ff9a3c;
+}
+.save-note {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  box-sizing: border-box;
+  text-decoration: none;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 154, 60, 0.8);
+  background: rgba(60, 22, 6, 0.75);
+  color: #ffe6c0;
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  cursor: pointer;
+}
 .start-nav {
   display: flex;
   flex-wrap: wrap;
@@ -4292,6 +4318,25 @@ label.setting {
     }
   }
 
+
+  // ---- 引き継ぎ: shared page https://nikkukyuu-code.github.io/transfer/ (all games, one code) ----
+  // Older saves may only have the AES-sealed store (readable only here): write the plain list so the
+  // shared transfer page can carry readable rankings.
+  async function materializePlainRanks() {
+    try {
+      const cur = JSON.parse(localStorage.getItem(PLAIN_RANK_KEY) || "[]");
+      if (Array.isArray(cur) && cur.length) return;
+      const sealed = await readSealedList();
+      if (!sealed || !sealed.length) return;
+      const opened = (await openEntries(sealed)).filter((e) => e && typeof e.ms === "number");
+      if (opened.length) localStorage.setItem(PLAIN_RANK_KEY, JSON.stringify(opened));
+    } catch (e) {}
+  }
+  async function openTransfer() {
+    await materializePlainRanks();
+    location.href = "/transfer/?from=/shogi/game/";
+  }
+
   function mountStartOverlay() {
     document.querySelector(".start-overlay")?.remove();
     const el = document.createElement("div");
@@ -4301,7 +4346,9 @@ label.setting {
       <div class="start-nav">
         <a class="home-link start-home" href="https://nikkukyuu-code.github.io/">トップページに戻る</a>
         <a class="home-link start-home" href="../">ルール説明へ</a>
+        <a class="home-link start-home start-transfer" id="btn-transfer" href="/transfer/?from=/shogi/game/">引き継ぎ</a>
       </div>
+      <a class="save-note" id="save-note" href="/transfer/?from=/shogi/game/">⚠ 記録はこの端末のブラウザ内だけに保存。iPhoneは7日ほど開かないと消えることも →「引き継ぎ」でコードを控えてください</a>
       <h2 class="start-title">7GET将棋<span class="beta-badge">β版</span></h2>
       <section class="win-show" aria-label="\u52DD\u3061\u65B9">
         <p class="win-note">\u3075\u3064\u3046\u306E\u5C06\u68CB\u3068\u9055\u3044\u307E\u3059</p>
@@ -4359,6 +4406,10 @@ label.setting {
       unlock();
       void startMatch();
     });
+    for (const id of ["#btn-transfer", "#save-note"]) {
+      el.querySelector(id)?.addEventListener("click", (e) => { e.preventDefault(); void openTransfer(); });
+    }
+    void materializePlainRanks();
     el.querySelector("#btn-net")?.addEventListener("click", () => {
       unlock();
       openNetMenu();
@@ -4428,6 +4479,8 @@ label.setting {
     startEngineIfNeeded();
   }
   function undo() {
+    // COM戦は「待ったなし」: take-backs are disabled in every mode.
+    return;
     if (netMode) return;
     if (thinking) {
       stopEngine();
@@ -4873,7 +4926,6 @@ label.setting {
       <div id="trophy-bot" class="trophy-bar you"></div>
     </div>
     <div class="dock">
-      <button id="btn-undo"${netMode ? " disabled" : ""}>\u5F85\u3063\u305F</button>
       <button id="btn-resign">\u6295\u4E86</button>
       <button id="btn-new">\u65B0\u898F</button>
       <button class="stop" id="btn-stop" ${thinking ? "" : "disabled"}>\u4ECA\u3059\u3050\u6307\u3059</button>
@@ -4906,7 +4958,6 @@ label.setting {
       setSoundEnabled(settings.sound);
     });
     app.querySelector("#btn-new").addEventListener("click", () => showStartScreen());
-    app.querySelector("#btn-undo").addEventListener("click", () => undo());
     app.querySelector("#btn-resign").addEventListener("click", () => {
       void resign();
     });
@@ -4972,8 +5023,8 @@ label.setting {
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-28 03:23:30";
-  var SHOGI_BUILD_TIME = 1790533410079;
+    var SHOGI_VERSION_LABEL = "2026-09-28 03:39:16";
+  var SHOGI_BUILD_TIME = 1790534356096;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
