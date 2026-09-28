@@ -547,13 +547,6 @@ button.primary {
   border-color: #c06060;
 }
 
-button.stop {
-  background: linear-gradient(180deg, #b8860b, #8b6914);
-  border-color: var(--gold);
-  color: #1a1008;
-  font-weight: 700;
-}
-
 label.setting {
   display: flex;
   flex-direction: column;
@@ -3498,7 +3491,6 @@ header.top .status { min-width: 0; overflow: hidden; }
   // Human-like COM pacing: minimum "thinking" time before the COM move is shown.
   // Rules are identical for both sides; this only affects presentation timing.
   var thinkMinMs = 0;
-  var forceMoveNow = false;
   var pendingEngineApply = null;
   var HUMAN_THINK_MS = {
     beginner: [700, 1500],
@@ -3669,7 +3661,6 @@ header.top .status { min-width: 0; overflow: hidden; }
     thinking = true;
     thinkStartedAt = performance.now();
     thinkMinMs = humanLikeThinkMs(pos, settings.difficulty);
-    forceMoveNow = false;
     pendingEngineApply = null;
     engineInfo = null;
     const id = ++searchId;
@@ -3719,7 +3710,7 @@ header.top .status { min-width: 0; overflow: hidden; }
         render();
         startEngineIfNeeded();
       };
-      const minHold = forceMoveNow ? 80 : Math.max(80, thinkMinMs);
+      const minHold = Math.max(80, thinkMinMs);
       const wait2 = Math.max(0, minHold - (performance.now() - thinkStartedAt));
       if (wait2 > 0) {
         pendingEngineApply = applyResult;
@@ -5247,7 +5238,6 @@ header.top .status { min-width: 0; overflow: hidden; }
       <button id="btn-undo"${netMode ? " disabled hidden" : ""}>\u5F85\u3063\u305F</button>
       <button id="btn-resign">\u6295\u4E86</button>
       <button id="btn-new">\u65B0\u898F</button>
-      <button class="stop" id="btn-stop" ${thinking ? "" : "disabled"}${netMode ? " hidden" : ""}>\u4ECA\u3059\u3050\u6307\u3059</button>
       <button id="btn-rank"${isSerious() && !netMode ? "" : " hidden"}>\u30E9\u30F3\u30AD\u30F3\u30B0</button>
       <button type="button" id="btn-nick">${displayNick()}</button>
       <span class="diff-lock">${settings.humanSide === 0 ? "\u5148\u624B" : "\u5F8C\u624B"}</span>
@@ -5280,17 +5270,6 @@ header.top .status { min-width: 0; overflow: hidden; }
     app.querySelector("#btn-undo").addEventListener("click", () => undo());
     app.querySelector("#btn-resign").addEventListener("click", () => {
       void resign();
-    });
-    app.querySelector("#btn-stop").addEventListener("click", () => {
-      // 「今すぐ指す」: skip the human-like hold as well as the search.
-      forceMoveNow = true;
-      if (pendingEngineApply) {
-        const fn = pendingEngineApply;
-        clearThinkHold();
-        fn();
-        return;
-      }
-      stopEngine();
     });
     app.querySelector("#btn-rank").addEventListener("click", () => {
       void showRanking(lastRecordAt ?? void 0);
@@ -5343,8 +5322,8 @@ header.top .status { min-width: 0; overflow: hidden; }
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-28 06:23:48";
-  var SHOGI_BUILD_TIME = 1790544228010;
+    var SHOGI_VERSION_LABEL = "2026-09-28 10:22:37";
+  var SHOGI_BUILD_TIME = 1790558557548;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
