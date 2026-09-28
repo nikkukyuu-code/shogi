@@ -118,6 +118,13 @@ header.top h1 {
   50% { box-shadow: 0 3px 0 #8a1830, 0 0 22px rgba(255, 120, 150, 0.85); }
 }
 @media (prefers-reduced-motion: reduce) { .start-transfer { animation: none; } }
+/* Data-loss notice (title): heading + 3 short bullets + 2 sentences */
+.dl-note .dl-h, .dl-note .dl-li, .dl-note .dl-p { display: block; }
+.dl-note .dl-h { font-weight: 900; }
+.dl-note .dl-li { text-align: left; padding-left: 1em; text-indent: -1em; }
+.dl-note .dl-p { margin-top: 1px; }
+.dl-note .dl-lis { display: inline-block; text-align: left; }
+.save-note.dl-note .dl-li { display: inline-block; white-space: nowrap; padding: 0; text-indent: 0; margin: 0 0.35em; }
 .save-note .easy-link { color: #ffe07a; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; font-weight: 900; }
 .save-note {
   appearance: none;
@@ -4677,7 +4684,7 @@ header.top .status { min-width: 0; overflow: hidden; }
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
       <a class="start-transfer" id="btn-transfer" href="/transfer/?from=/shogi/game/">🔄 引き継ぎ<small>（機種変更・データ移行）</small></a>
-      <a class="save-note" id="save-note" href="/transfer/?from=/shogi/game/">⚠ 記録はこの端末のブラウザ内だけ。iPhoneは7日ほど開かないと消えることも <span class="easy-link">→ かんたんな方法はこちら</span></a>
+      <a class="save-note dl-note" id="save-note" href="/transfer/?from=/shogi/game/"><b class="dl-h">⚠ 記録が消えることがあります：</b><span class="dl-li">・iPhoneのSafariで7日くらい遊ばなかったとき</span><span class="dl-li">・ブラウザの履歴やデータを消したとき</span><span class="dl-li">・プライベートモードで遊んだとき</span><span class="dl-p">スマホを買い替える前に「引き継ぎ」ボタンでコードを作って保存してください。<span class="easy-link">かんたんな方法はこちら ›</span></span></a>
       <p class="start-ver"><span id="visit-count"></span><span id="battle-count" hidden></span><span id="app-version">${SHOGI_VERSION_LABEL}</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
@@ -5322,8 +5329,8 @@ header.top .status { min-width: 0; overflow: hidden; }
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-28 10:22:37";
-  var SHOGI_BUILD_TIME = 1790558557548;
+    var SHOGI_VERSION_LABEL = "2026-09-28 16:01:51";
+  var SHOGI_BUILD_TIME = 1790578911371;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
