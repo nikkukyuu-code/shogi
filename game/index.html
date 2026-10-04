@@ -2,6 +2,31 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
+<!--nk-autoupdate--><script>
+/* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
+(function () {
+  var PAGE_LABEL = '2026-10-05 01:26:26';
+  var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
+  function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
+  var busy = false;
+  function check() {
+    if (busy || document.visibilityState === 'hidden' || !safe()) return;
+    busy = true;
+    fetch(URL + '?_=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      busy = false;
+      var v = d && d.label;
+      if (!v || v === PAGE_LABEL || !safe()) return;
+      try { if (sessionStorage.getItem(KEY) === v) return; sessionStorage.setItem(KEY, v); } catch (e) { return; }
+      location.replace(location.pathname + '?r=' + String(v).replace(/[^0-9]/g, '') + location.hash);
+    }).catch(function () { busy = false; });
+  }
+  window.__nkCheckUpdate = check;
+  function start() { setTimeout(check, 1500); if (EVERY > 0) setInterval(check, EVERY * 1000); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(); });
+  window.addEventListener('pageshow', function (e) { if (e.persisted) check(); });
+})();
+</script><!--/nk-autoupdate-->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <meta http-equiv="Cache-Control" content="no-store" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -4091,6 +4116,7 @@ header.top .status { min-width: 0; overflow: hidden; }
     });
   }
   function showStartScreen() {
+    setTimeout(function () { try { window.__nkCheckUpdate && window.__nkCheckUpdate(); } catch (e) {} }, 1500);
     closeNet();
     inMatch = false;
     starting = false;
@@ -5332,8 +5358,8 @@ header.top .status { min-width: 0; overflow: hidden; }
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-09-29 12:46:55";
-  var SHOGI_BUILD_TIME = 1790653615171;
+    var SHOGI_VERSION_LABEL = "2026-10-05 01:26:26";
+  var SHOGI_BUILD_TIME = 1791131186233;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
