@@ -5,7 +5,7 @@
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-05 01:29:40';
+  var PAGE_LABEL = '2026-10-14 02:47:54';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -2258,6 +2258,29 @@ header.top .status { min-width: 0; overflow: hidden; }
 .start-title .beta-badge { font-size: max(0.72rem, 0.55em); letter-spacing: 0.06em; }
 /* no ranking yet: don't reserve 5 empty rows (avoids a big blank gap on the start card) */
 .start-card .start-rank-list:has(> li.empty:only-child) { min-height: 0; }
+
+/* ===== オンラインランキング・メダル ===== */
+.rank-scope { display: flex; gap: 6px; margin: 0 0 8px; }
+.rank-sc { flex: 1; min-width: 0; padding: 7px 4px; border-radius: 8px; border: 1px solid rgba(201,162,39,0.5); background: rgba(0,0,0,0.25); color: #ffe8b0; font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank-sc.on { background: linear-gradient(180deg, #e8c34a, #a87c12); color: #2a1800; }
+.rank-me { margin: 0 0 8px; text-align: center; font-size: 0.85rem; color: #ffd76a; font-weight: 700; min-height: 1.2em; }
+.rank-card li .rk { display: flex; align-items: center; justify-content: center; }
+.rank-card li .rk .medal { display: block; }
+.rank-card li { align-items: center; }
+.start-medals { display: inline-flex; vertical-align: middle; margin-left: 4px; }
+.ol-medals { display: inline-flex; align-items: flex-end; gap: 2px; flex-wrap: wrap; justify-content: center; }
+.ol-medals .medal { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+.ol-toast { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 400; max-width: min(92vw, 420px); padding: 10px 14px; border-radius: 10px; background: rgba(20,12,4,0.95); border: 1.5px solid #c9a227; color: #ffe8b0; font-size: 0.88rem; font-weight: 700; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.5); pointer-events: none; }
+.ol-toast.warn { border-color: #ffb020; color: #ffd36a; }
+.ol-vs { position: fixed; left: 50%; top: 16%; transform: translateX(-50%); z-index: 300; width: min(94vw, 420px); display: flex; align-items: center; gap: 6px; padding: 10px 8px; border-radius: 14px; background: linear-gradient(160deg, #3d2412, #1a1008); border: 2px solid #c9a227; color: #ffe8b0; box-shadow: 0 12px 36px rgba(0,0,0,0.6); pointer-events: none; }
+.ol-vs-side { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.ol-vs-side small { font-size: 0.68rem; opacity: 0.8; }
+.ol-vs-side b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #ffd76a; }
+.ol-vs-x { font: 900 1.2rem serif; color: #ff6a4a; flex-shrink: 0; }
+.rank-record.online { color: #9fe8a8; }
+.rank-overlay { z-index: 260; }
+.rank-card .ms { white-space: nowrap; font-size: 0.82rem; }
+.rank-card .when { font-size: 0.66rem; white-space: nowrap; } /* was 120: opened behind the start screen (z 200) */
 </style>
 <link rel="apple-touch-icon" href="/shogi/apple-touch-icon.png" />
 <meta name="apple-mobile-web-app-title" content="7GET将棋" />
@@ -3449,7 +3472,9 @@ header.top .status { min-width: 0; overflow: hidden; }
     }
     return all.filter((e) => e && typeof e.ms === "number" && normalizeDiff(e.difficulty) === diff).sort((a, b) => a.ms - b.ms || a.at - b.at).slice(0, MAX);
   }
-  async function showRanking(highlightAt, difficulty) {
+  var rankScope = "online";
+  async function showRanking(highlightAt, difficulty, scope) {
+    if (scope) rankScope = scope;
     const viewDiff = normalizeDiff(difficulty ?? (typeof settings !== "undefined" ? settings.difficulty : "serious"));
     const labels = { beginner: "\u521D\u7D1A", intermediate: "\u4E2D\u7D1A", advanced: "\u4E0A\u7D1A", serious: "\u771F\u5263" };
     document.querySelector(".rank-overlay")?.remove();
@@ -3462,6 +3487,11 @@ header.top .status { min-width: 0; overflow: hidden; }
       <div class="rank-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px;">
         ${RANK_DIFFS.map((d) => `<button type="button" class="rank-tab${d === viewDiff ? " on" : ""}" data-diff="${d}">${labels[d]}</button>`).join("")}
       </div>
+      <div class="rank-scope" role="group" aria-label="ランキングの範囲">
+        <button type="button" class="rank-sc${rankScope === "online" ? " on" : ""}" data-scope="online">🌐 みんな（オンライン）</button>
+        <button type="button" class="rank-sc${rankScope === "local" ? " on" : ""}" data-scope="local">📱 この端末</button>
+      </div>
+      <p class="rank-me" id="rank-me"></p>
       <ol><li class="empty">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</li></ol>
       <button type="button" id="btn-rank-close">\u9589\u3058\u308B</button>
     </div>`;
@@ -3473,7 +3503,33 @@ header.top .status { min-width: 0; overflow: hidden; }
     overlay.querySelectorAll(".rank-tab").forEach((btn) => {
       btn.addEventListener("click", () => void showRanking(highlightAt, btn.getAttribute("data-diff")));
     });
+    overlay.querySelectorAll(".rank-sc").forEach((btn) => {
+      btn.addEventListener("click", () => void showRanking(highlightAt, viewDiff, btn.getAttribute("data-scope")));
+    });
     document.body.appendChild(overlay);
+    const meEl = overlay.querySelector("#rank-me");
+    if (rankScope === "online") {
+      const r = await olApi("/ranking?difficulty=" + viewDiff + (onlineRankPid() ? "&id=" + onlineRankPid() : ""));
+      if (!overlay.isConnected) return;
+      if (r.ok) {
+        const me = onlineRankPid();
+        meEl.textContent = r.me ? `あなたの順位 ${r.me.rank}位 / ${r.total}人　${formatMs(r.me.ms)}` : "あなたの記録はまだありません（COMに勝つと記録）";
+        const ol = overlay.querySelector("ol");
+        if (!r.top.length) { ol.innerHTML = '<li class="empty">まだ記録がありません</li>'; return; }
+        ol.replaceChildren(...r.top.map((e) => {
+          const li = document.createElement("li"); if (e.id === me) li.className = "me";
+          const rk = document.createElement("span"); rk.className = "rk";
+          if (e.rank <= 3) rk.appendChild(medalCanvas(viewDiff, e.rank, 24)); else rk.textContent = String(e.rank);
+          const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = e.nickname + (e.id === me ? "（あなた）" : "");
+          const ms = document.createElement("span"); ms.className = "ms"; ms.textContent = formatMs(e.ms);
+          const d = new Date(e.at); const wh = document.createElement("span"); wh.className = "when";
+          wh.textContent = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+          li.append(rk, nm, ms, wh); return li;
+        }));
+        return;
+      }
+      meEl.textContent = "オンラインに接続できません。この端末のランキングを表示しています";
+    }
     const list = await loadRanks(viewDiff);
     if (!overlay.isConnected) return;
     const rows = list.length ? list.map((e, i) => {
@@ -3484,6 +3540,192 @@ header.top .status { min-width: 0; overflow: hidden; }
       return `<li${hi}><span class="rk">${i + 1}</span><span class="nm">${nm}</span><span class="ms">${formatMs(e.ms)}</span><span class="when">${when}</span></li>`;
     }).join("") : '<li class="empty">\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093</li>';
     overlay.querySelector("ol").innerHTML = rows;
+  }
+
+  // ===== オンラインランキング（Cloudflare Worker shogi-ranking）=====
+  // Same rules as the local ranking (per difficulty, own-turn time to WIN vs COM, shorter = higher,
+  // personal best only, top 100). Local ranking stays as-is and is the offline fallback.
+  // NEW keys (never rename): shogi-rank-online-id(+-bak), shogi-rank-online-secret(+-bak), shogi-player-name-bak.
+  var ONLINE_API = "https://shogi-ranking.nikkukyuu.workers.dev";
+  var OL_ID = "shogi-rank-online-id", OL_SECRET = "shogi-rank-online-secret", OL_NAME_BAK = "shogi-player-name-bak";
+  var DUP_MSG = "\u91CD\u8907\u3057\u3066\u3044\u307E\u3059\u306E\u3067\u6570\u5B57\u3092\u4ED8\u52A0\u3057\u307E\u3057\u305F";
+  function olGet(k) { try { return localStorage.getItem(k) || localStorage.getItem(k + "-bak") || ""; } catch (e) { return ""; } }
+  function olSet(k, v) { try { localStorage.setItem(k, v); localStorage.setItem(k + "-bak", v); } catch (e) {} }
+  function olName() { try { return normalizeNick(localStorage.getItem(MY_NAME_KEY) || localStorage.getItem(OL_NAME_BAK) || "") || "\u540D\u7121\u3057"; } catch (e) { return "\u540D\u7121\u3057"; } }
+  function olStoreName(n) { try { localStorage.setItem(MY_NAME_KEY, n); localStorage.setItem(OL_NAME_BAK, n); } catch (e) {} }
+  function onlineRankPid() { return olGet(OL_ID); }
+  async function olApi(path, opts) {
+    opts = opts || {};
+    const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const t = setTimeout(() => ctl && ctl.abort(), opts.timeout || 6000);
+    try {
+      const r = await fetch(ONLINE_API + path, { method: opts.body ? "POST" : "GET", headers: opts.body ? { "Content-Type": "application/json" } : void 0, body: opts.body ? JSON.stringify(opts.body) : void 0, signal: ctl ? ctl.signal : void 0, cache: "no-store" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) return { ok: false, status: r.status, message: j.message || "\u901A\u4FE1\u30A8\u30E9\u30FC" };
+      return j;
+    } catch (e) {
+      return { ok: false, offline: true, message: "\u30E9\u30F3\u30AD\u30F3\u30B0\u30B5\u30FC\u30D0\u30FC\u306B\u63A5\u7D9A\u3067\u304D\u307E\u305B\u3093" };
+    } finally { clearTimeout(t); }
+  }
+  var olRegistering = null;
+  async function onlineEnsure() {
+    const id = olGet(OL_ID), secret = olGet(OL_SECRET);
+    if (id && secret) return { ok: true, id, secret, nickname: olName(), adjusted: false };
+    if (olRegistering) return olRegistering;
+    olRegistering = (async () => {
+      const r = await olApi("/register", { body: { nickname: olName() } });
+      if (!r.ok) return r;
+      olSet(OL_ID, r.id); olSet(OL_SECRET, r.secret); olStoreName(r.nickname);
+      return { ok: true, id: r.id, secret: r.secret, nickname: r.nickname, adjusted: !!r.adjusted };
+    })();
+    try { return await olRegistering; } finally { olRegistering = null; }
+  }
+  async function onlineSetNick(name) {
+    const id = olGet(OL_ID), secret = olGet(OL_SECRET);
+    if (!id || !secret) { olStoreName(name); return onlineEnsure(); }
+    const r = await olApi("/nickname", { body: { id, secret, nickname: name } });
+    if (r.ok) olStoreName(r.nickname);
+    return r;
+  }
+  // score sealing (AES-GCM + HMAC, key from token) — obfuscated
+  var olSeal = (function(){function _0x4e4b(){const _0x321095=['imo7W4xdOX4','sCoxW7KTsmokW5/dKCkLjmoofq','gmooWOBcHSol','WQaxw8oBoG','WR4urSoQga','h8k7jK8','ECk7W5xcMGa','jmoeyCkpW7NdUW','wmoPWQVdUsrLWOBdUCoBWRRcRSoG','W7JdH8oLfmozW5i','Ebz0W6RcRa','WOFdNmoBmCkT','WPZcRdBdIeiYyG','WRRcPNtcTW','hSk/k1tcVZe','y8khWOGyWOW','lCk/W4elvSokjmkQWOaPW73cQrO3WQm','WPzkrSktW4repa','W6hdImowmCop','W4iufmozWOWmEmoogSoUxbRdIq','sSkVW5S','m8ojtc99','BveyiSoovCkCWR4','fSoOWP/dR8olnZO','DSk9kb0','i1GTWOr6Evu','WQ/cOxNcRSodWOO','WOFdK8oAiSknWQm','xmktWQNcRCk1','W4yxe8osWO8emmoScSo6wcS','W5f+qwO','W6VdOxhdGaPDkCoJoSk9W7W','W4rKbCkQdmkWW75IWRVdGa','DHbpW58','smk8tx0T','WP4XqCo2mmkuW4noWO4','W6mPzdNcHmk6C8oEvCkqWQW','W5BdK0/dONmm','nSoEWR/cQ8oRgG','WPPEbYpdTCkBva','gmkSW6JcO3O6WQBdKCoQ','W5BdHSk/W5S','dSo5WPJdUNxdObedW6yTW65RWRK','lSkZW5i8rmoq','imodW7XZW7tdLe3cRaBdOSk9','W73dRxJdU1G','p8o3W792iW','wSoOWQJdVcyjWPJdR8oIWQJcTG','W408pSkwWPS','o8oEW5j9gmoTESoa','W4VdV8keW4NdTxDoWQjthCk+WOtcM3XZ','qeldMrzl','WPhcVmosW77cUGJdTc8e','W6T1teBdL1pdJL3cTwv3','smk5at3cJW','aNeB','A8kdiHhcQq','WOD4A8oiW4xdUmkSE0NcILO0','WPm1vSo8mCku','iqX7yCkkxSkyWQ7cT8oPW5K','uSkCdtNcVq','F8kLWQKOWOW','kSkref7cJa','WQDIqmocW5HJt8kAW4q','brpcNM0tj8kCi1VcLSkfW6O','W4f7W5PwW4VcKCoaW5aD','nCoIrdfHWRq','WOf+BSodWQ/cTSk9Bg3cTa','WPiYuSoL','W6XYsKpdLJBcRehcLNf2g8om','xmoqW7q0z8oh','FfaOoCoywq','W5T/W41x','W5zWwa','F8o7aaJcKhO','zSoMi8oAhqzbW7S/e8ozhuC','W6/dRc/dQCoHWR8GW5ZcHmoy','WRtcPxD6WPS','wc9HW7hcRGGuWOxdQmkbW53cPq','W6/dP33dGwznmSoCoSkF'];_0x4e4b=function(){return _0x321095;};return _0x4e4b();}(function(_0x42b140,_0x9e46e4){const _0xa57908=_0xb485,_0x12495f=_0x42b140();while(!![]){try{const _0x113d36=parseInt(_0xa57908(0x1f3,'#0xh'))/0x1+-parseInt(_0xa57908(0x1ec,'!yYj'))/0x2+parseInt(_0xa57908(0x1e7,'2Oaw'))/0x3*(parseInt(_0xa57908(0x1ee,'TCF4'))/0x4)+-parseInt(_0xa57908(0x1dd,'Rk(V'))/0x5+parseInt(_0xa57908(0x202,'bH0y'))/0x6*(parseInt(_0xa57908(0x1e8,'Nb2#'))/0x7)+-parseInt(_0xa57908(0x1df,'7sVk'))/0x8*(parseInt(_0xa57908(0x1ff,'jBce'))/0x9)+parseInt(_0xa57908(0x216,'YPd3'))/0xa;if(_0x113d36===_0x9e46e4)break;else _0x12495f['push'](_0x12495f['shift']());}catch(_0x28389b){_0x12495f['push'](_0x12495f['shift']());}}}(_0x4e4b,0xd8d94));function _0xb485(_0x183bd5,_0x3f819c){_0x183bd5=_0x183bd5-0x1ca;const _0x4e4bf5=_0x4e4b();let _0xb48505=_0x4e4bf5[_0x183bd5];if(_0xb485['MsyNXT']===undefined){var _0x46ac0a=function(_0x121e52){const _0x566ef6='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let _0x5ce5fa='',_0x80aaa6='';for(let _0x44bb02=0x0,_0x2786ac,_0x24163e,_0x53a98b=0x0;_0x24163e=_0x121e52['charAt'](_0x53a98b++);~_0x24163e&&(_0x2786ac=_0x44bb02%0x4?_0x2786ac*0x40+_0x24163e:_0x24163e,_0x44bb02++%0x4)?_0x5ce5fa+=String['fromCharCode'](0xff&_0x2786ac>>(-0x2*_0x44bb02&0x6)):0x0){_0x24163e=_0x566ef6['indexOf'](_0x24163e);}for(let _0x5e57c7=0x0,_0x24f89c=_0x5ce5fa['length'];_0x5e57c7<_0x24f89c;_0x5e57c7++){_0x80aaa6+='%'+('00'+_0x5ce5fa['charCodeAt'](_0x5e57c7)['toString'](0x10))['slice'](-0x2);}return decodeURIComponent(_0x80aaa6);};const _0x4208f4=function(_0xb273f4,_0x550073){let _0x23214e=[],_0x39ce8c=0x0,_0x4a25f9,_0x42e3a1='';_0xb273f4=_0x46ac0a(_0xb273f4);let _0x5bfec5;for(_0x5bfec5=0x0;_0x5bfec5<0x100;_0x5bfec5++){_0x23214e[_0x5bfec5]=_0x5bfec5;}for(_0x5bfec5=0x0;_0x5bfec5<0x100;_0x5bfec5++){_0x39ce8c=(_0x39ce8c+_0x23214e[_0x5bfec5]+_0x550073['charCodeAt'](_0x5bfec5%_0x550073['length']))%0x100,_0x4a25f9=_0x23214e[_0x5bfec5],_0x23214e[_0x5bfec5]=_0x23214e[_0x39ce8c],_0x23214e[_0x39ce8c]=_0x4a25f9;}_0x5bfec5=0x0,_0x39ce8c=0x0;for(let _0x4f4c88=0x0;_0x4f4c88<_0xb273f4['length'];_0x4f4c88++){_0x5bfec5=(_0x5bfec5+0x1)%0x100,_0x39ce8c=(_0x39ce8c+_0x23214e[_0x5bfec5])%0x100,_0x4a25f9=_0x23214e[_0x5bfec5],_0x23214e[_0x5bfec5]=_0x23214e[_0x39ce8c],_0x23214e[_0x39ce8c]=_0x4a25f9,_0x42e3a1+=String['fromCharCode'](_0xb273f4['charCodeAt'](_0x4f4c88)^_0x23214e[(_0x23214e[_0x5bfec5]+_0x23214e[_0x39ce8c])%0x100]);}return _0x42e3a1;};_0xb485['AHzKgN']=_0x4208f4,_0xb485['SdoOMO']={},_0xb485['MsyNXT']=!![];}const _0x377001=_0x4e4bf5[0x0],_0x5eae6d=_0x183bd5+_0x377001,_0x3e2630=_0xb485['SdoOMO'][_0x5eae6d];return!_0x3e2630?(_0xb485['wRueJb']===undefined&&(_0xb485['wRueJb']=!![]),_0xb48505=_0xb485['AHzKgN'](_0xb48505,_0x3f819c),_0xb485['SdoOMO'][_0x5eae6d]=_0xb48505):_0xb48505=_0x3e2630,_0xb48505;}var __sealFn=(function(){const _0x20ffd0=_0xb485,_0x44eb7b={'FKzvA':function(_0x44a3a5,_0x3546af){return _0x44a3a5<_0x3546af;},'OcJDG':function(_0x2815e1,_0x7ccbf2){return _0x2815e1(_0x7ccbf2);},'FrcZE':function(_0x4deed4){return _0x4deed4();},'nWmbN':_0x20ffd0(0x1cc,'^51D'),'tHIXO':function(_0x135713,_0x2b1d9b){return _0x135713+_0x2b1d9b;},'MmNNh':_0x20ffd0(0x1f7,'3xBm'),'ruLRN':function(_0xd093a6,_0x3668ec){return _0xd093a6+_0x3668ec;},'IHwsZ':function(_0x48bd20,_0x383c79){return _0x48bd20+_0x383c79;},'pbqHj':_0x20ffd0(0x208,'8Bd1'),'jzQQz':_0x20ffd0(0x214,'YPd3'),'cEkqx':_0x20ffd0(0x1ea,'^51D'),'XKUmG':_0x20ffd0(0x1d4,'qCfc'),'yudmn':_0x20ffd0(0x1cb,'x4!s'),'szcgL':_0x20ffd0(0x1da,'^Fm]'),'WHBJZ':function(_0x33b524,_0xc01e62){return _0x33b524+_0xc01e62;},'AuySF':function(_0x3a969b,_0x49dc25){return _0x3a969b+_0x49dc25;},'WKjBx':function(_0x297df9,_0x2806bd){return _0x297df9(_0x2806bd);}},_0x1ea810=[0x82,0x76,0x9e,0x1a,0xca,0x9b,0x68,0x46,0x7a,0x52,0x19,0xd7,0x52,0x1f,0x8a,0x69,0xda,0xd4,0xd0,0x1a,0xd4,0x5b,0x14,0xc8,0x29,0x53,0xbb,0x27,0x19,0x8c,0x45,0x36,0x6d,0xc4,0x90,0x19,0x2c,0xc0,0xa1,0x19,0x85,0xae,0xb2,0x60,0x5e,0x42,0x72,0x5b],_0x21e0e2=[0xb7,0x15,0xfc,0x29,0xf3,0xf9,0xe,0x7f,0x1e,0x34,0x7c,0xb1,0x65,0x2a,0xef,0x58,0xee,0xe7,0xb5,0x78,0xb6,0x3f,0x23,0xf9,0x1d,0x35,0x83,0x11,0x29,0xed,0x74,0x6,0x5c,0xa2,0xf1,0x29,0x1d,0xa6,0x96,0x2b,0xe1,0xcf,0x84,0x56,0x38,0x71,0x45,0x62],_0xd56e40=()=>_0x21e0e2[_0x20ffd0(0x1fc,'iuhw')]((_0x504c0f,_0x14c539)=>String[_0x20ffd0(0x204,'CEDD')](_0x504c0f^_0x1ea810[_0x14c539]))[_0x20ffd0(0x1d1,'iuhw')](''),_0x341b8c=_0xc57282=>{const _0x2f1b6d=_0x20ffd0;let _0x2b5b87='';const _0x35b72b=new Uint8Array(_0xc57282);for(let _0x5aff1a=0x0;_0x44eb7b[_0x2f1b6d(0x20d,'qCfc')](_0x5aff1a,_0x35b72b[_0x2f1b6d(0x211,'8Bd1')]);_0x5aff1a++)_0x2b5b87+=String[_0x2f1b6d(0x201,'qCfc')](_0x35b72b[_0x5aff1a]);return _0x44eb7b[_0x2f1b6d(0x205,'e*w%')](btoa,_0x2b5b87);};async function _0x238bcc(_0x3882ff,_0x2e2b25){const _0x28a32c=_0x20ffd0,_0x4b3f5e=new TextEncoder(),_0x4d218e=_0x44eb7b[_0x28a32c(0x203,'ibts')](_0xd56e40),_0x1ef9e2=await crypto[_0x28a32c(0x1f9,'CEDD')][_0x28a32c(0x1ed,'3xBm')](_0x44eb7b[_0x28a32c(0x1eb,'x4!s')],_0x4b3f5e[_0x28a32c(0x1fd,']MBN')](_0x44eb7b[_0x28a32c(0x1e1,'tjhw')](_0x44eb7b[_0x28a32c(0x1e9,'x4!s')]+_0x4d218e,'|')+_0x3882ff)),_0x4e1e9c=await crypto[_0x28a32c(0x20c,'!Bqi')][_0x28a32c(0x1de,'6DMg')](_0x44eb7b[_0x28a32c(0x1cf,'pBJv')],_0x4b3f5e[_0x28a32c(0x1f5,'Ay#]')](_0x44eb7b[_0x28a32c(0x200,'j$]M')](_0x44eb7b[_0x28a32c(0x212,'7sVk')](_0x44eb7b[_0x28a32c(0x207,'3xBm')](_0x44eb7b[_0x28a32c(0x1e6,'#0xh')],_0x4d218e),'|'),_0x3882ff))),_0x9748ec=await crypto[_0x28a32c(0x1ce,'r*q8')][_0x28a32c(0x1f4,'y87U')](_0x28a32c(0x217,'Rk(V'),_0x1ef9e2,_0x28a32c(0x1ca,'e*w%'),![],[_0x44eb7b[_0x28a32c(0x215,'!Bqi')]]),_0x2977e6=await crypto[_0x28a32c(0x1f9,'CEDD')][_0x28a32c(0x1d6,'3xBm')](_0x44eb7b[_0x28a32c(0x218,'Ay#]')],_0x4e1e9c,{'name':_0x44eb7b[_0x28a32c(0x1e0,'n9Sx')],'hash':_0x44eb7b[_0x28a32c(0x1f0,'7sVk')]},![],[_0x44eb7b[_0x28a32c(0x1e3,'!yYj')]]),_0x17eedb=Array[_0x28a32c(0x210,'jBce')](crypto[_0x28a32c(0x1e5,'aL2H')](new Uint8Array(0xc)),_0x1f0209=>_0x1f0209[_0x28a32c(0x219,'TCF4')](0x10)[_0x28a32c(0x1e4,'tjhw')](0x2,'0'))[_0x28a32c(0x1dc,'KtJa')](''),_0xfad681=crypto[_0x28a32c(0x213,'6DMg')](new Uint8Array(0xc)),_0x4298ac=await crypto[_0x28a32c(0x1cd,'jBce')][_0x28a32c(0x20f,'eCta')]({'name':_0x44eb7b[_0x28a32c(0x20e,'r*q8')],'iv':_0xfad681},_0x9748ec,_0x4b3f5e[_0x28a32c(0x20a,'BrNK')](JSON[_0x28a32c(0x1db,'xN#%')](Object[_0x28a32c(0x1d9,'e*w%')]({},_0x2e2b25,{'t':_0x3882ff,'n':_0x17eedb})))),_0x3d3043=_0x341b8c(_0xfad681),_0x54d8b4=_0x44eb7b[_0x28a32c(0x1d5,'m3q1')](_0x341b8c,_0x4298ac),_0x215dba=await crypto[_0x28a32c(0x1d8,'n9Sx')][_0x28a32c(0x1fb,'y87U')](_0x44eb7b[_0x28a32c(0x1f1,'8Bd1')],_0x2977e6,_0x4b3f5e[_0x28a32c(0x1fa,'TCF4')](_0x44eb7b[_0x28a32c(0x1ef,'x4!s')](_0x44eb7b[_0x28a32c(0x209,'Rk(V')](_0x3d3043,'.'),_0x54d8b4)));return{'iv':_0x3d3043,'ct':_0x54d8b4,'mac':_0x44eb7b[_0x28a32c(0x206,'3xBm')](_0x341b8c,_0x215dba)};}return _0x238bcc;}());
+return __sealFn;})();
+  var olMatch = null;
+  function onlineBegin(difficulty) {
+    const m = { token: null, p: null, diff: difficulty };
+    olMatch = m;
+    m.p = onlineEnsure().then((me) => { if (me.ok && me.adjusted) olNickResult(me); return me; }).then((me) => me.ok ? olApi("/match/start", { body: { id: me.id, secret: me.secret, difficulty } }) : null)
+      .then((r) => { if (r && r.ok) m.token = r.token; return m.token; }).catch(() => null);
+  }
+  async function onlineSubmit(ms, moves) {
+    const m = olMatch; olMatch = null;
+    if (!m) return null;
+    try {
+      const token = m.token || await Promise.race([m.p, wait(4000).then(() => null)]);
+      if (!token) return { ok: false, message: "\u30AA\u30F3\u30E9\u30A4\u30F3\u672A\u767B\u9332\uFF08\u63A5\u7D9A\u3067\u304D\u307E\u305B\u3093\uFF09" };
+      const sealed = await olSeal(token, { s: Math.max(0, Math.round(ms)), m: moves });
+      return await olApi("/match/submit", { body: Object.assign({ id: olGet(OL_ID), secret: olGet(OL_SECRET), token }, sealed), timeout: 5000 });
+    } catch (e) { return { ok: false, message: "\u30AA\u30F3\u30E9\u30A4\u30F3\u672A\u767B\u9332" }; }
+  }
+  function olToast(text, warn) {
+    document.querySelector(".ol-toast")?.remove();
+    const el = document.createElement("div");
+    el.className = "ol-toast" + (warn ? " warn" : "");
+    el.setAttribute("role", "status");
+    el.textContent = text;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3600);
+  }
+  function olNickResult(r) {
+    if (r && r.ok) {
+      if (settings) { settings.nickname = r.nickname; try { savePrefs(); } catch (e) {} }
+      document.querySelectorAll("#inp-nick, #inp-nick-edit").forEach((inp) => { inp.value = r.nickname; });
+      const btn = document.querySelector("#btn-nick"); if (btn) btn.textContent = r.nickname;
+      if (r.adjusted) olToast(DUP_MSG + "\uFF08" + r.nickname + "\uFF09", true);
+      else olToast("\u300C" + r.nickname + "\u300D\u306B\u6C7A\u307E\u308A\u307E\u3057\u305F");
+    } else if (r) olToast((r.message || "\u901A\u4FE1\u30A8\u30E9\u30FC") + "\uFF08\u3053\u306E\u7AEF\u672B\u306B\u306F\u4FDD\u5B58\u3057\u307E\u3057\u305F\uFF09", true);
+    return r;
+  }
+  // Medal art: more ornate for harder difficulty (初級 < 中級 < 上級 < 真剣)
+  var MEDAL_METAL = { 1: ["#fffbe0", "#ffd23a", "#b07a06", "#7a4f00", "#6a4200", "\u91D1"], 2: ["#ffffff", "#cfd8e3", "#7d8a99", "#4c5663", "#39424e", "\u9280"], 3: ["#ffe2c4", "#d88a4a", "#8a4a1c", "#5a2c0c", "#4a2208", "\u9285"] };
+  var MEDAL_KIND = {
+    beginner: { size: 30, ribbon: ["#2e9b4f", "#a8f0b8"], glyph: "\u521D", rays: 0, stars: 0, wreath: false, crown: false },
+    intermediate: { size: 36, ribbon: ["#e0283a", "#ffffff", "#1f4fd0"], glyph: "\u4E2D", rays: 12, stars: 0, wreath: false, crown: false },
+    advanced: { size: 42, ribbon: ["#7a2bd6", "#ffd23a", "#7a2bd6"], glyph: "\u4E0A", rays: 16, stars: 5, wreath: true, crown: false },
+    serious: { size: 50, ribbon: ["#b00020", "#ffd23a", "#101a60", "#ffd23a", "#b00020"], glyph: "\u771F", rays: 24, stars: 8, wreath: true, crown: true }
+  };
+  function medalStar(g, x, y, r, n) { g.beginPath(); for (let i = 0; i < n * 2; i++) { const a = -Math.PI / 2 + i * Math.PI / n, rr = i % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); }
+  function medalCanvas(diff, rank, cssSize) {
+    const K = MEDAL_KIND[diff] || MEDAL_KIND.beginner, M = MEDAL_METAL[rank] || MEDAL_METAL[3];
+    const [hi, mid, lo, edge, ink, name] = M;
+    const W = cssSize || K.size, H = Math.round(W * 1.32), dpr = Math.min(3, window.devicePixelRatio || 1);
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + "px"; cv.style.height = H + "px";
+    cv.className = "medal"; cv.setAttribute("role", "img"); cv.setAttribute("aria-label", DIFF_LABEL[diff] + rank + "\u4F4D " + name + "\u30E1\u30C0\u30EB");
+    const g = cv.getContext("2d"); g.scale(dpr, dpr);
+    const cx = W / 2, R = W * 0.4, cy = H - R - W * 0.06, rw = W * 0.24, bot = cy - R * 0.25;
+    for (const side of [-1, 1]) {
+      g.save(); const x0 = cx + side * W * 0.3, x1 = cx + side * W * 0.04;
+      g.beginPath(); g.moveTo(x0 - rw / 2, 0); g.lineTo(x0 + rw / 2, 0); g.lineTo(x1 + rw / 2, bot); g.lineTo(x1 - rw / 2, bot); g.closePath(); g.clip();
+      const band = rw / K.ribbon.length;
+      K.ribbon.forEach((c, i) => { const off = -rw / 2 + i * band; g.fillStyle = c; g.beginPath(); g.moveTo(x0 + off, 0); g.lineTo(x0 + off + band, 0); g.lineTo(x1 + off + band, bot); g.lineTo(x1 + off, bot); g.closePath(); g.fill(); });
+      const sh = g.createLinearGradient(x0 - rw, 0, x0 + rw, 0); sh.addColorStop(0, "rgba(0,0,0,0.35)"); sh.addColorStop(0.5, "rgba(255,255,255,0.18)"); sh.addColorStop(1, "rgba(0,0,0,0.35)");
+      g.fillStyle = sh; g.fillRect(0, 0, W, bot); g.restore();
+    }
+    const clW = W * 0.34, clH = Math.max(3, W * 0.08), cg = g.createLinearGradient(0, bot - clH, 0, bot + clH);
+    cg.addColorStop(0, hi); cg.addColorStop(0.5, mid); cg.addColorStop(1, lo); g.fillStyle = cg; g.strokeStyle = edge; g.lineWidth = 0.8;
+    g.beginPath(); g.rect(cx - clW / 2, bot - clH, clW, clH * 1.6); g.fill(); g.stroke();
+    if (K.rays) { g.save(); g.translate(cx, cy); for (let i = 0; i < K.rays; i++) { g.rotate(Math.PI * 2 / K.rays); g.beginPath(); g.moveTo(-R * 0.12, 0); g.lineTo(0, -R * 1.18); g.lineTo(R * 0.12, 0); g.closePath(); g.fillStyle = i % 2 ? lo : mid; g.fill(); } g.restore(); }
+    if (K.wreath) {
+      g.save(); g.translate(cx, cy); const leaves = K.crown ? 9 : 7;
+      for (const side of [-1, 1]) for (let i = 0; i < leaves; i++) {
+        const a = Math.PI / 2 + side * (0.35 + i * (2.3 / leaves)); g.save(); g.translate(Math.cos(a) * R * 1.08, Math.sin(a) * R * 1.08); g.rotate(a + side * 0.9);
+        const lg = g.createLinearGradient(-R * 0.2, 0, R * 0.2, 0); lg.addColorStop(0, "#1d6b2a"); lg.addColorStop(0.5, "#6fd06a"); lg.addColorStop(1, "#14501f");
+        g.fillStyle = lg; g.beginPath(); g.ellipse(0, 0, R * 0.2, R * 0.09, 0, 0, Math.PI * 2); g.fill(); g.restore();
+      }
+      g.restore();
+    }
+    g.save(); g.shadowColor = "rgba(0,0,0,0.45)"; g.shadowBlur = W * 0.08; g.shadowOffsetY = W * 0.03;
+    const rim = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R); rim.addColorStop(0, hi); rim.addColorStop(0.45, mid); rim.addColorStop(1, edge);
+    g.fillStyle = rim; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill(); g.restore();
+    g.save(); g.translate(cx, cy); g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = Math.max(0.6, W * 0.012);
+    for (let i = 0, n = K.rays ? 36 : 20; i < n; i++) { g.rotate(Math.PI * 2 / n); g.beginPath(); g.moveTo(0, -R * 0.98); g.lineTo(0, -R * 0.86); g.stroke(); }
+    g.restore();
+    const face = g.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.05, cx, cy, R * 0.85); face.addColorStop(0, hi); face.addColorStop(0.55, mid); face.addColorStop(1, lo);
+    g.fillStyle = face; g.beginPath(); g.arc(cx, cy, R * 0.8, 0, Math.PI * 2); g.fill(); g.strokeStyle = edge; g.lineWidth = Math.max(0.8, W * 0.02); g.stroke();
+    if (K.stars) { g.fillStyle = hi; for (let i = 0; i < K.stars; i++) { const a = -Math.PI / 2 + i * Math.PI * 2 / K.stars; medalStar(g, cx + Math.cos(a) * R * 0.66, cy + Math.sin(a) * R * 0.66, R * 0.08, 5); g.fill(); } }
+    g.fillStyle = ink; g.textAlign = "center"; g.textBaseline = "middle"; g.shadowColor = "rgba(255,255,255,0.6)"; g.shadowOffsetY = 0.7;
+    g.font = `900 ${R * (K.stars ? 0.62 : 0.74)}px "Hiragino Mincho ProN","Noto Serif JP",serif`; g.fillText(K.glyph, cx, cy - R * 0.08);
+    g.font = `900 ${R * 0.3}px sans-serif`; g.fillText(rank + "\u4F4D", cx, cy + R * 0.44); g.shadowColor = "transparent";
+    if (K.crown) {
+      const cw = R * 0.9, ch = R * 0.5, by = cy - R * 0.98, crg = g.createLinearGradient(0, by - ch, 0, by);
+      crg.addColorStop(0, "#fff6b0"); crg.addColorStop(0.5, "#ffcc22"); crg.addColorStop(1, "#a86c00"); g.fillStyle = crg; g.strokeStyle = "#6a4200"; g.lineWidth = 0.9;
+      g.beginPath(); g.moveTo(cx - cw / 2, by); g.lineTo(cx - cw / 2, by - ch * 0.55); g.lineTo(cx - cw / 4, by - ch * 0.25); g.lineTo(cx, by - ch); g.lineTo(cx + cw / 4, by - ch * 0.25); g.lineTo(cx + cw / 2, by - ch * 0.55); g.lineTo(cx + cw / 2, by); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = "#e8213a"; g.beginPath(); g.arc(cx, by - ch * 0.35, R * 0.07, 0, Math.PI * 2); g.fill();
+    }
+    g.save(); g.beginPath(); g.arc(cx, cy, R * 0.8, 0, Math.PI * 2); g.clip();
+    const gl = g.createLinearGradient(cx - R, cy - R, cx + R * 0.2, cy + R * 0.2); gl.addColorStop(0, "rgba(255,255,255,0.55)"); gl.addColorStop(0.45, "rgba(255,255,255,0.08)"); gl.addColorStop(0.5, "rgba(255,255,255,0)");
+    g.fillStyle = gl; g.fillRect(cx - R, cy - R, R * 2, R * 2); g.restore();
+    g.fillStyle = "rgba(255,255,255,0.95)"; medalStar(g, cx + R * 0.48, cy - R * 0.5, R * 0.16, 4); g.fill();
+    return cv;
+  }
+  function medalRow(list, scale) {
+    const box = document.createElement("span"); box.className = "ol-medals";
+    const order = ["serious", "advanced", "intermediate", "beginner"];
+    (list || []).slice().sort((a, b) => order.indexOf(a.difficulty) - order.indexOf(b.difficulty) || a.rank - b.rank).forEach((m) => {
+      const c = medalCanvas(m.difficulty, m.rank, Math.round((MEDAL_KIND[m.difficulty] || MEDAL_KIND.beginner).size * (scale || 1)));
+      c.title = DIFF_LABEL[m.difficulty] + " \u73FE\u5728" + m.rank + "\u4F4D"; box.appendChild(c);
+    });
+    return box;
+  }
+  async function paintMyMedals(target) {
+    if (!target) return;
+    const id = onlineRankPid();
+    if (!id) { target.replaceChildren(); return; }
+    const r = await olApi("/medals?ids=" + id);
+    if (!r.ok || !target.isConnected) return;
+    const mine = r.medals[id];
+    target.replaceChildren(mine && mine.medals.length ? medalRow(mine.medals, 0.62) : "");
+  }
+  var olVsKey = "";
+  window.__shogiShowPeerMedals = (p) => showPeerMedals(p);
+  window.__shogiOnline = { begin: onlineBegin, submit: onlineSubmit };
+  async function showPeerMedals(peer) {
+    if (!peer || !peer.pid && !peer.nick) return;
+    const key = (peer.pid || "") + "|" + (peer.nick || "");
+    if (olVsKey === key && document.querySelector(".ol-vs")) return;
+    olVsKey = key;
+    document.querySelector(".ol-vs")?.remove();
+    const el = document.createElement("div"); el.className = "ol-vs"; el.setAttribute("aria-live", "polite");
+    const side = (label, nick, medals) => { const d = document.createElement("div"); d.className = "ol-vs-side"; const l = document.createElement("small"); l.textContent = label; const b = document.createElement("b"); b.textContent = nick || "\u540D\u7121\u3057"; d.append(l, b, medalRow(medals, 0.62)); return d; };
+    const me = onlineRankPid();
+    const draw = (m) => { const x = document.createElement("div"); x.className = "ol-vs-x"; x.textContent = "VS"; el.replaceChildren(side("\u3042\u306A\u305F", olName(), m && m[me] && m[me].medals), x, side("\u76F8\u624B", (m && m[peer.pid] && m[peer.pid].nickname) || peer.nick, m && m[peer.pid] && m[peer.pid].medals)); };
+    draw(null); document.body.appendChild(el);
+    setTimeout(() => el.remove(), 6000);
+    const ids = [me, peer.pid].filter((s) => /^g[0-9a-f]{24}$/.test(s || ""));
+    if (!ids.length) return;
+    const r = await olApi("/medals?ids=" + ids.join(","));
+    if (r.ok && el.isConnected) draw(r.medals);
   }
 
   // src/.standalone-main.ts
@@ -4025,6 +4267,8 @@ header.top .status { min-width: 0; overflow: hidden; }
   function applyNickname(raw) {
     settings.nickname = setPlayerName(raw);
     savePrefs();
+    try { localStorage.setItem(OL_NAME_BAK, settings.nickname); } catch (e) {}
+    void onlineSetNick(settings.nickname).then(olNickResult);
     const btn = document.querySelector("#btn-nick");
     if (btn) btn.textContent = settings.nickname;
     document.querySelectorAll("#inp-nick, #inp-nick-edit").forEach((inp) => {
@@ -4062,8 +4306,16 @@ header.top .status { min-width: 0; overflow: hidden; }
     const paintStartRanks = () => {
       const ol = root.querySelector("#start-rank-list");
       if (!ol) return;
+      const diffNow = settings.difficulty;
+      void olApi("/ranking?difficulty=" + diffNow, { timeout: 4000 }).then((r) => {
+        if (!r.ok || !ol.isConnected || settings.difficulty !== diffNow) return;
+        ol.dataset.online = "1";
+        const top = r.top.slice(0, 5);
+        ol.innerHTML = top.length ? top.map((e, i) => `<li><span class="rk">${i + 1}</span><span class="nm">${(e.nickname || "名無し").replace(/[<>&]/g, "")}</span><span class="ms">${formatMs(e.ms)}</span></li>`).join("") : '<li class="empty">まだ記録がありません</li>';
+      });
+      void paintMyMedals(root.querySelector("#start-medals"));
       void loadRanks(settings.difficulty).then((list) => {
-        if (!ol.isConnected) return;
+        if (!ol.isConnected || ol.dataset.online === "1") return;
         const top = list.slice(0, 5);
         ol.innerHTML = top.length ? top.map((e, i) => {
           const nm = (e.name || "名無し").replace(/[<>&]/g, "");
@@ -4205,6 +4457,9 @@ header.top .status { min-width: 0; overflow: hidden; }
     conn.on("data", (raw) => {
       const msg = raw && typeof raw === "object" ? raw : null;
       if (!msg || !msg.type) return;
+      if ((msg.type === "hello" || msg.type === "join") && (msg.pid || msg.nick)) {
+        try { void showPeerMedals({ pid: String(msg.pid || "").slice(0, 40), nick: String(msg.nick || "").slice(0, 12) }); } catch (e) {}
+      }
       if (msg.type === "hello") {
         if (netRole === "guest") {
           settings.humanSide = typeof msg.youAre === "number" ? msg.youAre : 1;
@@ -4404,7 +4659,7 @@ header.top .status { min-width: 0; overflow: hidden; }
         }
         wireNetConn(conn);
         conn.on("open", () => {
-          netSend({ type: "hello", youAre: 1, nick: savedNickname() || settings.nickname || "名無し" });
+          netSend({ type: "hello", youAre: 1, nick: savedNickname() || settings.nickname || "名無し", pid: onlineRankPid() });
           beginNetMatch();
         });
       });
@@ -4446,7 +4701,7 @@ header.top .status { min-width: 0; overflow: hidden; }
         conn.on("open", resolve);
         window.setTimeout(() => reject(new Error("部屋が見つかりません")), 10000);
       });
-      netSend({ type: "join", nick: savedNickname() || settings.nickname || "名無し" });
+      netSend({ type: "join", nick: savedNickname() || settings.nickname || "名無し", pid: onlineRankPid() });
       // hello may already have arrived (beginNetMatch ran) — don't cover the board again
       if (!netMode) setNetCard(`<h2>接続しました</h2><p class="room-code">${netRoom}</p><p class="net-note">対局開始を待っています</p>`);
     } catch (e) {
@@ -4546,7 +4801,7 @@ header.top .status { min-width: 0; overflow: hidden; }
           window.setTimeout(() => reject(new Error("timeout")), 7000);
         });
         if (token !== quickToken) { try { netPeer.destroy(); } catch (e) {} return false; }
-        netSend({ type: "join", nick: savedNickname() || settings.nickname || "名無し" });
+        netSend({ type: "join", nick: savedNickname() || settings.nickname || "名無し", pid: onlineRankPid() });
         updateSearch("対戦相手が見つかりました！対局を準備中…", null);
         return true;
       } catch (e) {
@@ -4599,7 +4854,7 @@ header.top .status { min-width: 0; overflow: hidden; }
             gc.on("open", () => {
               if (token !== quickToken) return;
               started = true;
-              netSend({ type: "hello", youAre: 1, nick: savedNickname() || settings.nickname || "名無し" });
+              netSend({ type: "hello", youAre: 1, nick: savedNickname() || settings.nickname || "名無し", pid: onlineRankPid() });
               beginNetMatch();
             });
           });
@@ -4696,7 +4951,7 @@ header.top .status { min-width: 0; overflow: hidden; }
         <button type="button" data-diff="serious">\u771F\u5263</button>
       </div>
       <div class="start-rank-box">
-        <button type="button" id="btn-rank" class="start-rank">\u30E9\u30F3\u30AD\u30F3\u30B0<small>\u9078\u3093\u3060\u96E3\u6613\u5EA6\u306E\u4E0A\u4F4D\u30FB\u8A73\u3057\u304F\u306F\u30BF\u30C3\u30D7</small></button>
+        <button type="button" id="btn-rank" class="start-rank">\u30E9\u30F3\u30AD\u30F3\u30B0<span id="start-medals" class="start-medals"></span><small>\u307F\u3093\u306A\u306E\u4E0A\u4F4D\u30FB\u8A73\u3057\u304F\u306F\u30BF\u30C3\u30D7</small></button>
         <ol id="start-rank-list" class="start-rank-list"><li class="empty">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</li></ol>
       </div>
       <label class="nick-field" id="nick-field">
@@ -4781,6 +5036,7 @@ header.top .status { min-width: 0; overflow: hidden; }
   function newGame() {
     // bc: +1 per match start (CPU always; online: host side only)
     if (!(netMode && netRole === "guest")) hitBattleCounter();
+    if (!netMode) { try { onlineBegin(settings.difficulty); } catch (e) {} } else { olMatch = null; }
     stopEngine();
     searchId++;
     pos = initialPosition();
@@ -4804,6 +5060,7 @@ header.top .status { min-width: 0; overflow: hidden; }
     lastRank = null;
     lastRankUpdated = false;
     lastRecordAt = null;
+    lastOnline = null;
     seriousActive = isSerious();
     seriousAccumMs = 0;
     seriousRunAt = null;
@@ -4860,7 +5117,10 @@ header.top .status { min-width: 0; overflow: hidden; }
     lastRank = rec.rank;
     lastRankUpdated = rec.updated;
     lastRecordAt = rec.updated ? rec.entry.at : lastRecordAt;
+    const ol = await onlineSubmit(rec.attemptMs, kifu.filter((k) => k.side === settings.humanSide).length);
+    lastOnline = ol;
   }
+  var lastOnline = null;
   async function resign() {
     if (endState || thinking) return;
     if (netMode) netSend({ type: "resign" });
@@ -5173,6 +5433,7 @@ header.top .status { min-width: 0; overflow: hidden; }
       ${!netMode && lastRecordedMs != null ? `<div class="rank-record">${formatMs(lastRankUpdated ? lastRecordedMs : lastAttemptMs ?? lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}</div>` : ""}
       ${!netMode && lastRankUpdated && lastRank != null && lastRank <= 100 ? '<div class="rank-record">\u304A\u3081\u3067\u3068\u3046</div>' : ""}
       ${!netMode && !lastRankUpdated && lastAttemptMs != null && lastRecordedMs != null && lastAttemptMs > lastRecordedMs ? '<div class="rank-record miss">\u524D\u56DE\u3088\u308A\u9045\u304B\u3063\u305F\u306E\u3067\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u66F4\u65B0\u3057\u307E\u305B\u3093</div>' : ""}
+      ${!netMode && lastOnline ? (lastOnline.ok ? `<div class="rank-record online">🌐 みんなのランキング ${lastOnline.rank}位${lastOnline.updated ? "（自己ベスト更新）" : ""}</div>` : `<div class="rank-record miss">${(lastOnline.message || "").replace(/[<>&]/g, "")}</div>`) : ""}
       <div class="end-trophies">${slots}</div>
       <div class="btns" style="justify-content:center">
         <button class="primary" id="btn-again">${btnLabel}</button>
@@ -5358,8 +5619,8 @@ header.top .status { min-width: 0; overflow: hidden; }
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-05 01:29:40";
-  var SHOGI_BUILD_TIME = 1791131380562;
+    var SHOGI_VERSION_LABEL = "2026-10-14 02:47:54";
+  var SHOGI_BUILD_TIME = 1791913674192;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
