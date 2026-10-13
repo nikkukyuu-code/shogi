@@ -5,7 +5,7 @@
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-14 02:47:54';
+  var PAGE_LABEL = '2026-10-14 02:56:40';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -2280,7 +2280,12 @@ header.top .status { min-width: 0; overflow: hidden; }
 .rank-record.online { color: #9fe8a8; }
 .rank-overlay { z-index: 260; }
 .rank-card .ms { white-space: nowrap; font-size: 0.82rem; }
-.rank-card .when { font-size: 0.66rem; white-space: nowrap; } /* was 120: opened behind the start screen (z 200) */
+.rank-card .when { font-size: 0.66rem; white-space: nowrap; }
+@media (max-width: 480px) {
+  .rank-card li { grid-template-columns: 2.2em minmax(3em, 1fr) auto; row-gap: 0; }
+  .rank-card li .rk { grid-row: span 2; }
+  .rank-card li .when { grid-column: 2 / -1; text-align: right; }
+} /* was 120: opened behind the start screen (z 200) */
 </style>
 <link rel="apple-touch-icon" href="/shogi/apple-touch-icon.png" />
 <meta name="apple-mobile-web-app-title" content="7GET将棋" />
@@ -3487,10 +3492,6 @@ header.top .status { min-width: 0; overflow: hidden; }
       <div class="rank-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px;">
         ${RANK_DIFFS.map((d) => `<button type="button" class="rank-tab${d === viewDiff ? " on" : ""}" data-diff="${d}">${labels[d]}</button>`).join("")}
       </div>
-      <div class="rank-scope" role="group" aria-label="ランキングの範囲">
-        <button type="button" class="rank-sc${rankScope === "online" ? " on" : ""}" data-scope="online">🌐 みんな（オンライン）</button>
-        <button type="button" class="rank-sc${rankScope === "local" ? " on" : ""}" data-scope="local">📱 この端末</button>
-      </div>
       <p class="rank-me" id="rank-me"></p>
       <ol><li class="empty">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</li></ol>
       <button type="button" id="btn-rank-close">\u9589\u3058\u308B</button>
@@ -3503,12 +3504,9 @@ header.top .status { min-width: 0; overflow: hidden; }
     overlay.querySelectorAll(".rank-tab").forEach((btn) => {
       btn.addEventListener("click", () => void showRanking(highlightAt, btn.getAttribute("data-diff")));
     });
-    overlay.querySelectorAll(".rank-sc").forEach((btn) => {
-      btn.addEventListener("click", () => void showRanking(highlightAt, viewDiff, btn.getAttribute("data-scope")));
-    });
     document.body.appendChild(overlay);
     const meEl = overlay.querySelector("#rank-me");
-    if (rankScope === "online") {
+    {
       const r = await olApi("/ranking?difficulty=" + viewDiff + (onlineRankPid() ? "&id=" + onlineRankPid() : ""));
       if (!overlay.isConnected) return;
       if (r.ok) {
@@ -3528,18 +3526,9 @@ header.top .status { min-width: 0; overflow: hidden; }
         }));
         return;
       }
-      meEl.textContent = "オンラインに接続できません。この端末のランキングを表示しています";
+      meEl.textContent = "";
+      overlay.querySelector("ol").innerHTML = '<li class="empty">ランキングサーバーに接続できません（対局はそのままできます）</li>';
     }
-    const list = await loadRanks(viewDiff);
-    if (!overlay.isConnected) return;
-    const rows = list.length ? list.map((e, i) => {
-      const hi = highlightAt && e.at === highlightAt ? ' class="me"' : "";
-      const d = new Date(e.at);
-      const when = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-      const nm = savedNickname() || e.name || "\u540D\u7121\u3057";
-      return `<li${hi}><span class="rk">${i + 1}</span><span class="nm">${nm}</span><span class="ms">${formatMs(e.ms)}</span><span class="when">${when}</span></li>`;
-    }).join("") : '<li class="empty">\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093</li>';
-    overlay.querySelector("ol").innerHTML = rows;
   }
 
   // ===== オンラインランキング（Cloudflare Worker shogi-ranking）=====
@@ -4308,20 +4297,13 @@ return __sealFn;})();
       if (!ol) return;
       const diffNow = settings.difficulty;
       void olApi("/ranking?difficulty=" + diffNow, { timeout: 4000 }).then((r) => {
-        if (!r.ok || !ol.isConnected || settings.difficulty !== diffNow) return;
+        if (!ol.isConnected || settings.difficulty !== diffNow) return;
+        if (!r.ok) { ol.innerHTML = '<li class="empty">ランキングサーバーに接続できません（対局はそのままできます）</li>'; return; }
         ol.dataset.online = "1";
         const top = r.top.slice(0, 5);
         ol.innerHTML = top.length ? top.map((e, i) => `<li><span class="rk">${i + 1}</span><span class="nm">${(e.nickname || "名無し").replace(/[<>&]/g, "")}</span><span class="ms">${formatMs(e.ms)}</span></li>`).join("") : '<li class="empty">まだ記録がありません</li>';
       });
       void paintMyMedals(root.querySelector("#start-medals"));
-      void loadRanks(settings.difficulty).then((list) => {
-        if (!ol.isConnected || ol.dataset.online === "1") return;
-        const top = list.slice(0, 5);
-        ol.innerHTML = top.length ? top.map((e, i) => {
-          const nm = (e.name || "名無し").replace(/[<>&]/g, "");
-          return `<li><span class="rk">${i + 1}</span><span class="nm">${nm}</span><span class="ms">${formatMs(e.ms)}</span></li>`;
-        }).join("") : '<li class="empty">まだ記録がありません</li>';
-      });
     };
     const pickDiff = (next) => {
       settings.difficulty = next;
@@ -5619,8 +5601,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-14 02:47:54";
-  var SHOGI_BUILD_TIME = 1791913674192;
+    var SHOGI_VERSION_LABEL = "2026-10-14 02:56:40";
+  var SHOGI_BUILD_TIME = 1791914200244;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
