@@ -5,7 +5,7 @@
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-14 02:56:40';
+  var PAGE_LABEL = '2026-10-14 03:07:43';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -2267,6 +2267,9 @@ header.top .status { min-width: 0; overflow: hidden; }
 .rank-card li .rk { display: flex; align-items: center; justify-content: center; }
 .rank-card li .rk .medal { display: block; }
 .rank-card li { align-items: center; }
+.start-myrank { margin: 2px 0 0; text-align: center; font-weight: 800; font-size: 0.86rem; color: #d8c79a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.2em; }
+.start-myrank.in { color: #ffd23a; }
+.ol-rank-big { font-size: 1.15em; color: #ffd23a; white-space: nowrap; }
 .start-medals { display: inline-flex; vertical-align: middle; margin-left: 4px; }
 .ol-medals { display: inline-flex; align-items: flex-end; gap: 2px; flex-wrap: wrap; justify-content: center; }
 .ol-medals .medal { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
@@ -3511,7 +3514,7 @@ header.top .status { min-width: 0; overflow: hidden; }
       if (!overlay.isConnected) return;
       if (r.ok) {
         const me = onlineRankPid();
-        meEl.textContent = r.me ? `あなたの順位 ${r.me.rank}位 / ${r.total}人　${formatMs(r.me.ms)}` : "あなたの記録はまだありません（COMに勝つと記録）";
+        meEl.innerHTML = r.me ? `あなたは <b class="ol-rank-big">${olRankText(r.total, r.me.rank)}</b>　${formatMs(r.me.ms)}` : `<b class="ol-rank-big">${olRankText(r.total, 0)}</b>　COMに勝つと参加`;
         const ol = overlay.querySelector("ol");
         if (!r.top.length) { ol.innerHTML = '<li class="empty">まだ記録がありません</li>'; return; }
         ol.replaceChildren(...r.top.map((e) => {
@@ -3583,7 +3586,16 @@ return __sealFn;})();
   function onlineBegin(difficulty) {
     const m = { token: null, p: null, diff: difficulty };
     olMatch = m;
-    m.p = onlineEnsure().then((me) => { if (me.ok && me.adjusted) olNickResult(me); return me; }).then((me) => me.ok ? olApi("/match/start", { body: { id: me.id, secret: me.secret, difficulty } }) : null)
+    m.p = onlineEnsure().then((me) => { if (me.ok && me.adjusted) olNickResult(me); return me; }).then(async (me) => {
+      if (!me.ok) return null;
+      let r = await olApi("/match/start", { body: { id: me.id, secret: me.secret, difficulty } });
+      if (!r.ok && r.status === 401) {
+        // Server no longer knows this id: register again with the same nickname (keys are overwritten, never wiped).
+        const re = await olApi("/register", { body: { nickname: olName() } });
+        if (re.ok) { olSet(OL_ID, re.id); olSet(OL_SECRET, re.secret); olStoreName(re.nickname); r = await olApi("/match/start", { body: { id: re.id, secret: re.secret, difficulty } }); }
+      }
+      return r;
+    })
       .then((r) => { if (r && r.ok) m.token = r.token; return m.token; }).catch(() => null);
   }
   async function onlineSubmit(ms, moves) {
@@ -3593,9 +3605,13 @@ return __sealFn;})();
       const token = m.token || await Promise.race([m.p, wait(4000).then(() => null)]);
       if (!token) return { ok: false, message: "\u30AA\u30F3\u30E9\u30A4\u30F3\u672A\u767B\u9332\uFF08\u63A5\u7D9A\u3067\u304D\u307E\u305B\u3093\uFF09" };
       const sealed = await olSeal(token, { s: Math.max(0, Math.round(ms)), m: moves });
-      return await olApi("/match/submit", { body: Object.assign({ id: olGet(OL_ID), secret: olGet(OL_SECRET), token }, sealed), timeout: 5000 });
+      const r = await olApi("/match/submit", { body: Object.assign({ id: olGet(OL_ID), secret: olGet(OL_SECRET), token }, sealed), timeout: 5000 });
+      if (r && r.ok) { const t = await olApi("/ranking?difficulty=" + r.difficulty + "&id=" + olGet(OL_ID), { timeout: 4000 }); if (t.ok) { r.total = t.total; if (t.me) r.rank = t.me.rank; } }
+      return r;
     } catch (e) { return { ok: false, message: "\u30AA\u30F3\u30E9\u30A4\u30F3\u672A\u767B\u9332" }; }
   }
+  var OL_DIFF_JA = { beginner: "初級", intermediate: "中級", advanced: "上級", serious: "真剣" };
+  function olRankText(total, rank) { return rank ? `${total}人中${rank}位` : `未参加（${total || 0}人参加中）`; }
   function olToast(text, warn) {
     document.querySelector(".ol-toast")?.remove();
     const el = document.createElement("div");
@@ -4296,8 +4312,10 @@ return __sealFn;})();
       const ol = root.querySelector("#start-rank-list");
       if (!ol) return;
       const diffNow = settings.difficulty;
-      void olApi("/ranking?difficulty=" + diffNow, { timeout: 4000 }).then((r) => {
+      const myEl = root.querySelector("#start-myrank");
+      void olApi("/ranking?difficulty=" + diffNow + (onlineRankPid() ? "&id=" + onlineRankPid() : ""), { timeout: 4000 }).then((r) => {
         if (!ol.isConnected || settings.difficulty !== diffNow) return;
+        if (myEl) { myEl.textContent = r.ok ? `あなた（${OL_DIFF_JA[diffNow]}）：${olRankText(r.total, r.me && r.me.rank)}` : ""; myEl.classList.toggle("in", !!(r.ok && r.me)); }
         if (!r.ok) { ol.innerHTML = '<li class="empty">ランキングサーバーに接続できません（対局はそのままできます）</li>'; return; }
         ol.dataset.online = "1";
         const top = r.top.slice(0, 5);
@@ -4935,6 +4953,7 @@ return __sealFn;})();
       <div class="start-rank-box">
         <button type="button" id="btn-rank" class="start-rank">\u30E9\u30F3\u30AD\u30F3\u30B0<span id="start-medals" class="start-medals"></span><small>\u307F\u3093\u306A\u306E\u4E0A\u4F4D\u30FB\u8A73\u3057\u304F\u306F\u30BF\u30C3\u30D7</small></button>
         <ol id="start-rank-list" class="start-rank-list"><li class="empty">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</li></ol>
+        <p id="start-myrank" class="start-myrank"></p>
       </div>
       <label class="nick-field" id="nick-field">
         <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0\uFF08\u7A7A\u306A\u3089\u540D\u7121\u3057\uFF09" value="${(savedNickname() || settings.nickname).replace(/"/g, "&quot;")}" />
@@ -5415,7 +5434,7 @@ return __sealFn;})();
       ${!netMode && lastRecordedMs != null ? `<div class="rank-record">${formatMs(lastRankUpdated ? lastRecordedMs : lastAttemptMs ?? lastRecordedMs)}${lastRank ? `\u3000${lastRank}\u4F4D` : ""}</div>` : ""}
       ${!netMode && lastRankUpdated && lastRank != null && lastRank <= 100 ? '<div class="rank-record">\u304A\u3081\u3067\u3068\u3046</div>' : ""}
       ${!netMode && !lastRankUpdated && lastAttemptMs != null && lastRecordedMs != null && lastAttemptMs > lastRecordedMs ? '<div class="rank-record miss">\u524D\u56DE\u3088\u308A\u9045\u304B\u3063\u305F\u306E\u3067\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u66F4\u65B0\u3057\u307E\u305B\u3093</div>' : ""}
-      ${!netMode && lastOnline ? (lastOnline.ok ? `<div class="rank-record online">🌐 みんなのランキング ${lastOnline.rank}位${lastOnline.updated ? "（自己ベスト更新）" : ""}</div>` : `<div class="rank-record miss">${(lastOnline.message || "").replace(/[<>&]/g, "")}</div>`) : ""}
+      ${!netMode && lastOnline ? (lastOnline.ok ? `<div class="rank-record online">🌐 みんなのランキング（${OL_DIFF_JA[lastOnline.difficulty] || ""}）<b class="ol-rank-big">${lastOnline.total ? olRankText(lastOnline.total, lastOnline.rank) : lastOnline.rank + "位"}</b>${lastOnline.updated ? "（自己ベスト更新）" : ""}</div>` : `<div class="rank-record miss">${(lastOnline.message || "").replace(/[<>&]/g, "")}</div>`) : ""}
       <div class="end-trophies">${slots}</div>
       <div class="btns" style="justify-content:center">
         <button class="primary" id="btn-again">${btnLabel}</button>
@@ -5601,8 +5620,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-14 02:56:40";
-  var SHOGI_BUILD_TIME = 1791914200244;
+    var SHOGI_VERSION_LABEL = "2026-10-14 03:07:43";
+  var SHOGI_BUILD_TIME = 1791914863793;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
