@@ -5,7 +5,7 @@
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-14 03:07:43';
+  var PAGE_LABEL = '2026-10-14 16:42:37';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -4969,7 +4969,7 @@ return __sealFn;})();
         <button type="button" data-side="1">\u5F8C\u624B</button>
       </div>
       <a class="start-transfer" id="btn-transfer" href="/transfer/?from=/shogi/game/">🔄 引き継ぎ<small>（機種変更・データ移行）</small></a>
-      <a class="save-note dl-note" id="save-note" href="/transfer/?from=/shogi/game/"><b class="dl-h">⚠ 記録が消えることがあります：</b><span class="dl-li">・iPhoneのSafariで7日くらい遊ばなかったとき</span><span class="dl-li">・ブラウザの履歴やデータを消したとき</span><span class="dl-li">・プライベートモードで遊んだとき</span><span class="dl-p dl-home">📱 iPhoneは「ホーム画面に追加」して遊ぶと消えにくくなります</span><span class="dl-p">スマホを買い替える前に「引き継ぎ」ボタンでコードを作って保存してください。<span class="easy-link">かんたんな方法はこちら ›</span></span></a>
+      <a class="save-note dl-note" id="save-note" href="/transfer/?from=/shogi/game/"><b class="dl-h">⚠ 記録が消えることがあります：</b><span class="dl-li">・iPhoneのSafariで7日くらい遊ばなかったとき</span><span class="dl-li">・ブラウザの履歴やデータを消したとき</span><span class="dl-li">・プライベートモードで遊んだとき</span><span class="dl-p dl-home">📱 iPhoneは「ホーム画面に追加」して遊ぶと消えにくくなります</span><span class="dl-p">スマホを買い替える前に「引き継ぎ」ボタンで引き継ぎIDを発行してメモしてください（IDと数字だけで戻せます）。<span class="easy-link">かんたんな方法はこちら ›</span></span></a>
       <p class="start-ver"><span id="visit-count"></span><span id="battle-count" hidden></span><span id="app-version">${SHOGI_VERSION_LABEL}</span></p>
       <div class="start-foot">
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
@@ -5620,8 +5620,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-14 03:07:43";
-  var SHOGI_BUILD_TIME = 1791914863793;
+    var SHOGI_VERSION_LABEL = "2026-10-14 16:42:37";
+  var SHOGI_BUILD_TIME = 1791963757754;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;

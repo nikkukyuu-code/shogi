@@ -25,6 +25,17 @@ async function runBackup(env, reason) {
       await env.BK.batch(stmts);
     }
   }
+  // transfer (引き継ぎID): encrypted blobs can be large → incremental, one snapshot row per code changed since the last run.
+  if (env.TRANSFER) {
+    const last = await env.BK.prepare("SELECT MAX(taken_at) t FROM runs").first();
+    const since = (last && last.t) || 0;
+    const { results } = await env.TRANSFER.prepare('SELECT * FROM codes WHERE updated_at >= ? AND blob IS NOT NULL').bind(since).all();
+    summary.transfer = { codes_changed: results.length };
+    for (let i = 0; i < results.length; i += 20) {
+      await env.BK.batch(results.slice(i, i + 20).map((r, j) => env.BK.prepare('INSERT INTO snapshots (taken_at, day, game, tbl, part, parts, row_count, rows_json, reason) VALUES (?,?,?,?,?,?,?,?,?)')
+        .bind(now, day, 'transfer', 'codes', i + j, results.length, 1, JSON.stringify([r]), reason)));
+    }
+  }
   await env.BK.prepare('INSERT INTO runs (taken_at, day, reason, summary_json) VALUES (?,?,?,?)').bind(now, day, reason, JSON.stringify(summary)).run();
   return { taken_at: now, day, summary };
 }
