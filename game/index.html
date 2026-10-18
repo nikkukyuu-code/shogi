@@ -5,7 +5,7 @@
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-17 11:44:23';
+  var PAGE_LABEL = '2026-10-18 19:41:13';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -2232,30 +2232,6 @@ header.top .status { min-width: 0; overflow: hidden; }
 .start-rank-list .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .start-rank-list .ms { opacity: 0.9; font-variant-numeric: tabular-nums; }
 .start-rank-list .empty { justify-content: center; opacity: 0.7; }
-/* β版 badge (beta) */
-.beta-badge {
-  display: inline-block;
-  margin-left: 0.35em;
-  padding: 0.2em 0.55em 0.22em;
-  font-size: max(0.72rem, 0.42em);
-  font-weight: 900;
-  font-style: normal;
-  line-height: 1.1;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-  vertical-align: middle;
-  color: #fff;
-  -webkit-text-fill-color: #fff;
-  -webkit-text-stroke: 0;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
-  background: linear-gradient(135deg, #ff2d55, #ff8a00);
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  border-radius: 999px;
-  box-shadow: 0 0 12px rgba(255, 70, 70, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
-  transform: rotate(-8deg);
-  filter: none;
-}
-.start-title .beta-badge { font-size: max(0.72rem, 0.55em); letter-spacing: 0.06em; }
 /* no ranking yet: don't reserve 5 empty rows (avoids a big blank gap on the start card) */
 .start-card .start-rank-list:has(> li.empty:only-child) { min-height: 0; }
 
@@ -5009,7 +4985,7 @@ return __sealFn;})();
         <a class="home-link start-home" href="https://nikkukyuu-code.github.io/">トップページに戻る</a>
         <a class="home-link start-home" href="../">ルール説明へ</a>
       </div>
-      <h2 class="start-title">7GET将棋<span class="beta-badge">β版</span></h2>
+      <h2 class="start-title">7GET将棋</h2>
       <section class="win-show" aria-label="\u52DD\u3061\u65B9">
         <p class="win-note">\u3075\u3064\u3046\u306E\u5C06\u68CB\u3068\u9055\u3044\u307E\u3059</p>
         <ol class="win-lines">
@@ -5694,8 +5670,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-17 11:44:23";
-  var SHOGI_BUILD_TIME = 1792205063702;
+    var SHOGI_VERSION_LABEL = "2026-10-18 19:41:13";
+  var SHOGI_BUILD_TIME = 1792320073647;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
