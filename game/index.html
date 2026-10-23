@@ -5,7 +5,7 @@
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-23 19:21:12';
+  var PAGE_LABEL = '2026-10-24 01:22:54';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -1787,6 +1787,7 @@ label.setting {
 }
 .start-overlay #btn-rank[hidden] { display: none; }
 .start-overlay .sound-toggle { margin-left: auto; }
+.start-foot .share-btn { margin: 0; cursor: pointer; font-family: inherit; padding: 3px 12px; }
 
 
 .think-chip {
@@ -5025,6 +5026,7 @@ return __sealFn;})();
       <a class="save-note dl-note" id="save-note" href="/transfer/?from=/shogi/game/"><b class="dl-h">⚠ 記録が消えることがあります：</b><span class="dl-li">・iPhoneのSafariで7日くらい遊ばなかったとき</span><span class="dl-li">・ブラウザの履歴やデータを消したとき</span><span class="dl-li">・プライベートモードで遊んだとき</span><span class="dl-p dl-home">📱 iPhoneは「ホーム画面に追加」して遊ぶと消えにくくなります</span><span class="dl-p">スマホを買い替える前に「引き継ぎ」ボタンで引き継ぎIDを発行してメモしてください（IDと数字だけで戻せます）。<span class="easy-link">かんたんな方法はこちら ›</span></span></a>
       <p class="start-ver"><span id="visit-count"></span><span id="battle-count" hidden></span><span id="app-version">${SHOGI_VERSION_LABEL}</span></p>
       <div class="start-foot">
+        <button type="button" class="home-link start-home share-btn" data-share-btn data-share-title="7GET将棋" data-share-text="ブラウザゲーム「7GET将棋」 ほかのゲームもこちらから遊べます">共有</button>
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
       </div>
     </div>`;
@@ -5673,8 +5675,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-23 19:21:12";
-  var SHOGI_BUILD_TIME = 1792750872000;
+    var SHOGI_VERSION_LABEL = "2026-10-24 01:22:54";
+  var SHOGI_BUILD_TIME = 1792772574000;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
@@ -5781,6 +5783,39 @@ return __sealFn;})();
   void bumpVisits();
 })();
 
+</script>
+<script>
+/* 共有ボタン: navigator.share → fallback copy + toast (X / LINE) */
+(function () {
+  var URL_TOP = 'https://nikkukyuu-code.github.io/';
+  function toast(msg, title, text) {
+    var old = document.getElementById('share-toast'); if (old) old.remove();
+    var t = document.createElement('div'); t.id = 'share-toast'; t.setAttribute('role', 'status');
+    t.style.cssText = 'position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:2147483000;max-width:min(92vw,360px);padding:10px 14px;border-radius:12px;background:rgba(10,12,24,.94);color:#fff;font:700 14px/1.5 system-ui,sans-serif;text-align:center;box-shadow:0 4px 18px rgba(0,0,0,.5)';
+    var q = encodeURIComponent(text + ' ' + URL_TOP);
+    t.innerHTML = '<div></div><div style="margin-top:6px;display:flex;gap:10px;justify-content:center;font-size:13px">' +
+      '<a target="_blank" rel="noopener" style="color:#9ad4ff" href="https://twitter.com/intent/tweet?text=' + q + '">Xで共有</a>' +
+      '<a target="_blank" rel="noopener" style="color:#7be08f" href="https://social-plugins.line.me/lineit/share?url=' + encodeURIComponent(URL_TOP) + '">LINEで共有</a></div>';
+    t.firstChild.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function () { if (t.parentNode) t.remove(); }, 4500);
+  }
+  function copy(s) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(s);
+    return new Promise(function (ok, ng) {
+      try { var a = document.createElement('textarea'); a.value = s; a.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(a); a.select(); var r = document.execCommand('copy'); a.remove(); r ? ok() : ng(); } catch (e) { ng(e); }
+    });
+  }
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest && ev.target.closest('[data-share-btn]'); if (!b) return;
+    ev.preventDefault();
+    var title = b.getAttribute('data-share-title') || document.title;
+    var text = b.getAttribute('data-share-text') || title;
+    var fb = function () { copy(URL_TOP).then(function () { toast('リンクをコピーしました', title, text); }, function () { toast(URL_TOP, title, text); }); };
+    if (navigator.share) navigator.share({ title: title, text: text, url: URL_TOP }).catch(function (e) { if (!e || e.name !== 'AbortError') fb(); });
+    else fb();
+  });
+})();
 </script>
 </body>
 </html>
