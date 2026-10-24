@@ -5,7 +5,7 @@
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-25 06:23:11';
+  var PAGE_LABEL = '2026-10-25 06:43:52';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -2297,6 +2297,16 @@ header.top .status { min-width: 0; overflow: hidden; }
 .rank-card .rk-medals:empty { display: none; }
 .rank-card .rk-medals .ol-medals { flex-wrap: nowrap; justify-content: flex-start; gap: 1px; }
 .rank-card .rk-medals .medal { flex-shrink: 0; }
+
+/* ===== 共通「◀ 戻る」ボタン（全ゲーム同じ見た目・見出し左端） ===== */
+.sub-back { appearance: none; height: 30px; padding: 0 9px; border-radius: 9px;
+  border: 1px solid rgba(140, 200, 255, 0.6); background: linear-gradient(180deg, rgba(40, 80, 150, 0.95), rgba(18, 36, 80, 0.95));
+  color: #e8f4ff; font: 800 0.8rem/1 sans-serif; letter-spacing: 0; white-space: nowrap; cursor: pointer; box-shadow: 0 0 10px rgba(80, 160, 255, 0.35); -webkit-tap-highlight-color: transparent; }
+.sub-back:active { transform: translateY(1px); }
+.sub-back:focus-visible { outline: 2px solid #5fe0ff; outline-offset: 1px; }
+.rank-card, .nick-card { position: relative; }
+.rank-card > .sub-back, .nick-card > .sub-back { position: absolute; left: 10px; top: 10px; z-index: 3; margin: 0; width: auto; }
+.rank-card > h2, .nick-card > h2 { padding-left: 64px; padding-right: 64px; }
 @media (prefers-reduced-motion: reduce) { .rank-card li::after, .rank-card li.top1, .rk-crown { animation: none !important; } }
 
 </style>
@@ -3500,6 +3510,7 @@ header.top .status { min-width: 0; overflow: hidden; }
     overlay.className = "rank-overlay";
     overlay.innerHTML = `
     <div class="rank-card" role="dialog" aria-label="\u30E9\u30F3\u30AD\u30F3\u30B0">
+      <button type="button" class="sub-back" aria-label="閉じて戻る">◀ 戻る</button>
       <h2>\u30E9\u30F3\u30AD\u30F3\u30B0</h2>
       <p class="rank-lead">\u6295\u4E86\u3059\u308B\u307E\u3067\u306E\u3001\u81EA\u5206\u306E\u624B\u756A\u3060\u3051\u306E\u6642\u9593\u3067\u3059\u3002\u76F8\u624B\u306E\u601D\u8003\u306F\u5165\u308A\u307E\u305B\u3093\u3002\u77ED\u3044\u307B\u3069\u4E0A\u4F4D\uFF08\u96E3\u6613\u5EA6\u5225\u30FB100\u4F4D\u307E\u3067\uFF09</p>
       <div class="rank-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px;">
@@ -3514,6 +3525,7 @@ header.top .status { min-width: 0; overflow: hidden; }
       if (e.target === overlay) close();
     });
     overlay.querySelector("#btn-rank-close").addEventListener("click", close);
+    overlay.querySelector(".sub-back").addEventListener("click", close);
     overlay.querySelectorAll(".rank-tab").forEach((btn) => {
       btn.addEventListener("click", () => void showRanking(highlightAt, btn.getAttribute("data-diff")));
     });
@@ -4406,6 +4418,7 @@ return __sealFn;})();
     el.className = "nick-overlay";
     el.innerHTML = `
     <div class="start-card nick-card">
+      <button type="button" class="sub-back" aria-label="閉じて戻る">◀ 戻る</button>
       <h2>\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0</h2>
       <label class="nick-field">
         <input id="inp-nick-edit" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${settings.nickname.replace(/"/g, "&quot;")}" />
@@ -4416,6 +4429,7 @@ return __sealFn;})();
     el.addEventListener("click", (e) => {
       if (e.target === el) el.remove();
     });
+    el.querySelector(".sub-back").addEventListener("click", () => el.remove());
     el.querySelector("#btn-nick-save").addEventListener("click", () => {
       void (async () => {
         const inp = el.querySelector("#inp-nick-edit");
@@ -5741,8 +5755,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-25 06:23:11";
-  var SHOGI_BUILD_TIME = 1792876991000;
+    var SHOGI_VERSION_LABEL = "2026-10-25 06:43:52";
+  var SHOGI_BUILD_TIME = 1792878232000;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
