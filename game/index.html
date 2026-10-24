@@ -5,7 +5,7 @@
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-24 19:06:44';
+  var PAGE_LABEL = '2026-10-25 06:23:11';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -2290,6 +2290,13 @@ header.top .status { min-width: 0; overflow: hidden; }
 @keyframes rkShine { 0% { transform: translateX(-120%) skewX(-18deg); } 60%, 100% { transform: translateX(320%) skewX(-18deg); } }
 @keyframes rkGlow { from { box-shadow: 0 0 6px rgba(255,200,40,0.45); } to { box-shadow: 0 0 18px rgba(255,215,60,0.85); } }
 @keyframes rkCrown { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-2px) rotate(6deg); } }
+
+.rank-card .nm { display: flex; flex-direction: column; justify-content: center; gap: 1px; min-width: 0; }
+.rank-card .nm-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-card .rk-medals { display: block; min-width: 0; overflow: hidden; line-height: 0; white-space: nowrap; }
+.rank-card .rk-medals:empty { display: none; }
+.rank-card .rk-medals .ol-medals { flex-wrap: nowrap; justify-content: flex-start; gap: 1px; }
+.rank-card .rk-medals .medal { flex-shrink: 0; }
 @media (prefers-reduced-motion: reduce) { .rank-card li::after, .rank-card li.top1, .rk-crown { animation: none !important; } }
 
 </style>
@@ -3524,12 +3531,13 @@ header.top .status { min-width: 0; overflow: hidden; }
           const li = document.createElement("li"); li.className = (e.id === me ? "me " : "") + (e.rank <= 3 ? "top" + e.rank : e.rank <= 10 ? "top10" : "");
           const rk = document.createElement("span"); rk.className = "rk";
           if (e.rank <= 3) rk.appendChild(medalCanvas(viewDiff, e.rank, 24)); else rk.textContent = String(e.rank);
-          const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = e.nickname + (e.id === me ? "（あなた）" : ""); if (e.rank === 1) nm.prepend(Object.assign(document.createElement("i"), { className: "rk-crown", textContent: "\u{1F451}" }));
+          const nm = document.createElement("span"); nm.className = "nm"; const nt = document.createElement("span"); nt.className = "nm-t"; nt.textContent = e.nickname + (e.id === me ? "（あなた）" : ""); if (e.rank === 1) nt.prepend(Object.assign(document.createElement("i"), { className: "rk-crown", textContent: "\u{1F451}" })); const md = document.createElement("span"); md.className = "rk-medals"; md.dataset.pid = e.id; nm.append(nt, md);
           const ms = document.createElement("span"); ms.className = "ms"; ms.textContent = formatMs(e.ms);
           const d = new Date(e.at); const wh = document.createElement("span"); wh.className = "when";
           wh.textContent = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
           li.append(rk, nm, ms, wh); return li;
         }));
+        rkWatchMedals(ol);
         return;
       }
       meEl.textContent = "";
@@ -3714,6 +3722,40 @@ return __sealFn;})();
     if (!r.ok || !target.isConnected) return;
     const mine = r.medals[id];
     target.replaceChildren(mine && mine.medals.length ? medalRow(mine.medals, 0.62) : "");
+  }
+  // ランキング各行のメダル: 画面に入った行だけ /medals?ids= (4人ずつ) で遅延取得・セッション中キャッシュ
+  var rkMedalCache = new Map(), rkMedalWait = new Set(), rkMedalIO = null, rkMedalBusy = 0;
+  function rkPaintMedals(el) {
+    const m = rkMedalCache.get(el.dataset.pid);
+    if (!m || el.dataset.done) return;
+    el.dataset.done = "1";
+    if (!m.length) { el.remove(); return; }
+    el.replaceChildren(medalRow(m, 0.5));
+  }
+  function rkPumpMedals() {
+    while (rkMedalBusy < 2 && rkMedalWait.size) {
+      const ids = [...rkMedalWait].slice(0, 4);
+      ids.forEach((id) => rkMedalWait.delete(id));
+      rkMedalBusy++;
+      olApi("/medals?ids=" + ids.join(",")).then((r) => {
+        if (r && r.ok) for (const id of ids) rkMedalCache.set(id, (r.medals && r.medals[id] && r.medals[id].medals) || []);
+      }).catch(() => {}).finally(() => {
+        rkMedalBusy--;
+        document.querySelectorAll(".rank-card .rk-medals[data-pid]:not([data-done])").forEach(rkPaintMedals);
+        rkPumpMedals();
+      });
+    }
+  }
+  function rkWatchMedals(ol) {
+    if (rkMedalIO) rkMedalIO.disconnect();
+    const els = [...ol.querySelectorAll(".rk-medals[data-pid]")];
+    const want = (el) => { const id = el.dataset.pid; if (rkMedalCache.has(id)) rkPaintMedals(el); else if (/^g[0-9a-f]{24}$/.test(id)) rkMedalWait.add(id); };
+    if (typeof IntersectionObserver === "undefined") { els.forEach(want); rkPumpMedals(); return; }
+    rkMedalIO = new IntersectionObserver((ents) => {
+      for (const en of ents) if (en.isIntersecting) { rkMedalIO.unobserve(en.target); const m = en.target.querySelector(".rk-medals[data-pid]"); if (m) want(m); }
+      rkPumpMedals();
+    }, { root: ol, rootMargin: "200px 0px" });
+    els.forEach((el) => rkMedalIO.observe(el.closest("li") || el));
   }
   var olVsKey = "";
   window.__shogiShowPeerMedals = (p) => showPeerMedals(p);
@@ -5048,7 +5090,7 @@ return __sealFn;})();
       </div>
       <a class="start-transfer" id="btn-transfer" href="/transfer/?from=/shogi/game/">🔄 引き継ぎ<small>（機種変更・データ移行）</small></a>
       <a class="save-note dl-note" id="save-note" href="/transfer/?from=/shogi/game/"><b class="dl-h">⚠ 記録が消えることがあります：</b><span class="dl-li">・iPhoneのSafariで7日くらい遊ばなかったとき</span><span class="dl-li">・ブラウザの履歴やデータを消したとき</span><span class="dl-li">・プライベートモードで遊んだとき</span><span class="dl-p dl-home">📱 iPhoneは「ホーム画面に追加」して遊ぶと消えにくくなります</span><span class="dl-p">スマホを買い替える前に「引き継ぎ」ボタンで引き継ぎIDを発行してメモしてください（IDと数字だけで戻せます）。<span class="easy-link">かんたんな方法はこちら ›</span></span></a>
-      <p class="start-ver"><span id="visit-count"></span><span id="battle-count" hidden></span><span id="app-version">${SHOGI_VERSION_LABEL}</span></p>
+      <p class="start-ver"><span id="visit-count"></span><span id="battle-count" hidden></span><span class="ver-pre" style="white-space:nowrap">バージョン <span id="app-version">${SHOGI_VERSION_LABEL}</span></span></p>
       <div class="start-foot">
         <button type="button" class="home-link start-home share-btn" data-share-btn data-share-title="7GET将棋" data-share-text="ブラウザゲーム「7GET将棋」 ほかのゲームもこちらから遊べます">共有</button>
         <label class="sound-toggle"><input type="checkbox" id="chk-sound" />\u97F3</label>
@@ -5699,8 +5741,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-24 19:06:44";
-  var SHOGI_BUILD_TIME = 1792836404000;
+    var SHOGI_VERSION_LABEL = "2026-10-25 06:23:11";
+  var SHOGI_BUILD_TIME = 1792876991000;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
