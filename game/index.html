@@ -5,7 +5,7 @@
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-24 01:22:54';
+  var PAGE_LABEL = '2026-10-24 19:06:44';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -2268,6 +2268,30 @@ header.top .status { min-width: 0; overflow: hidden; }
   .rank-card li .rk { grid-row: span 2; }
   .rank-card li .when { grid-column: 2 / -1; text-align: right; }
 } /* was 120: opened behind the start screen (z 200) */
+/* ===== ランキング: ベスト100をスクロール / 上位ほど派手に ===== */
+.rank-card { display: flex; flex-direction: column; overflow: hidden; max-height: min(86svh, 760px); }
+.rank-card > h2, .rank-card > .rank-lead, .rank-card > .rank-tabs, .rank-card > .rank-me, .rank-card > #btn-rank-close { flex-shrink: 0; }
+.rank-card ol { flex: 1 1 auto; min-height: 120px; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; margin: 0 -6px 12px; padding: 2px 6px; scrollbar-width: thin; scrollbar-color: rgba(201,162,39,0.6) transparent; }
+.rank-card li { position: relative; overflow: hidden; }
+.rank-card li.top1 { background: linear-gradient(100deg, rgba(255,214,70,0.5), rgba(150,95,0,0.35) 50%, rgba(0,0,0,0.1)); border: 1.5px solid #ffe07a; border-radius: 8px; margin-bottom: 4px; padding: 10px 6px; animation: rkGlow 1.8s ease-in-out infinite alternate; }
+.rank-card li.top1 .nm { color: #fff3b8; font-weight: 900; font-size: 1.05em; text-shadow: 0 0 8px rgba(255,210,60,0.85); }
+.rank-card li.top1 .ms { color: #fff1a0; font-weight: 900; text-shadow: 0 0 8px rgba(255,200,40,0.8); }
+.rank-card li.top2 { background: linear-gradient(100deg, rgba(225,235,250,0.35), rgba(120,135,160,0.25) 50%, rgba(0,0,0,0.1)); border: 1.5px solid #dfe8f5; border-radius: 8px; margin-bottom: 4px; padding: 9px 6px; box-shadow: 0 0 10px rgba(210,225,245,0.3); }
+.rank-card li.top2 .nm { color: #f2f6ff; font-weight: 900; }
+.rank-card li.top3 { background: linear-gradient(100deg, rgba(225,140,70,0.38), rgba(120,60,20,0.25) 50%, rgba(0,0,0,0.1)); border: 1.5px solid #e9a066; border-radius: 8px; margin-bottom: 4px; padding: 8px 6px; }
+.rank-card li.top3 .nm { color: #ffe0c4; font-weight: 900; }
+.rank-card li.top1::after, .rank-card li.top2::after, .rank-card li.top3::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; pointer-events: none; background: linear-gradient(100deg, transparent, rgba(255,255,255,0.4), transparent); transform: translateX(-120%) skewX(-18deg); will-change: transform; animation: rkShine 2.6s ease-in-out infinite; }
+.rank-card li.top2::after { animation-duration: 3.6s; opacity: 0.7; }
+.rank-card li.top3::after { animation-duration: 4.6s; opacity: 0.5; }
+.rank-card li.top10 { background: linear-gradient(90deg, rgba(201,162,39,0.16), transparent); box-shadow: inset 3px 0 0 rgba(232,195,74,0.8); }
+.rank-card li.top10 .rk { text-shadow: 0 0 6px rgba(255,210,90,0.6); }
+.rank-card li.me { outline: 2px solid #ffd76a; outline-offset: -2px; }
+.rk-crown { font-style: normal; display: inline-block; margin-right: 3px; animation: rkCrown 1.6s ease-in-out infinite; }
+@keyframes rkShine { 0% { transform: translateX(-120%) skewX(-18deg); } 60%, 100% { transform: translateX(320%) skewX(-18deg); } }
+@keyframes rkGlow { from { box-shadow: 0 0 6px rgba(255,200,40,0.45); } to { box-shadow: 0 0 18px rgba(255,215,60,0.85); } }
+@keyframes rkCrown { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-2px) rotate(6deg); } }
+@media (prefers-reduced-motion: reduce) { .rank-card li::after, .rank-card li.top1, .rk-crown { animation: none !important; } }
+
 </style>
 <link rel="apple-touch-icon" href="/shogi/apple-touch-icon.png" />
 <meta name="apple-mobile-web-app-title" content="7GET将棋" />
@@ -3497,10 +3521,10 @@ header.top .status { min-width: 0; overflow: hidden; }
         const ol = overlay.querySelector("ol");
         if (!r.top.length) { ol.innerHTML = '<li class="empty">まだ記録がありません</li>'; return; }
         ol.replaceChildren(...r.top.map((e) => {
-          const li = document.createElement("li"); if (e.id === me) li.className = "me";
+          const li = document.createElement("li"); li.className = (e.id === me ? "me " : "") + (e.rank <= 3 ? "top" + e.rank : e.rank <= 10 ? "top10" : "");
           const rk = document.createElement("span"); rk.className = "rk";
           if (e.rank <= 3) rk.appendChild(medalCanvas(viewDiff, e.rank, 24)); else rk.textContent = String(e.rank);
-          const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = e.nickname + (e.id === me ? "（あなた）" : "");
+          const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = e.nickname + (e.id === me ? "（あなた）" : ""); if (e.rank === 1) nm.prepend(Object.assign(document.createElement("i"), { className: "rk-crown", textContent: "\u{1F451}" }));
           const ms = document.createElement("span"); ms.className = "ms"; ms.textContent = formatMs(e.ms);
           const d = new Date(e.at); const wh = document.createElement("span"); wh.className = "when";
           wh.textContent = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -5675,8 +5699,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-24 01:22:54";
-  var SHOGI_BUILD_TIME = 1792772574000;
+    var SHOGI_VERSION_LABEL = "2026-10-24 19:06:44";
+  var SHOGI_BUILD_TIME = 1792836404000;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
