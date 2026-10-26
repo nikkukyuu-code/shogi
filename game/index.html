@@ -5,7 +5,7 @@
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-25 06:43:52';
+  var PAGE_LABEL = '2026-10-26 19:12:46';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -1749,10 +1749,13 @@ label.setting {
   flex-wrap: wrap;
 }
 #battle-count[hidden] { display: none; }
+#battle-count .bc-breakdown { font-size: 0.86em; opacity: 0.9; white-space: normal; overflow-wrap: anywhere; }
 #battle-count {
   font-size: inherit;
   letter-spacing: inherit;
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 100%;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 #visit-count {
@@ -5171,7 +5174,7 @@ return __sealFn;})();
   }
   function newGame() {
     // bc: +1 per match start (CPU always; online: host side only)
-    if (!(netMode && netRole === "guest")) hitBattleCounter();
+    if (!(netMode && netRole === "guest")) hitBattleCounter(netMode ? "pvp" : settings.difficulty);
     if (!netMode) { try { onlineBegin(settings.difficulty); } catch (e) {} } else { olMatch = null; }
     stopEngine();
     searchId++;
@@ -5755,8 +5758,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-25 06:43:52";
-  var SHOGI_BUILD_TIME = 1792878232000;
+    var SHOGI_VERSION_LABEL = "2026-10-26 19:12:46";
+  var SHOGI_BUILD_TIME = 1793009566472;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
@@ -5830,33 +5833,70 @@ return __sealFn;})();
     var n = d && (typeof d.value === "number" ? d.value : Number(d.value));
     return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
   }
+  // Per-mode breakdown (separate abacus keys; total key unchanged): 対人 + COM difficulties.
+  var BATTLE_MODES = [
+    { id: "pvp", label: "対人" },
+    { id: "beginner", label: "初級" },
+    { id: "intermediate", label: "中級" },
+    { id: "advanced", label: "上級" },
+    { id: "serious", label: "真剣" }
+  ];
+  function readN(k) { try { var n = Number(localStorage.getItem(k)); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; } catch (e) { return 0; } }
+  function writeN(k, n) { try { if (Number.isFinite(n) && n > readN(k)) localStorage.setItem(k, String(Math.floor(n))); } catch (e) {} }
+  function hitKey(key, lastKey) {
+    try {
+      fetch(BATTLE_API + "/hit/" + key + "?_=" + Date.now(), { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { var n = parseBattleValue(d); if (n != null) writeN(lastKey, n); })
+        .catch(function () {});
+    } catch (e) {}
+  }
+  // +1 for an ESTABLISHED match (call only when the game really starts). mode: "pvp" | difficulty id.
+  function hitBattleCounter(mode) {
+    hitKey(BATTLE_KEY, BATTLE_LAST_KEY);
+    if (BATTLE_MODES.some(function (m) { return m.id === mode; })) hitKey(BATTLE_KEY + "-" + mode, BATTLE_LAST_KEY + "_" + mode);
+  }
+  async function getBattle(key) {
+    try {
+      const r = await fetch(BATTLE_API + "/get/" + key + "?_=" + Date.now(), { cache: "no-store" });
+      if (r.ok) return parseBattleValue(await r.json());
+      if (r.status === 404) return 0;
+    } catch (e) {}
+    return null;
+  }
+  var battleModeVals = {};
   function paintBattles(n) {
     var el = document.getElementById("battle-count");
     if (!el) return;
     el.textContent = "bc " + Number(n).toLocaleString("ja-JP");
+    var parts = BATTLE_MODES.filter(function (m) { return battleModeVals[m.id] != null; })
+      .map(function (m) { return m.label + " " + battleModeVals[m.id].toLocaleString("ja-JP"); });
+    if (parts.length) {
+      var b = document.createElement("span");
+      b.className = "bc-breakdown";
+      b.textContent = "（" + parts.join(" / ") + "）";
+      el.appendChild(b);
+    }
     el.hidden = false;
   }
-  function hitBattleCounter() {
-    try {
-      fetch(BATTLE_API + "/hit/" + BATTLE_KEY + "?_=" + Date.now(), { cache: "no-store" })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (d) { var n = parseBattleValue(d); if (n != null) writeBattleLast(n); })
-        .catch(function () {});
-    } catch (e) {}
-  }
   async function loadBattleCount() {
+    BATTLE_MODES.forEach(function (m) { var l = readN(BATTLE_LAST_KEY + "_" + m.id); if (l > 0) battleModeVals[m.id] = l; });
     var last = readBattleLast();
     if (last > 0) paintBattles(last);
-    try {
-      const r = await fetch(BATTLE_API + "/get/" + BATTLE_KEY + "?_=" + Date.now(), { cache: "no-store" });
-      var n = null;
-      if (r.ok) n = parseBattleValue(await r.json());
-      else if (r.status === 404) n = 0;
-      if (n == null) return;
-      var best = Math.max(n, last);
-      writeBattleLast(best);
-      paintBattles(best);
-    } catch (e) {}
+    var res = await Promise.all([getBattle(BATTLE_KEY)].concat(BATTLE_MODES.map(function (m) { return getBattle(BATTLE_KEY + "-" + m.id); })));
+    BATTLE_MODES.forEach(function (m, i) {
+      var v = res[i + 1];
+      if (v == null) return;
+      var lk = BATTLE_LAST_KEY + "_" + m.id;
+      var best = Math.max(v, readN(lk));
+      writeN(lk, best);
+      battleModeVals[m.id] = best;
+    });
+    var n = res[0];
+    if (n == null) { if (last > 0) paintBattles(last); return; }
+    var bestT = Math.max(n, readBattleLast());
+    writeBattleLast(bestT);
+    paintBattles(bestT);
   }
   bindViewport();
   showStartScreen();
