@@ -1,11 +1,36 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<script>
+/* 人らしい訪問 (nikkukyuu/shogi-human): 1タブ1回だけ・記録のみ（表示なし）。ボット除外、表示中に5秒滞在 or 操作で記録。 */
+(function () {
+  try {
+    if (navigator.webdriver || /bot|crawl|spider|slurp|headless|lighthouse|pagespeed|preview|facebookexternalhit|bingpreview|phantom|puppeteer|playwright|selenium/i.test(navigator.userAgent || '')) return;
+    var SK = 'nkHuman:shogi';
+    if (sessionStorage.getItem(SK)) return;
+    var done = false, t = null, EV = ['pointerdown', 'touchstart', 'keydown', 'scroll', 'wheel'];
+    function hit(k) { fetch('https://abacus.jasoncameron.dev/hit/nikkukyuu/' + k + '?_=' + Date.now(), { cache: 'no-store', mode: 'cors' }).catch(function () {}); }
+    function fire() {
+      if (done || document.visibilityState !== 'visible') return;
+      done = true; clearTimeout(t);
+      EV.forEach(function (e) { removeEventListener(e, onAct, true); });
+      try { if (sessionStorage.getItem(SK)) return; sessionStorage.setItem(SK, '1'); } catch (e) { return; }
+      hit('shogi-human');
+      
+    }
+    function onAct(e) { if (e.isTrusted !== false) fire(); }
+    function arm() { clearTimeout(t); if (!done && document.visibilityState === 'visible') t = setTimeout(fire, 5000); }
+    EV.forEach(function (e) { addEventListener(e, onAct, { capture: true, passive: true }); });
+    document.addEventListener('visibilitychange', arm);
+    arm();
+  } catch (e) {}
+})();
+</script>
 <meta charset="UTF-8" />
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-26 19:12:46';
+  var PAGE_LABEL = '2026-10-27 10:54:07';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -5758,8 +5783,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-26 19:12:46";
-  var SHOGI_BUILD_TIME = 1793009566472;
+    var SHOGI_VERSION_LABEL = "2026-10-27 10:54:07";
+  var SHOGI_BUILD_TIME = 1793066047322;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
