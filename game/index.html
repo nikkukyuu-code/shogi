@@ -30,7 +30,7 @@
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-29 12:39:50';
+  var PAGE_LABEL = '2026-10-29 21:22:40';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -2359,6 +2359,7 @@ header.top .status { min-width: 0; overflow: hidden; }
     var yt = ''; try { yt = sessionStorage.getItem('nkSrcYt') === '1' || /[?&]src=yt(&|$)/.test(location.search) ? 'yt' : ''; } catch (e) {}
     setTimeout(function () { once('nkVL:' + P, { ev: 'load', s: yt, r: ref, wd: navigator.webdriver ? 1 : 0 }); }, 0);
     window.__nkVisitBattle = function () { send({ ev: 'battle' }) /* 対戦ごと */; };
+    window.__nkVisitShare = function () { send({ ev: 'share' }); }; /* 共有ボタンを押した回数（毎回） */
     var done = false, t = null, EV = ['pointerdown', 'touchstart', 'keydown', 'scroll', 'wheel'];
     function fire() {
       if (done || document.visibilityState !== 'visible') return;
@@ -4846,6 +4847,7 @@ return __sealFn;})();
         catch (e) { if (note) note.textContent = "コピーできませんでした。番号 " + code + " を伝えてください"; }
       });
       document.querySelector("#net-share")?.addEventListener("click", () => {
+        try { window.__nkVisitShare && window.__nkVisitShare(); } catch (e) {}
         navigator.share({ title: "7GET将棋", text: "7GET将棋で対戦しよう！「部屋で対戦」→「部屋に入る」で番号 " + code + " を入力してね", url: "https://nikkukyuu-code.github.io/shogi/game/" }).catch(() => {});
       });
       netPeer.on("connection", (conn) => {
@@ -5818,8 +5820,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-29 12:39:50";
-  var SHOGI_BUILD_TIME = 1793245190000;
+    var SHOGI_VERSION_LABEL = "2026-10-29 21:22:40";
+  var SHOGI_BUILD_TIME = 1793276560000;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
@@ -5978,6 +5980,7 @@ return __sealFn;})();
       '<a target="_blank" rel="noopener" style="color:#9ad4ff" href="https://twitter.com/intent/tweet?text=' + q + '">Xで共有</a>' +
       '<a target="_blank" rel="noopener" style="color:#7be08f" href="https://social-plugins.line.me/lineit/share?url=' + encodeURIComponent(URL_TOP) + '">LINEで共有</a></div>';
     t.firstChild.textContent = msg;
+    t.addEventListener('click', function (e) { try { if (e.target.closest && e.target.closest('a') && window.__nkVisitShare) window.__nkVisitShare(); } catch (_) {} });
     document.body.appendChild(t);
     setTimeout(function () { if (t.parentNode) t.remove(); }, 4500);
   }
@@ -5990,6 +5993,7 @@ return __sealFn;})();
   document.addEventListener('click', function (ev) {
     var b = ev.target.closest && ev.target.closest('[data-share-btn]'); if (!b) return;
     ev.preventDefault();
+    try { if (window.__nkVisitShare) window.__nkVisitShare(); } catch (e) {}
     var title = b.getAttribute('data-share-title') || document.title;
     var text = b.getAttribute('data-share-text') || title;
     var fb = function () { copy(URL_TOP).then(function () { toast('リンクをコピーしました', title, text); }, function () { toast(URL_TOP, title, text); }); };
