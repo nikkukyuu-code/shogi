@@ -27,11 +27,11 @@
 })();
 </script>
 <meta charset="UTF-8" />
-<script>window.NK_I18N_CFG={"base": "../", "anchors": [[".start-title", "prepend"]], "skip": ".piece,.hand-piece,.board,.sr-piece"};</script><script src="../i18n/i18n.js?v=20261031035715"></script>
+<script>window.NK_I18N_CFG={"base": "../", "anchors": [[".start-title", "prepend"]], "skip": ".piece,.hand-piece,.board,.sr-piece"};</script><script src="../i18n/i18n.js?v=20261031050208"></script>
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-31 03:57:15';
+  var PAGE_LABEL = '2026-10-31 05:02:08';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -4493,7 +4493,7 @@ return __sealFn;})();
       <button type="button" class="sub-back" aria-label="閉じて戻る">◀ 戻る</button>
       <h2>\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0</h2>
       <label class="nick-field">
-        <input id="inp-nick-edit" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${settings.nickname.replace(/"/g, "&quot;")}" />
+        <input id="inp-nick-edit" type="text" maxlength="12" autocomplete="nickname" placeholder="\u7A7A\u306A\u3089\u540D\u7121\u3057" value="${((__v) => (document.documentElement.lang !== "ja" && __v === "\u540D\u7121\u3057" ? "" : __v))(settings.nickname).replace(/"/g, "&quot;")}" />
         <small id="nick-edit-hint">\u3053\u306E\u7AEF\u672B\u3067\u4E00\u4EBA\u4E00\u3064\u3002\u7A7A\u306A\u3089\u540D\u7121\u3057</small>
       </label>
       <button type="button" class="start-btn" id="btn-nick-save">\u5909\u66F4</button>
@@ -5163,7 +5163,7 @@ return __sealFn;})();
         <p id="start-myrank" class="start-myrank"></p>
       </div>
       <label class="nick-field" id="nick-field">
-        <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0\uFF08\u7A7A\u306A\u3089\u540D\u7121\u3057\uFF09" value="${(savedNickname() || settings.nickname).replace(/"/g, "&quot;")}" />
+        <input id="inp-nick" type="text" maxlength="12" autocomplete="nickname" placeholder="\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0\uFF08\u7A7A\u306A\u3089\u540D\u7121\u3057\uFF09" value="${((__v) => (document.documentElement.lang !== "ja" && __v === "\u540D\u7121\u3057" ? "" : __v))(savedNickname() || settings.nickname).replace(/"/g, "&quot;")}" />
         <button type="button" id="btn-nick-save-start">\u56FA\u5B9A</button>
       </label>
       <button type="button" class="start-btn" id="btn-start">\u30B9\u30BF\u30FC\u30C8</button>
@@ -5429,7 +5429,7 @@ return __sealFn;})();
           if (justOpp) {
             const mark = document.createElement("i");
             mark.className = "just-mark";
-            mark.textContent = lastMove.drop ? "\u6253" : "\u76F8\u624B";
+            mark.textContent = ((t) => (window.NKI18N && NKI18N.t) ? NKI18N.t(t) : t)(lastMove.drop ? "\u6253" : "\u76F8\u624B");
             cell.appendChild(mark);
           }
           pe.draggable = !isCoarsePointer() && isHumanTurn() && p.side === pos.sideToMove;
@@ -5828,7 +5828,7 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-31 03:57:15";
+    var SHOGI_VERSION_LABEL = "2026-10-31 05:02:08";
   var SHOGI_BUILD_TIME = 1793361559294;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
