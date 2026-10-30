@@ -27,11 +27,11 @@
 })();
 </script>
 <meta charset="UTF-8" />
-<script>window.NK_I18N_CFG={"base": "../", "anchors": [[".start-title", "prepend"]], "skip": ".piece,.hand-piece,.board,.sr-piece"};</script><script src="../i18n/i18n.js?v=20261030205919"></script>
+<script>window.NK_I18N_CFG={"base": "../", "anchors": [[".start-title", "prepend"]], "skip": ".piece,.hand-piece,.board,.sr-piece"};</script><script src="../i18n/i18n.js?v=20261031035715"></script>
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-30 20:59:19';
+  var PAGE_LABEL = '2026-10-31 03:57:15';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -1312,6 +1312,8 @@ label.setting {
   opacity: 0;
   text-shadow: 0 0 18px rgba(196,30,30,0.45);
 }
+html:not([lang="ja"]) .start-seal { font-size: clamp(1.5rem, 8.5vw, 4.2rem); padding: 10px 18px; max-width: 94vw; white-space: normal; text-align: center; }
+html:not([lang="ja"]) .start-word { max-width: 94vw; text-align: center; }
 .start-cinematic.show .start-seal {
   animation: stampIn 0.45s cubic-bezier(0.12, 0.8, 0.2, 1) forwards;
 }
@@ -2191,6 +2193,11 @@ header.top .status { min-width: 0; overflow: hidden; }
   .dock { gap: 3px; overflow-x: hidden; }
   .dock button, .dock select { flex: 1 1 auto; min-width: 0; padding: 6px 4px; font-size: clamp(0.64rem, 2.85vw, 0.8rem); letter-spacing: 0; white-space: nowrap; }
   .dock #btn-nick { max-width: 5.5em; min-width: 3.9em; flex-shrink: 0.4; }
+  /* localized names (e.g. 名無し→Anonymous): fixed cap so auto font-shrink can make the whole name fit */
+  /* localized labels are longer than 待った/投了/新規: let the dock wrap to a 2nd row instead of cutting words */
+  html:not([lang="ja"]) .dock { flex-wrap: wrap; row-gap: 3px; }
+  html:not([lang="ja"]) .dock button, html:not([lang="ja"]) .dock select { min-width: max-content; }
+  html:not([lang="ja"]) .dock #btn-nick { min-width: 3.9em; max-width: 9em; }
   .dock .diff-lock { flex-shrink: 0; font-size: 0.72rem; padding: 6px 4px; letter-spacing: 0.02em; }
   .dock .sound-toggle { font-size: 0.72rem; gap: 2px; }
 }
@@ -3716,7 +3723,7 @@ return __sealFn;})();
       const btn = document.querySelector("#btn-nick"); if (btn) btn.textContent = r.nickname;
       if (r.adjusted) olToast(DUP_MSG + "\uFF08" + r.nickname + "\uFF09", true);
       else olToast("\u300C" + r.nickname + "\u300D\u306B\u6C7A\u307E\u308A\u307E\u3057\u305F");
-    } else if (r) olToast((r.message || "\u901A\u4FE1\u30A8\u30E9\u30FC") + "\uFF08\u3053\u306E\u7AEF\u672B\u306B\u306F\u4FDD\u5B58\u3057\u307E\u3057\u305F\uFF09", true);
+    } else if (r) olToast((r.message || "\u901A\u4FE1\u30A8\u30E9\u30FC") + ((window.NKI18N && NKI18N.t) ? NKI18N.t("\uFF08\u3053\u306E\u7AEF\u672B\u306B\u306F\u4FDD\u5B58\u3057\u307E\u3057\u305F\uFF09") : "\uFF08\u3053\u306E\u7AEF\u672B\u306B\u306F\u4FDD\u5B58\u3057\u307E\u3057\u305F\uFF09"), true);
     return r;
   }
   // Medal art: more ornate for harder difficulty (初級 < 中級 < 上級 < 真剣)
@@ -5821,7 +5828,7 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-30 20:59:19";
+    var SHOGI_VERSION_LABEL = "2026-10-31 03:57:15";
   var SHOGI_BUILD_TIME = 1793361559294;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
