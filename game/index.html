@@ -27,11 +27,11 @@
 })();
 </script>
 <meta charset="UTF-8" />
-<script>window.NK_I18N_CFG={"base": "../", "anchors": [[".start-title", "prepend"]], "skip": ".piece,.hand-piece,.board,.sr-piece"};</script><script src="../i18n/i18n.js?v=20261031050208"></script>
+<script>window.NK_I18N_CFG={"base": "../", "anchors": [[".start-title", "prepend"]], "skip": ".piece,.hand-piece,.board,.sr-piece"};</script><script src="../i18n/i18n.js?v=20261031051040"></script>
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-31 05:02:08';
+  var PAGE_LABEL = '2026-10-31 05:10:40';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -708,13 +708,13 @@ label.setting {
 }
 .trophy-bar-head .count.pulse {
   color: #ffe066;
-  transform: scale(1.25);
   text-shadow: 0 0 12px #ffd700, 0 0 24px #ffaa00;
   animation: countFlash 0.6s ease;
 }
+/* 拡大しない（ステージ端で切れないように）: 明るさの点滅だけ */
 @keyframes countFlash {
-  0% { transform: scale(1.4); }
-  100% { transform: scale(1); }
+  0% { color: #fff; text-shadow: 0 0 18px #fff3a0, 0 0 32px #ffd700; }
+  100% { color: #ffe066; }
 }
 .trophy-slots {
   display: flex;
@@ -3062,6 +3062,23 @@ header.top .status { min-width: 0; overflow: hidden; }
     }
     return PIECE_KANJI[kind];
   }
+function __fitJustMark(m) {
+  const run = () => {
+    if (!m.isConnected) return;
+    m.style.fontSize = ""; m.style.transform = "translateX(-50%)";
+    const st = m.closest(".stage"); const R = st ? st.getBoundingClientRect() : { left: 0, top: 0, right: innerWidth, bottom: innerHeight };
+    const L = Math.max(R.left, 0) + 1, T = Math.max(R.top, 0) + 1, RR = Math.min(R.right, document.documentElement.clientWidth) - 1, B = Math.min(R.bottom, innerHeight) - 1;
+    let r = m.getBoundingClientRect(); let fs = parseFloat(getComputedStyle(m).fontSize) || 9;
+    while (r.width > RR - L && fs > 6) { fs -= 0.5; m.style.fontSize = fs + "px"; r = m.getBoundingClientRect(); }
+    let dx = 0, dy = 0;
+    if (r.left < L) dx = L - r.left; else if (r.right > RR) dx = RR - r.right;
+    if (r.top < T) dy = T - r.top; else if (r.bottom > B) dy = B - r.bottom;
+    if (dx || dy) m.style.transform = `translate(calc(-50% + ${dx}px), ${dy}px)`;
+  };
+  requestAnimationFrame(run); setTimeout(run, 120);
+}
+window.__fitJustMark = __fitJustMark;
+if (!window.__fitJustMarkResize) { window.__fitJustMarkResize = 1; addEventListener("resize", () => document.querySelectorAll(".just-mark").forEach(__fitJustMark)); }
   function moveToJa(move, side, _posBefore) {
     const prefix = side === SENTE ? "\u25B2" : "\u25B3";
     const dest = squareToJa(move.to);
@@ -5431,6 +5448,7 @@ return __sealFn;})();
             mark.className = "just-mark";
             mark.textContent = ((t) => (window.NKI18N && NKI18N.t) ? NKI18N.t(t) : t)(lastMove.drop ? "\u6253" : "\u76F8\u624B");
             cell.appendChild(mark);
+            __fitJustMark(mark);
           }
           pe.draggable = !isCoarsePointer() && isHumanTurn() && p.side === pos.sideToMove;
           if (pe.draggable) {
@@ -5828,7 +5846,7 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-31 05:02:08";
+    var SHOGI_VERSION_LABEL = "2026-10-31 05:10:40";
   var SHOGI_BUILD_TIME = 1793361559294;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
