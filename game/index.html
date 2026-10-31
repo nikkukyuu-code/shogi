@@ -27,11 +27,11 @@
 })();
 </script>
 <meta charset="UTF-8" />
-<script>window.NK_I18N_CFG={"base": "../", "anchors": [[".start-title", "prepend"]], "skip": ".piece,.hand-piece,.board,.sr-piece"};</script><script src="../i18n/i18n.js?v=20261031051040"></script>
+<script>window.NK_I18N_CFG={"base": "../", "anchors": [[".start-title", "prepend"]], "skip": ".piece,.hand-piece,.board,.sr-piece"};</script><script src="../i18n/i18n.js?v=20261101084025"></script>
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-10-31 05:10:40';
+  var PAGE_LABEL = '2026-11-01 08:40:25';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -3238,7 +3238,7 @@ if (!window.__fitJustMarkResize) { window.__fitJustMarkResize = 1; addEventListe
       osc(c, "sine", 784, 0.1, 0.05);
       osc(c, "sine", 988, 0.14, 0.045, 0.09);
     }
-    speakJa("\u8CB4\u65B9\u306E\u756A\u3067\u3059");
+    speakV("yourTurn");
   }
   function playRiichi(you = true) {
     const c = ac();
@@ -3248,7 +3248,7 @@ if (!window.__fitJustMarkResize) { window.__fitJustMarkResize = 1; addEventListe
       osc(c, "sine", 880, 0.36, 0.07, 0.16);
       osc(c, "sine", 1320, 0.42, 0.05, 0.28);
     }
-    speakJa(you ? "\u30EA\u30FC\u30C1\u3001\u3042\u30681\u679A" : "\u76F8\u624B\u30EA\u30FC\u30C1\u3001\u3042\u30681\u679A");
+    speakV(you ? "riichi" : "oppRiichi");
   }
   function playPreSeventh() {
     const c = ac();
@@ -3258,7 +3258,7 @@ if (!window.__fitJustMarkResize) { window.__fitJustMarkResize = 1; addEventListe
       osc(c, "sine", 660, 0.35, 0.07, 0.18);
       osc(c, "sine", 990, 0.42, 0.05, 0.32);
     }
-    speakJa("7\u3064\u76EE");
+    speakV("seventh");
   }
   function playSeventhTaken(name) {
     const c = ac();
@@ -3267,24 +3267,57 @@ if (!window.__fitJustMarkResize) { window.__fitJustMarkResize = 1; addEventListe
       osc(c, "sine", 196, 0.35, 0.04, 0.1);
       osc(c, "sine", 784, 0.4, 0.05, 0.12);
     }
-    speakJa(`\u53D6\u3089\u308C\u305F\u306E\u306F${name}`);
+    speakV("taken", { p: name });
   }
-  function speakJa(text) {
+  var VOICE_I18N = {"ja": {"bcp": "ja-JP", "t": {"yourTurn": "貴方の番です", "riichi": "リーチ、あと1枚", "oppRiichi": "相手リーチ、あと1枚", "seventh": "7つ目", "taken": "取られたのは{p}", "kickoff": "{d}、対局開始", "first": "おめでとう、一位です", "rank": "おめでとう、{n}位です"}, "p": {"玉将": "玉将", "王将": "王将", "飛車": "飛車", "角行": "角行", "金将": "金将", "銀将": "銀将", "桂馬": "桂馬", "香車": "香車", "歩兵": "歩兵", "龍王": "龍王", "龍馬": "龍馬", "成銀": "成銀", "成桂": "成桂", "成香": "成香", "と金": "と金", "駒": "駒"}, "d": {"初級": "初級", "中級": "中級", "上級": "上級", "真剣": "真剣"}}, "en": {"bcp": "en-US", "t": {"yourTurn": "Your turn", "riichi": "Reach! One more piece", "oppRiichi": "Opponent reach! One more piece", "seventh": "Seventh piece!", "taken": "Taken: {p}", "kickoff": "{d}. Game start!", "first": "Congratulations! You are number one!", "rank": "Congratulations! You are rank {n}!"}, "p": {"玉将": "King", "王将": "King", "飛車": "Rook", "角行": "Bishop", "金将": "Gold", "銀将": "Silver", "桂馬": "Knight", "香車": "Lance", "歩兵": "Pawn", "龍王": "Dragon", "龍馬": "Horse", "成銀": "Promoted Silver", "成桂": "Promoted Knight", "成香": "Promoted Lance", "と金": "Tokin", "駒": "Piece"}, "d": {"初級": "Beginner", "中級": "Intermediate", "上級": "Advanced", "真剣": "Serious"}}, "zh-Hans": {"bcp": "zh-CN", "t": {"yourTurn": "轮到你了", "riichi": "听牌！还差一枚", "oppRiichi": "对手听牌！还差一枚", "seventh": "第七枚！", "taken": "被吃掉的是{p}", "kickoff": "{d}，对局开始", "first": "恭喜，第一名！", "rank": "恭喜，第{n}名！"}, "p": {"玉将": "玉将", "王将": "王将", "飛車": "飞车", "角行": "角行", "金将": "金将", "銀将": "银将", "桂馬": "桂马", "香車": "香车", "歩兵": "步兵", "龍王": "龙王", "龍馬": "龙马", "成銀": "成银", "成桂": "成桂", "成香": "成香", "と金": "金", "駒": "棋子"}, "d": {"初級": "初级", "中級": "中级", "上級": "高级", "真剣": "真剑"}}, "zh-Hant": {"bcp": "zh-TW", "t": {"yourTurn": "輪到你了", "riichi": "聽牌！還差一枚", "oppRiichi": "對手聽牌！還差一枚", "seventh": "第七枚！", "taken": "被吃掉的是{p}", "kickoff": "{d}，對局開始", "first": "恭喜，第一名！", "rank": "恭喜，第{n}名！"}, "p": {"玉将": "玉將", "王将": "王將", "飛車": "飛車", "角行": "角行", "金将": "金將", "銀将": "銀將", "桂馬": "桂馬", "香車": "香車", "歩兵": "步兵", "龍王": "龍王", "龍馬": "龍馬", "成銀": "成銀", "成桂": "成桂", "成香": "成香", "と金": "金", "駒": "棋子"}, "d": {"初級": "初級", "中級": "中級", "上級": "高級", "真剣": "真劍"}}, "ko": {"bcp": "ko-KR", "t": {"yourTurn": "당신 차례입니다", "riichi": "리치! 한 개 남았습니다", "oppRiichi": "상대 리치! 한 개 남았습니다", "seventh": "일곱 번째!", "taken": "빼앗긴 말은 {p}", "kickoff": "{d}, 대국 시작", "first": "축하합니다, 1위입니다!", "rank": "축하합니다, {n}위입니다!"}, "p": {"玉将": "옥장", "王将": "왕장", "飛車": "비차", "角行": "각행", "金将": "금장", "銀将": "은장", "桂馬": "계마", "香車": "향차", "歩兵": "보병", "龍王": "용왕", "龍馬": "용마", "成銀": "성은", "成桂": "성계", "成香": "성향", "と金": "토킨", "駒": "말"}, "d": {"初級": "초급", "中級": "중급", "上級": "상급", "真剣": "진검"}}, "es": {"bcp": "es-ES", "t": {"yourTurn": "Tu turno", "riichi": "¡Reach! Falta una pieza", "oppRiichi": "¡Reach del rival! Le falta una pieza", "seventh": "¡Séptima pieza!", "taken": "Capturada: {p}", "kickoff": "{d}. ¡Empieza la partida!", "first": "¡Felicidades! ¡Primer puesto!", "rank": "¡Felicidades! ¡Puesto {n}!"}, "p": {"玉将": "Rey", "王将": "Rey", "飛車": "Torre", "角行": "Alfil", "金将": "General de oro", "銀将": "General de plata", "桂馬": "Caballo", "香車": "Lanza", "歩兵": "Peón", "龍王": "Dragón", "龍馬": "Caballo dragón", "成銀": "Plata promovida", "成桂": "Caballo promovido", "成香": "Lanza promovida", "と金": "Tokin", "駒": "Pieza"}, "d": {"初級": "Principiante", "中級": "Intermedio", "上級": "Avanzado", "真剣": "En serio"}}, "pt": {"bcp": "pt-BR", "t": {"yourTurn": "Sua vez", "riichi": "Reach! Falta uma peça", "oppRiichi": "Reach do oponente! Falta uma peça", "seventh": "Sétima peça!", "taken": "Capturada: {p}", "kickoff": "{d}. Começa a partida!", "first": "Parabéns! Primeiro lugar!", "rank": "Parabéns! Posição {n}!"}, "p": {"玉将": "Rei", "王将": "Rei", "飛車": "Torre", "角行": "Bispo", "金将": "General de ouro", "銀将": "General de prata", "桂馬": "Cavalo", "香車": "Lança", "歩兵": "Peão", "龍王": "Dragão", "龍馬": "Cavalo dragão", "成銀": "Prata promovida", "成桂": "Cavalo promovido", "成香": "Lança promovida", "と金": "Tokin", "駒": "Peça"}, "d": {"初級": "Iniciante", "中級": "Intermediário", "上級": "Avançado", "真剣": "Sério"}}, "fr": {"bcp": "fr-FR", "t": {"yourTurn": "À vous de jouer", "riichi": "Reach ! Plus qu'une pièce", "oppRiichi": "Reach de l'adversaire ! Plus qu'une pièce", "seventh": "Septième pièce !", "taken": "Pièce prise : {p}", "kickoff": "{d}. Début de la partie !", "first": "Félicitations ! Première place !", "rank": "Félicitations ! Place numéro {n} !"}, "p": {"玉将": "Roi", "王将": "Roi", "飛車": "Tour", "角行": "Fou", "金将": "Général d'or", "銀将": "Général d'argent", "桂馬": "Cavalier", "香車": "Lancier", "歩兵": "Pion", "龍王": "Dragon", "龍馬": "Cheval dragon", "成銀": "Argent promu", "成桂": "Cavalier promu", "成香": "Lancier promu", "と金": "Tokin", "駒": "Pièce"}, "d": {"初級": "Débutant", "中級": "Intermédiaire", "上級": "Avancé", "真剣": "Sérieux"}}, "de": {"bcp": "de-DE", "t": {"yourTurn": "Du bist dran", "riichi": "Reach! Noch eine Figur", "oppRiichi": "Gegner Reach! Noch eine Figur", "seventh": "Siebte Figur!", "taken": "Geschlagen: {p}", "kickoff": "{d}. Spielbeginn!", "first": "Glückwunsch! Platz eins!", "rank": "Glückwunsch! Platz {n}!"}, "p": {"玉将": "König", "王将": "König", "飛車": "Turm", "角行": "Läufer", "金将": "Goldgeneral", "銀将": "Silbergeneral", "桂馬": "Springer", "香車": "Lanze", "歩兵": "Bauer", "龍王": "Drache", "龍馬": "Drachenpferd", "成銀": "Befördertes Silber", "成桂": "Beförderter Springer", "成香": "Beförderte Lanze", "と金": "Tokin", "駒": "Figur"}, "d": {"初級": "Anfänger", "中級": "Mittel", "上級": "Fortgeschritten", "真剣": "Ernst"}}, "it": {"bcp": "it-IT", "t": {"yourTurn": "Tocca a te", "riichi": "Reach! Manca un pezzo", "oppRiichi": "Reach dell'avversario! Manca un pezzo", "seventh": "Settimo pezzo!", "taken": "Catturato: {p}", "kickoff": "{d}. Inizia la partita!", "first": "Congratulazioni! Primo posto!", "rank": "Congratulazioni! Posto {n}!"}, "p": {"玉将": "Re", "王将": "Re", "飛車": "Torre", "角行": "Alfiere", "金将": "Generale d'oro", "銀将": "Generale d'argento", "桂馬": "Cavallo", "香車": "Lancia", "歩兵": "Pedone", "龍王": "Drago", "龍馬": "Cavallo drago", "成銀": "Argento promosso", "成桂": "Cavallo promosso", "成香": "Lancia promossa", "と金": "Tokin", "駒": "Pezzo"}, "d": {"初級": "Principiante", "中級": "Intermedio", "上級": "Avanzato", "真剣": "Serio"}}, "ru": {"bcp": "ru-RU", "t": {"yourTurn": "Ваш ход", "riichi": "Рич! Осталась одна фигура", "oppRiichi": "Рич у соперника! Осталась одна фигура", "seventh": "Седьмая фигура!", "taken": "Взята фигура: {p}", "kickoff": "{d}. Партия началась!", "first": "Поздравляем! Первое место!", "rank": "Поздравляем! Место {n}!"}, "p": {"玉将": "Король", "王将": "Король", "飛車": "Ладья", "角行": "Слон", "金将": "Золотой генерал", "銀将": "Серебряный генерал", "桂馬": "Конь", "香車": "Копьё", "歩兵": "Пешка", "龍王": "Дракон", "龍馬": "Конь-дракон", "成銀": "Повышенное серебро", "成桂": "Повышенный конь", "成香": "Повышенное копьё", "と金": "Токин", "駒": "Фигура"}, "d": {"初級": "Новичок", "中級": "Средний", "上級": "Продвинутый", "真剣": "Всерьёз"}}, "id": {"bcp": "id-ID", "t": {"yourTurn": "Giliranmu", "riichi": "Reach! Tinggal satu bidak", "oppRiichi": "Lawan reach! Tinggal satu bidak", "seventh": "Bidak ketujuh!", "taken": "Yang diambil: {p}", "kickoff": "{d}. Permainan dimulai!", "first": "Selamat! Peringkat pertama!", "rank": "Selamat! Peringkat {n}!"}, "p": {"玉将": "Raja", "王将": "Raja", "飛車": "Benteng", "角行": "Gajah", "金将": "Jenderal emas", "銀将": "Jenderal perak", "桂馬": "Kuda", "香車": "Tombak", "歩兵": "Pion", "龍王": "Naga", "龍馬": "Kuda naga", "成銀": "Perak promosi", "成桂": "Kuda promosi", "成香": "Tombak promosi", "と金": "Tokin", "駒": "Bidak"}, "d": {"初級": "Pemula", "中級": "Menengah", "上級": "Mahir", "真剣": "Serius"}}, "th": {"bcp": "th-TH", "t": {"yourTurn": "ตาของคุณ", "riichi": "รีจ! อีกหนึ่งตัว", "oppRiichi": "คู่แข่งรีจ! อีกหนึ่งตัว", "seventh": "ตัวที่เจ็ด!", "taken": "ตัวที่ถูกกินคือ {p}", "kickoff": "{d} เริ่มเกม!", "first": "ยินดีด้วย! อันดับหนึ่ง!", "rank": "ยินดีด้วย! อันดับ {n}!"}, "p": {"玉将": "ขุน", "王将": "ขุน", "飛車": "เรือ", "角行": "บิชอป", "金将": "ขุนพลทอง", "銀将": "ขุนพลเงิน", "桂馬": "ม้า", "香車": "หอก", "歩兵": "เบี้ย", "龍王": "มังกร", "龍馬": "ม้ามังกร", "成銀": "เงินเลื่อนขั้น", "成桂": "ม้าเลื่อนขั้น", "成香": "หอกเลื่อนขั้น", "と金": "โทคิน", "駒": "ตัวหมาก"}, "d": {"初級": "ระดับต้น", "中級": "ระดับกลาง", "上級": "ระดับสูง", "真剣": "จริงจัง"}}, "vi": {"bcp": "vi-VN", "t": {"yourTurn": "Đến lượt bạn", "riichi": "Reach! Còn một quân", "oppRiichi": "Đối thủ reach! Còn một quân", "seventh": "Quân thứ bảy!", "taken": "Quân bị bắt: {p}", "kickoff": "{d}. Bắt đầu ván đấu!", "first": "Chúc mừng! Hạng nhất!", "rank": "Chúc mừng! Hạng {n}!"}, "p": {"玉将": "Vua", "王将": "Vua", "飛車": "Xe", "角行": "Tượng", "金将": "Tướng vàng", "銀将": "Tướng bạc", "桂馬": "Mã", "香車": "Thương", "歩兵": "Tốt", "龍王": "Rồng", "龍馬": "Ngựa rồng", "成銀": "Bạc phong cấp", "成桂": "Mã phong cấp", "成香": "Thương phong cấp", "と金": "Tokin", "駒": "Quân"}, "d": {"初級": "Sơ cấp", "中級": "Trung cấp", "上級": "Cao cấp", "真剣": "Nghiêm túc"}}, "tr": {"bcp": "tr-TR", "t": {"yourTurn": "Sıra sende", "riichi": "Reach! Bir taş kaldı", "oppRiichi": "Rakip reach! Bir taş kaldı", "seventh": "Yedinci taş!", "taken": "Alınan taş: {p}", "kickoff": "{d}. Oyun başlıyor!", "first": "Tebrikler! Birinci oldun!", "rank": "Tebrikler! {n}. oldun!"}, "p": {"玉将": "Şah", "王将": "Şah", "飛車": "Kale", "角行": "Fil", "金将": "Altın general", "銀将": "Gümüş general", "桂馬": "At", "香車": "Mızrak", "歩兵": "Piyon", "龍王": "Ejderha", "龍馬": "Ejder at", "成銀": "Terfi gümüş", "成桂": "Terfi at", "成香": "Terfi mızrak", "と金": "Tokin", "駒": "Taş"}, "d": {"初級": "Başlangıç", "中級": "Orta", "上級": "İleri", "真剣": "Ciddi"}}, "ar": {"bcp": "ar-SA", "t": {"yourTurn": "دورك", "riichi": "ريتش! بقيت قطعة واحدة", "oppRiichi": "ريتش للخصم! بقيت قطعة واحدة", "seventh": "القطعة السابعة!", "taken": "القطعة المأخوذة: {p}", "kickoff": "{d}. بدأت المباراة!", "first": "تهانينا! المركز الأول!", "rank": "تهانينا! المركز {n}!"}, "p": {"玉将": "الملك", "王将": "الملك", "飛車": "الرخ", "角行": "الفيل", "金将": "الجنرال الذهبي", "銀将": "الجنرال الفضي", "桂馬": "الحصان", "香車": "الرمح", "歩兵": "البيدق", "龍王": "التنين", "龍馬": "حصان التنين", "成銀": "فضي مرقّى", "成桂": "حصان مرقّى", "成香": "رمح مرقّى", "と金": "توكين", "駒": "قطعة"}, "d": {"初級": "مبتدئ", "中級": "متوسط", "上級": "متقدم", "真剣": "جاد"}}, "hi": {"bcp": "hi-IN", "t": {"yourTurn": "आपकी बारी", "riichi": "रीच! बस एक मोहरा बाकी", "oppRiichi": "विरोधी की रीच! बस एक मोहरा बाकी", "seventh": "सातवाँ मोहरा!", "taken": "लिया गया मोहरा: {p}", "kickoff": "{d}. खेल शुरू!", "first": "बधाई हो! पहला स्थान!", "rank": "बधाई हो! स्थान {n}!"}, "p": {"玉将": "राजा", "王将": "राजा", "飛車": "रूक", "角行": "बिशप", "金将": "स्वर्ण सेनापति", "銀将": "रजत सेनापति", "桂馬": "घोड़ा", "香車": "भाला", "歩兵": "प्यादा", "龍王": "ड्रैगन", "龍馬": "ड्रैगन घोड़ा", "成銀": "पदोन्नत रजत", "成桂": "पदोन्नत घोड़ा", "成香": "पदोन्नत भाला", "と金": "तोकिन", "駒": "मोहरा"}, "d": {"初級": "शुरुआती", "中級": "मध्यम", "上級": "उन्नत", "真剣": "गंभीर"}}};
+  function voiceLang() {
+    let l = "ja";
+    try { l = window.NKI18N && window.NKI18N.lang || document.documentElement.lang || "ja"; } catch {}
+    return VOICE_I18N[l] ? l : "en";
+  }
+  function voiceText(key, vars = {}, lang = voiceLang()) {
+    const V = VOICE_I18N[lang];
+    const tpl = V.t[key] || VOICE_I18N.en.t[key] || "";
+    return tpl.replace(/\{(\w)\}/g, (_, k) => {
+      const x = vars[k];
+      if (k === "p") return V.p[x] || x;
+      if (k === "d") { try { const ui = window.NKI18N && window.NKI18N.dicts && window.NKI18N.dicts[lang]; if (lang !== "ja" && ui && ui[x]) return ui[x]; } catch {} return V.d[x] || x; }
+      return x == null ? "" : String(x);
+    });
+  }
+  function pickVoice(voices, bcp) {
+    const want = bcp.toLowerCase().replace("_", "-");
+    const norm = (v) => String(v.lang || "").toLowerCase().replace("_", "-");
+    const base = want.split("-")[0];
+    if (base === "zh") {
+      const tw = /tw|hk|hant/.test(want);
+      return voices.find((v) => norm(v) === want) || voices.find((v) => norm(v).startsWith("zh") && /tw|hk|hant/.test(norm(v)) === tw) || voices.find((v) => norm(v).startsWith("zh"));
+    }
+    return voices.find((v) => norm(v) === want) || voices.find((v) => norm(v).split("-")[0] === base);
+  }
+  function speakV(key, vars) {
     if (!enabled) return;
     try {
       const syn = window.speechSynthesis;
       if (!syn) return;
       syn.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "ja-JP";
+      let lang = voiceLang();
+      const voices = syn.getVoices() || [];
+      let voice = pickVoice(voices, VOICE_I18N[lang].bcp);
+      if (!voice && voices.length && lang !== "ja") {
+        lang = "en";
+        voice = pickVoice(voices, VOICE_I18N.en.bcp);
+      }
+      const u = new SpeechSynthesisUtterance(voiceText(key, vars, lang));
+      u.lang = VOICE_I18N[lang].bcp;
       u.rate = 1;
       u.pitch = 1.05;
-      const ja = syn.getVoices().find((v) => v.lang.startsWith("ja"));
-      if (ja) u.voice = ja;
+      if (voice) u.voice = voice;
       syn.speak(u);
     } catch {
     }
   }
+  try { window.speechSynthesis && window.speechSynthesis.getVoices(); } catch {}
   function playKickoff(label) {
     const c = ac();
     if (c) {
@@ -3294,7 +3327,7 @@ if (!window.__fitJustMarkResize) { window.__fitJustMarkResize = 1; addEventListe
       osc(c, "sine", 784, 0.28, 0.05, 0.28);
       osc(c, "triangle", 1046, 0.35, 0.045, 0.46);
     }
-    speakJa(`${label}\u3001\u5BFE\u5C40\u958B\u59CB`);
+    speakV("kickoff", { d: label });
   }
   function playCongrats(rank) {
     const c = ac();
@@ -3306,7 +3339,7 @@ if (!window.__fitJustMarkResize) { window.__fitJustMarkResize = 1; addEventListe
       });
       osc(c, "sine", 523, 0.7, 0.04, 0.5);
     }
-    speakJa(rank === 1 ? "\u304A\u3081\u3067\u3068\u3046\u3001\u4E00\u4F4D\u3067\u3059" : `\u304A\u3081\u3067\u3068\u3046\u3001${rank}\u4F4D\u3067\u3059`);
+    speakV(rank === 1 ? "first" : "rank", { n: rank });
   }
 
   // src/ui/ranking.ts
@@ -5846,8 +5879,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-10-31 05:10:40";
-  var SHOGI_BUILD_TIME = 1793361559294;
+    var SHOGI_VERSION_LABEL = "2026-11-01 08:40:25";
+  var SHOGI_BUILD_TIME = 1793490025018;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
