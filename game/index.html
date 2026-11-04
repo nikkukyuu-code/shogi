@@ -27,11 +27,11 @@
 })();
 </script>
 <meta charset="UTF-8" />
-<script>window.NK_I18N_CFG={"base": "../", "anchors": [[".start-title", "prepend"]], "skip": ".piece,.hand-piece,.board,.sr-piece"};</script><script src="../i18n/i18n.js?v=20261103214714"></script>
+<script>window.NK_I18N_CFG={"base": "../", "anchors": [[".start-title", "prepend"]], "skip": ".piece,.hand-piece,.board,.sr-piece"};</script><script src="../i18n/i18n.js?v=20261105013330"></script>
 <!--nk-autoupdate--><script>
 /* 自動更新: 新しい版が公開されたら、安全なとき（タイトル画面など・試合中でない）だけ自動で読み込み直す。記録(localStorage)には触れない。 */
 (function () {
-  var PAGE_LABEL = '2026-11-03 21:47:14';
+  var PAGE_LABEL = '2026-11-05 01:33:30';
   var URL = '/shogi/version.json', KEY = 'nkReloadFor:shogi', EVERY = 60;
   function safe() { try { return !!(document.querySelector('.start-overlay') && !document.querySelector('.net-overlay, .nick-overlay, .start-cinematic, .rank-overlay, .end-overlay, .promo-dialog') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))); } catch (e) { return false; } }
   var busy = false;
@@ -5301,7 +5301,10 @@ return __sealFn;})();
   }
   function newGame() {
     // bc: +1 per match start (CPU always; online: host side only)
-    if (!(netMode && netRole === "guest")) hitBattleCounter(netMode ? "pvp" : settings.difficulty);
+    // 対人戦 (online host): visit-log START now; abacus bc only when the match completes (render → endState)
+    pvpBcPending = false;
+    if (netMode) { if (netRole !== "guest") { try { if (window.__nkVisitBattle) window.__nkVisitBattle("pvp"); } catch (_) {} pvpBcPending = true; } }
+    else hitBattleCounter(settings.difficulty);
     if (!netMode) { try { onlineBegin(settings.difficulty); } catch (e) {} } else { olMatch = null; }
     stopEngine();
     searchId++;
@@ -5773,7 +5776,9 @@ return __sealFn;})();
     board.style.height = `${s}px`;
   }
   let vlEndState = null; // 訪問ログ: 対戦終了を1回だけ送る
+  var pvpBcPending = false; // 対人戦 bc: host counts once when a net match ends in win/lose/draw (not disconnect)
   function render() {
+    if (endState && pvpBcPending) { pvpBcPending = false; if (netMode && netRole !== "guest" && endState.reason !== "disconnect") { try { hitBattleCountOnly("pvp"); } catch (_) {} } }
     if (endState && endState !== vlEndState) { vlEndState = endState; try { if (window.__nkVisitBattleEnd) window.__nkVisitBattleEnd(endState.humanWon === true ? 'win' : endState.humanWon === false ? 'lose' : 'draw'); } catch (_) {} }
     flipped = settings.humanSide === GOTE;
     const topSide = opposite(settings.humanSide);
@@ -5888,8 +5893,8 @@ return __sealFn;})();
     }
   }
 
-    var SHOGI_VERSION_LABEL = "2026-11-03 21:47:14";
-  var SHOGI_BUILD_TIME = 1793710034000;
+    var SHOGI_VERSION_LABEL = "2026-11-05 01:33:30";
+  var SHOGI_BUILD_TIME = 1793810010000;
   (function paintShogiVersion() {
     var el = document.getElementById("app-version");
     if (el) el.textContent = SHOGI_VERSION_LABEL;
@@ -5984,6 +5989,11 @@ return __sealFn;})();
   // +1 for an ESTABLISHED match (call only when the game really starts). mode: "pvp" | difficulty id.
   function hitBattleCounter(mode) {
     try { if (window.__nkVisitBattle) window.__nkVisitBattle(mode); } catch (_) {}
+    hitKey(BATTLE_KEY, BATTLE_LAST_KEY);
+    if (BATTLE_MODES.some(function (m) { return m.id === mode; })) hitKey(BATTLE_KEY + "-" + mode, BATTLE_LAST_KEY + "_" + mode);
+  }
+  // Online PvP split (v2026-11-05): abacus only (total + mode), no visit log. Host, on match COMPLETION.
+  function hitBattleCountOnly(mode) {
     hitKey(BATTLE_KEY, BATTLE_LAST_KEY);
     if (BATTLE_MODES.some(function (m) { return m.id === mode; })) hitKey(BATTLE_KEY + "-" + mode, BATTLE_LAST_KEY + "_" + mode);
   }
